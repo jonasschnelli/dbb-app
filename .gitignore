@@ -66,3 +66,4 @@ Makefile.test
 
 # Mac specific
 .DS_Store
+src/config/*.in

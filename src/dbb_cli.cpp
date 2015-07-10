@@ -24,7 +24,7 @@
 
 */
 
-
+#include <assert.h> 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -34,13 +34,7 @@
 #include <string>
 
 #include <hidapi/hidapi.h>
-#include <openssl/aes.h>
-#include <openssl/bio.h>
-#include <openssl/buffer.h>
-#include <openssl/evp.h>
 #include "openssl/sha.h"
-
-#pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 #define HID_REPORT_SIZE   2048
 #define ERROR 0
@@ -59,19 +53,34 @@ static int api_hid_init(void)
     return SUCCESS;
 }
 
+//simple dispatch class for a dbb command
 class CDBBCommand
 {
 public:
     std::string cmdname;
     std::string json;
-    bool needsEncryption;
+    bool requiresEncryption;
 };
+
+/* 
+    currently avoid headers 
+    define everything as extern
+*/
+extern std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len);
+extern std::string base64_decode(std::string const& encoded_string);
+extern int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg);
+extern int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char *msg, size_t msgLen, unsigned char **encMsg);
+extern void doubleSha256(char *string, unsigned char *hashOut);
+extern void getRandIV(unsigned char *ivOut);
+
+#define AES_BLOCKSIZE 16
 
 static const CDBBCommand vCommands[] =
 {
-    { "erase"           , "{\"reset\" : \"__ERASE__\"}",            false},
-    { "password"           , "{\"password\" : \"0000\"}",            false},
-    { "led"             , "{\"led\" : \"toggle\"}",                 true}
+    { "erase"           , "{\"reset\" : \"__ERASE__\"}",                            false},
+    { "password"        , "{\"password\" : \"0000\"}",                              false},
+    { "led"             , "{\"led\" : \"toggle\"}",                                 true},
+    { "seed"            , "{\"seed\" : {\"source\" : \"create\"} }",                true},
 };
 
 bool sendCommand(const std::string &json, std::string &resultOut)
@@ -84,90 +93,13 @@ bool sendCommand(const std::string &json, std::string &resultOut)
     memcpy(HID_REPORT, json.c_str(), json.size() );
     hid_write(HID_HANDLE, (unsigned char *)HID_REPORT, HID_REPORT_SIZE);
 
-
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     printf("try to read some bytes...\n");
-    res = hid_read(HID_HANDLE, HID_REPORT, HID_REPORT_SIZE);
+    res = hid_read(HID_HANDLE, (unsigned char *)&resultOut[0], HID_REPORT_SIZE);
 	printf(" OK, read %d bytes.\n", res);
-	printf("Result: %s\n", HID_REPORT);
-
+    
+	printf("Result: %s\n", resultOut.c_str());
     return true;
-}
-
-void doubleSha256(char *string, unsigned char *hashOut)
-{
-    unsigned char firstSha[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, string, strlen(string));
-    SHA256_Final(firstSha, &sha256);
-
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, firstSha, SHA256_DIGEST_LENGTH);
-    SHA256_Final(hashOut, &sha256);
-    int i = 0;
-}
-
-class Crypto
-{
-private:
-    EVP_CIPHER_CTX *aesEncryptCtx;
-    EVP_CIPHER_CTX *aesDecryptCtx;
-public:
-    unsigned char aesKey[16];
-    unsigned char aesIV[16];
-
-    int aesEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg);
-    std::string base64encode(const unsigned char *msg, int size);
-};
-
-int Crypto::aesEncrypt(const unsigned char *msg, size_t msgLen, unsigned char **encMsg) {
-    size_t blockLen  = 0;
-    size_t encMsgLen = 0;
-
-    aesEncryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
-    EVP_CIPHER_CTX_init(aesEncryptCtx);
-
-    *encMsg = (unsigned char*)malloc(msgLen + AES_BLOCK_SIZE);
-    if(encMsg == NULL) return FAILURE;
-
-    if(!EVP_EncryptInit_ex(aesEncryptCtx, EVP_aes_256_cbc(), NULL, aesKey, aesIV)) {
-        return FAILURE;
-    }
-
-    if(!EVP_EncryptUpdate(aesEncryptCtx, *encMsg, (int*)&blockLen, (unsigned char*)msg, msgLen)) {
-        return FAILURE;
-    }
-    encMsgLen += blockLen;
-
-    if(!EVP_EncryptFinal_ex(aesEncryptCtx, *encMsg + encMsgLen, (int*)&blockLen)) {
-        return FAILURE;
-    }
-
-    EVP_CIPHER_CTX_cleanup(aesEncryptCtx);
-
-    return encMsgLen + blockLen;
-}
-
-std::string Crypto::base64encode(const unsigned char *msg, int size)
-{
-
-    BIO *bio, *b64;
-    BUF_MEM *bufferPtr;
-
-    b64 = BIO_new(BIO_f_base64());
-    bio = BIO_new(BIO_s_mem());
-    bio = BIO_push(b64, bio);
-
-    BIO_set_flags(bio, BIO_FLAGS_BASE64_NO_NL); //Ignore newlines - write everything in one line
-    BIO_write(bio, msg, size);
-    BIO_flush(bio);
-    BIO_get_mem_ptr(bio, &bufferPtr);
-    BIO_set_close(bio, BIO_NOCLOSE);
-    BIO_free_all(bio);
-
-    std::string s((*bufferPtr).data);
-    return s;
 }
 
 int main( int argc, char *argv[] )
@@ -195,26 +127,67 @@ int main( int argc, char *argv[] )
                 std::string pasword = "0000";
                 std::string cmdOut;
 
-                if (cmd.needsEncryption)
+                if (cmd.requiresEncryption)
                 {
+                    //double sha256 the password
                     unsigned char outputBuffer[SHA256_DIGEST_LENGTH];
                     doubleSha256((char *)pasword.c_str(), outputBuffer);
-
+                    
                     unsigned char *cypher;
-                    Crypto nC;
-                    memcpy(nC.aesIV, &outputBuffer, SHA256_DIGEST_LENGTH);
-                    memcpy(nC.aesKey, &outputBuffer, SHA256_DIGEST_LENGTH);
-                    int newLen = nC.aesEncrypt((const unsigned char *)cmd.json.c_str(), cmd.json.size(),&cypher);
+                    unsigned char aesIV[AES_BLOCKSIZE];
+                    unsigned char aesKey[AES_BLOCKSIZE];
+                    
+                    getRandIV(aesIV);
+                    memcpy(aesKey, outputBuffer, SHA256_DIGEST_LENGTH);
+                    
+                    int inlen = cmd.json.size();
+                    int  pads;
+                    int  inpadlen = inlen + AES_BLOCKSIZE - inlen % AES_BLOCKSIZE;
+                    unsigned char inpad[inpadlen];
+                    unsigned char enc[inpadlen];
+                    unsigned char enc_cat[inpadlen + AES_BLOCKSIZE]; // concatenating [ iv0  |  enc ]
+                    
+                    // PKCS7 padding
+                    memcpy(inpad, cmd.json.c_str(), inlen);
+                    for (pads = 0; pads < AES_BLOCKSIZE - inlen % AES_BLOCKSIZE; pads++ ) {
+                        inpad[inlen + pads] = (AES_BLOCKSIZE - inlen % AES_BLOCKSIZE);
+                    }
+                    
+                    //add iv to the stream for base64 encoding
+                    memcpy(enc_cat, aesIV, AES_BLOCKSIZE);
+                    
+                    //encrypt
+                    aesEncrypt(aesKey, aesIV, inpad, cmd.json.size(), &cypher);
+                    
+                    //copy the encypted data to the stream where the iv is already
+                    memcpy(enc_cat + AES_BLOCKSIZE, cypher, inpadlen);
 
-                    unsigned char *newB = (unsigned char *)malloc(newLen+16);
-                    memcpy(newB, nC.aesIV, 16);
-                    memcpy(newB+16, cypher, newLen);
-
-                    std::string base64str = nC.base64encode(cypher, newLen);
+                    //base64 encode
+                    std::string base64str = base64_encode(enc_cat, inpadlen + AES_BLOCKSIZE);
+                    
+                    
+                    // DECRIPT FOR SANITY REASONS
+                    //test, decode
+                    printf("base64 cmd: %s\n", base64str.c_str());
+                    std::string base64Dec = base64_decode(base64str);
+                    
+                    //test decrypt
+                    unsigned char *decryptedStream;
+                    unsigned char *decryptedCommand;
+                    int outlen = aesDecrypt(aesKey, aesIV, (unsigned char *)base64Dec.c_str(), base64Dec.size(), &decryptedStream);
+                    decryptedCommand = (unsigned char *)malloc(outlen);
+                    memcpy(decryptedCommand, decryptedStream+16, outlen-16);
+                    decryptedCommand[outlen-16] =0;
+                    
+                    printf("\n\n1: %s, 2: %s\n\n", decryptedCommand, cmd.json.c_str());
+                    assert(strcmp((const char *)decryptedCommand, cmd.json.c_str()) == 0);
                     sendCommand(base64str, cmdOut);
+                    
+                    //decrypt result: TODO:
                 }
                 else
                 {
+                    //send command unencrypted
         	        sendCommand(cmd.json,cmdOut);
                 }
                 cmdfound = true;
