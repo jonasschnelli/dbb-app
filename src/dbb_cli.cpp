@@ -105,6 +105,7 @@ void doubleSha256(char *string, unsigned char *hashOut)
     SHA256_Init(&sha256);
     SHA256_Update(&sha256, firstSha, SHA256_DIGEST_LENGTH);
     SHA256_Final(hashOut, &sha256);
+    int i = 0;
 }
 
 class Crypto
@@ -197,7 +198,7 @@ int main( int argc, char *argv[] )
                 if (cmd.needsEncryption)
                 {
                     unsigned char outputBuffer[SHA256_DIGEST_LENGTH];
-                    doubleSha256((char *)pasword.c_str(), (unsigned char *)&outputBuffer);
+                    doubleSha256((char *)pasword.c_str(), outputBuffer);
 
                     unsigned char *cypher;
                     Crypto nC;
@@ -209,7 +210,7 @@ int main( int argc, char *argv[] )
                     memcpy(newB, nC.aesIV, 16);
                     memcpy(newB+16, cypher, newLen);
 
-                    std::string base64str = nC.base64encode(newB, newLen+16);
+                    std::string base64str = nC.base64encode(cypher, newLen);
                     sendCommand(base64str, cmdOut);
                 }
                 else
