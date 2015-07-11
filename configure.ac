@@ -6,6 +6,8 @@ AC_CONFIG_HEADERS([src/config/dbb_cli-config.h])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
 
+AC_PROG_RANLIB
+
 # Enable debug
 AC_ARG_ENABLE([debug],
     [AS_HELP_STRING([--enable-debug],

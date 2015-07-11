@@ -1,4 +1,8 @@
-#include <string>
+// Copyright (c) 2015 Jonas Schnelli
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
+#include "crypto.h"
 
 #include <openssl/aes.h>
 #include <openssl/bio.h>
@@ -8,6 +12,7 @@
 
 #include <openssl/rand.h>
 
+//ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
 void doubleSha256(char *string, unsigned char *hashOut)
@@ -48,7 +53,7 @@ int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMs
     decLen += blockLen;
  
     EVP_CIPHER_CTX_cleanup(aesDecryptCtx);
- 
+    EVP_CIPHER_CTX_free(aesDecryptCtx);
     return (int)decLen;
 }
 
@@ -76,11 +81,12 @@ int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char 
     }
 
     EVP_CIPHER_CTX_cleanup(aesEncryptCtx);
-
+    EVP_CIPHER_CTX_free(aesEncryptCtx);
+    
     return encMsgLen + blockLen;
 }
 
 void getRandIV(unsigned char *ivOut)
 {
-    RAND_bytes(ivOut, 16);
+    RAND_bytes(ivOut, AES_BLOCK_SIZE);
 }

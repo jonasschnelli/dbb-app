@@ -24,7 +24,8 @@
 
 */
 
-#include <assert.h> 
+#include <assert.h>
+#include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -33,7 +34,11 @@
 
 #include <string>
 
-#include <hidapi/hidapi.h>
+#include "util.h"
+#include "crypto.h"
+
+#include "univalue/univalue.h"
+#include "hidapi/hidapi.h"
 #include "openssl/sha.h"
 
 #define HID_REPORT_SIZE   2048
@@ -62,19 +67,6 @@ public:
     bool requiresEncryption;
 };
 
-/* 
-    currently avoid headers 
-    define everything as extern
-*/
-extern std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len);
-extern std::string base64_decode(std::string const& encoded_string);
-extern int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg);
-extern int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char *msg, size_t msgLen, unsigned char **encMsg);
-extern void doubleSha256(char *string, unsigned char *hashOut);
-extern void getRandIV(unsigned char *ivOut);
-
-#define AES_BLOCKSIZE 16
-
 static const CDBBCommand vCommands[] =
 {
     { "erase"           , "{\"reset\" : \"__ERASE__\"}",                            false},
@@ -85,7 +77,7 @@ static const CDBBCommand vCommands[] =
 
 bool sendCommand(const std::string &json, std::string &resultOut)
 {
-    int res;
+    int res, cnt = 0;
 
     printf("Sending command: %s\n", json.c_str());
 
@@ -95,10 +87,113 @@ bool sendCommand(const std::string &json, std::string &resultOut)
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     printf("try to read some bytes...\n");
-    res = hid_read(HID_HANDLE, (unsigned char *)&resultOut[0], HID_REPORT_SIZE);
-	printf(" OK, read %d bytes.\n", res);
     
-	printf("Result: %s\n", resultOut.c_str());
+    memset(HID_REPORT, 0, HID_REPORT_SIZE);
+    while (cnt < HID_REPORT_SIZE) {
+        res = hid_read(HID_HANDLE, HID_REPORT + cnt, HID_REPORT_SIZE);
+        if (res < 0) {
+            printf("ERROR: Unable to read report.\n");
+            return false;
+        }
+        cnt += res;
+    }
+        
+	printf(" OK, read %d bytes.\n", res);
+
+    resultOut.assign((const char *)HID_REPORT);
+    return true;
+}
+
+bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &password, UniValue &jsonOut)
+{
+    unsigned char passwordSha256[SHA256_DIGEST_LENGTH];
+    unsigned char aesIV[DBB_AES_BLOCKSIZE];
+    unsigned char aesKey[DBB_AES_KEYSIZE];
+
+    doubleSha256((char *)password.c_str(), passwordSha256);
+    memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
+    
+    //decrypt result: TODO:
+    UniValue valRead(UniValue::VSTR);
+    if (!valRead.read(cmdIn))
+    {
+        printf("could not deserialize json\n");
+        return false;
+    }
+    UniValue ctext = find_value(valRead, "ciphertext");
+    if (ctext.isNull())
+    {
+        printf("No ciphertext in response found. Aborting.\n");
+        return false;
+    }
+
+    std::string base64dec = base64_decode(ctext.get_str());
+    unsigned int base64_len = base64dec.size();
+    unsigned char *base64dec_c = (unsigned char *)base64dec.c_str();
+
+    unsigned char *decryptedStream;
+    unsigned char *decryptedCommand;
+    memcpy(aesIV, base64dec_c, DBB_AES_BLOCKSIZE); //copy first 16 bytes and take as IV
+    int outlen = aesDecrypt(aesKey, aesIV, base64dec_c+DBB_AES_BLOCKSIZE, base64_len-DBB_AES_BLOCKSIZE, &decryptedStream);
+
+    int decrypt_len = 0;
+    int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
+    char *dec = (char *)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
+    if (!dec) {
+        decrypt_len = 0;
+        memset(decryptedStream, 0, sizeof(&decryptedStream));
+        return false;
+    }
+    memcpy(dec, decryptedStream, base64_len - DBB_AES_BLOCKSIZE - padlen);
+    dec[base64_len - DBB_AES_BLOCKSIZE - padlen] = 0;
+    decrypt_len = base64_len - DBB_AES_BLOCKSIZE - padlen + 1;
+    memset(decryptedStream, 0, sizeof(&decryptedStream));
+
+    return true;
+}
+
+bool encryptAndEncodeCommand(const std::string &cmd, const std::string &password, std::string &base64strOut)
+{
+    if (password.empty())
+        return false;
+
+    //double sha256 the password
+    unsigned char passwordSha256[SHA256_DIGEST_LENGTH];
+    unsigned char *cypher;
+    unsigned char aesIV[DBB_AES_BLOCKSIZE];
+    unsigned char aesKey[DBB_AES_KEYSIZE];
+
+    doubleSha256((char *)password.c_str(), passwordSha256);
+
+    //set random IV
+    getRandIV(aesIV);
+    memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
+
+    int inlen = cmd.size();
+    unsigned int pads = 0;
+    int inpadlen = inlen + DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE;
+    unsigned char inpad[inpadlen];
+    unsigned char enc[inpadlen];
+    unsigned char enc_cat[inpadlen + DBB_AES_BLOCKSIZE]; // concatenating [ iv0  |  enc ]
+
+    // PKCS7 padding
+    memcpy(inpad, cmd.c_str(), inlen);
+    for (pads = 0; pads < DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE; pads++ ) {
+        inpad[inlen + pads] = (DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE);
+    }
+
+    //add iv to the stream for base64 encoding
+    memcpy(enc_cat, aesIV, DBB_AES_BLOCKSIZE);
+
+    //encrypt
+    aesEncrypt(aesKey, aesIV, inpad, inlen, &cypher);
+
+    //copy the encypted data to the stream where the iv is already
+    memcpy(enc_cat + DBB_AES_BLOCKSIZE, cypher, inpadlen);
+
+    //base64 encode
+    base64strOut = base64_encode(enc_cat, inpadlen + DBB_AES_BLOCKSIZE);
+
     return true;
 }
 
@@ -108,7 +203,7 @@ int main( int argc, char *argv[] )
         printf("No digital bitbox connected");
 		return 0;
     } else {
-        printf("Digital Bitbox Connected\n");
+        LogPrint("main", "Digital Bitbox Connected\n");
 
         if (argc < 2)
         {
@@ -124,71 +219,26 @@ int main( int argc, char *argv[] )
             CDBBCommand cmd = vCommands[i];
             if (cmd.cmdname == userCmd)
             {
-                std::string pasword = "0000";
+                std::string password = "0000";
                 std::string cmdOut;
 
                 if (cmd.requiresEncryption)
                 {
-                    //double sha256 the password
-                    unsigned char outputBuffer[SHA256_DIGEST_LENGTH];
-                    doubleSha256((char *)pasword.c_str(), outputBuffer);
+                    std::string base64str;
+                    encryptAndEncodeCommand(cmd.json, password, base64str);
                     
-                    unsigned char *cypher;
-                    unsigned char aesIV[AES_BLOCKSIZE];
-                    unsigned char aesKey[AES_BLOCKSIZE];
-                    
-                    getRandIV(aesIV);
-                    memcpy(aesKey, outputBuffer, SHA256_DIGEST_LENGTH);
-                    
-                    int inlen = cmd.json.size();
-                    int  pads;
-                    int  inpadlen = inlen + AES_BLOCKSIZE - inlen % AES_BLOCKSIZE;
-                    unsigned char inpad[inpadlen];
-                    unsigned char enc[inpadlen];
-                    unsigned char enc_cat[inpadlen + AES_BLOCKSIZE]; // concatenating [ iv0  |  enc ]
-                    
-                    // PKCS7 padding
-                    memcpy(inpad, cmd.json.c_str(), inlen);
-                    for (pads = 0; pads < AES_BLOCKSIZE - inlen % AES_BLOCKSIZE; pads++ ) {
-                        inpad[inlen + pads] = (AES_BLOCKSIZE - inlen % AES_BLOCKSIZE);
-                    }
-                    
-                    //add iv to the stream for base64 encoding
-                    memcpy(enc_cat, aesIV, AES_BLOCKSIZE);
-                    
-                    //encrypt
-                    aesEncrypt(aesKey, aesIV, inpad, cmd.json.size(), &cypher);
-                    
-                    //copy the encypted data to the stream where the iv is already
-                    memcpy(enc_cat + AES_BLOCKSIZE, cypher, inpadlen);
-
-                    //base64 encode
-                    std::string base64str = base64_encode(enc_cat, inpadlen + AES_BLOCKSIZE);
-                    
-                    
-                    // DECRIPT FOR SANITY REASONS
-                    //test, decode
-                    printf("base64 cmd: %s\n", base64str.c_str());
-                    std::string base64Dec = base64_decode(base64str);
-                    
-                    //test decrypt
-                    unsigned char *decryptedStream;
-                    unsigned char *decryptedCommand;
-                    int outlen = aesDecrypt(aesKey, aesIV, (unsigned char *)base64Dec.c_str(), base64Dec.size(), &decryptedStream);
-                    decryptedCommand = (unsigned char *)malloc(outlen);
-                    memcpy(decryptedCommand, decryptedStream+16, outlen-16);
-                    decryptedCommand[outlen-16] =0;
-                    
-                    printf("\n\n1: %s, 2: %s\n\n", decryptedCommand, cmd.json.c_str());
-                    assert(strcmp((const char *)decryptedCommand, cmd.json.c_str()) == 0);
                     sendCommand(base64str, cmdOut);
                     
-                    //decrypt result: TODO:
+                    UniValue json;
+                    decryptAndDecodeCommand(cmdOut, password, json);
+                    std::string jsonFlat = json.write(2);
+                    LogPrint("main", jsonFlat.c_str());
                 }
                 else
                 {
                     //send command unencrypted
-        	        sendCommand(cmd.json,cmdOut);
+        	        sendCommand(cmd.json, cmdOut);
+                    printf("  result: %s\n", cmdOut.c_str());
                 }
                 cmdfound = true;
             }
@@ -199,12 +249,12 @@ int main( int argc, char *argv[] )
             //try to send it as raw json
             if (userCmd.size() > 1 && userCmd.front() == '{') //todo: ignore whitespace
             {
-                printf("Send raw json %s\n", userCmd.c_str());
                 std::string cmdOut;
-        	    cmdfound = sendCommand(userCmd,cmdOut);
+                printf("Send raw json %s\n", userCmd.c_str());
+        	    cmdfound = sendCommand(userCmd, cmdOut);
             }
 
-            printf("command not found\n");
+            LogPrintStr("command ("+SanitizeString(userCmd)+") not found\n");
         }
     }
     return 0;
