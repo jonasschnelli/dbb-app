@@ -44,7 +44,7 @@ if test "${with_hid}" != no ; then
 		CPPFLAGS="$CPPFLAGS -I${hid_includedir}"
 	fi
 	no_good=no
-	AC_CHECK_LIB([hidapi],[hid_open],,no_good=yes)
+	AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
 	AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
 	if test "$no_good" = yes; then
 		AC_MSG_ERROR([*** Please install libhidapi on your system ***])
