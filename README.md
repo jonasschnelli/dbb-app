@@ -2,10 +2,11 @@
 
 **C++ library for communicating with the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 
-This library includes UniValue a tiny json en-/decoded written by Jeff Garzik (stable and also used in bitcoin-core).
+This library includes UniValue – a tiny JSON parser/encoder written by Jeff Garzik (stable and also used in bitcoin-core).
 
 ## Example
 
+```cpp
     std::string base64str;
     std::string cmdOut;
     std::string password = "0000";
@@ -22,10 +23,24 @@ This library includes UniValue a tiny json en-/decoded written by Jeff Garzik (s
     json.read(decryptedJson);
     std::string jsonFlat = json.write(2);
     printf("result: %s\n", jsonFlat.c_str());
+```
+
+## dbb-cli
+This package includes a small tool "dbb-cli" which can be used to direcly talk with your digital bitbox device.
+
+## Current Status
+Libdbb is at an early stage of development.
+
+**TODOS**
+
+- Remove openssl requirement by a fallback or full replacement for sha256 and aes256-cbc.
+- Extend dbb-cli with all missing commands.
+- Add a daemon with support for JSON RPC 2.0 or ZMQ after a potential standard (needs BIPing).
 
 ## Build Instructions
 Dependencies:
 
+- openssl
 - https://github.com/signal11/hidapi
 
 OSX:
@@ -43,11 +58,9 @@ Linux:
     
 
 
---------------
-
 Basic build steps:
 
     autoreconf -i -f
-    ./configure --enable-debug (--with-hid-libdir= if you like to link to a special path where your libhdi is installe)
+    ./configure --enable-debug (--with-hid-libdir= if you like to link to a special path where your libhdi is installed)
     make
     sudo make install
