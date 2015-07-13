@@ -6,8 +6,15 @@
 #include <stdint.h>
 #include <ctype.h>
 #include <iomanip>
+#include <limits>
 #include <sstream>
 #include <stdexcept>      // std::runtime_error
+#include <string>
+#include <string.h>
+#include <cstdlib>
+#include <cerrno>
+#include <memory.h>
+
 
 #include "univalue.h"
 

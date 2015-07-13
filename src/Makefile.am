@@ -9,11 +9,10 @@ libunival_a_CFLAGS =
 
 
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj $(BOOST_CPPFLAGS)
+dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj util.h crypto.h
 
 bin_PROGRAMS = dbb_cli
 
-dbb_cli_INCLUDES = util.h crypto.h
 dbb_cli_SOURCES = dbb_cli.cpp base64.cpp crypto.cpp util.h util.cpp
 dbb_cli_CPPFLAGS = 
 dbb_cli_CFLAGS = 

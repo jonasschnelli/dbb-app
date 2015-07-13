@@ -8,9 +8,10 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
-#include "openssl/sha.h"
-
+#include <openssl/sha.h>
 #include <openssl/rand.h>
+
+#include <string.h>
 
 //ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"

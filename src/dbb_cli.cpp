@@ -247,7 +247,7 @@ int main( int argc, char *argv[] )
         if (!cmdfound)
         {
             //try to send it as raw json
-            if (userCmd.size() > 1 && userCmd.front() == '{') //todo: ignore whitespace
+            if (userCmd.size() > 1 && userCmd.at(0) == '{') //todo: ignore whitespace
             {
                 std::string cmdOut;
                 printf("Send raw json %s\n", userCmd.c_str());

@@ -4,6 +4,9 @@
 
 #include "util.h"
 
+#include <stdio.h>
+#include <string.h>
+
 #define fPrintToConsole true
 int LogPrintStr(const std::string &str)
 {
