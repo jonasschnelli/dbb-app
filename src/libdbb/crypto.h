@@ -9,6 +9,7 @@
 
 #define DBB_AES_BLOCKSIZE 16
 #define DBB_AES_KEYSIZE 32
+#define DBB_SHA256_DIGEST_LENGTH 32
 
 std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len);
 std::string base64_decode(std::string const& encoded_string);

@@ -83,7 +83,6 @@ int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char 
 
     EVP_CIPHER_CTX_cleanup(aesEncryptCtx);
     EVP_CIPHER_CTX_free(aesEncryptCtx);
-    
     return encMsgLen + blockLen;
 }
 

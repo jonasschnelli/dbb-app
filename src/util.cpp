@@ -7,20 +7,6 @@
 #include <stdio.h>
 #include <string.h>
 
-#define fPrintToConsole true
-int LogPrintStr(const std::string &str)
-{
-    int ret = 0; // Returns total number of characters written
-    if (fPrintToConsole)
-    {
-        // print to console
-        ret = fwrite(str.data(), 1, str.size(), stdout);
-        fflush(stdout);
-    }
-
-    return ret;
-}
-
 std::string SanitizeString(const std::string& str)
 {
     /**
