@@ -13,7 +13,7 @@
 
 std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len);
 std::string base64_decode(std::string const& encoded_string);
-int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg);
+bool aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg, int *outlen);
 int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char *msg, size_t msgLen, unsigned char **encMsg);
 
 //generate a two round sha256 hash

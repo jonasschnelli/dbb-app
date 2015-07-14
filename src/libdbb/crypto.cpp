@@ -29,7 +29,7 @@ void doubleSha256(char *string, unsigned char *hashOut)
     SHA256_Final(hashOut, &sha256);
 }
 
-int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg) {
+bool aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg, int *outlen) {
     size_t decLen   = 0;
     size_t blockLen = 0;
  
@@ -55,7 +55,9 @@ int aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMs
  
     EVP_CIPHER_CTX_cleanup(aesDecryptCtx);
     EVP_CIPHER_CTX_free(aesDecryptCtx);
-    return (int)decLen;
+    *outlen = (int)decLen;
+
+    return true;
 }
 
 int aesEncrypt(unsigned char *aesKey, unsigned char *aesIV, const unsigned char *msg, size_t msgLen, unsigned char **encMsg) {

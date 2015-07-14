@@ -108,7 +108,15 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
     UniValue valRead(UniValue::VSTR);
     if (!valRead.read(cmdIn))
         throw std::runtime_error("failed deserializing json");
-    
+
+    UniValue input = find_value(valRead, "input");
+    if (!input.isNull() && input.isObject())
+    {
+        UniValue error = find_value(input, "error");
+        if (!error.isNull() && error.isStr())
+            throw std::runtime_error("Error decrypting: "+error.get_str());
+    }
+
     UniValue ctext = find_value(valRead, "ciphertext");
     if (ctext.isNull())
         throw std::runtime_error("failed deserializing json");
@@ -120,7 +128,9 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
     unsigned char *decryptedStream;
     unsigned char *decryptedCommand;
     memcpy(aesIV, base64dec_c, DBB_AES_BLOCKSIZE); //copy first 16 bytes and take as IV
-    int outlen = aesDecrypt(aesKey, aesIV, base64dec_c+DBB_AES_BLOCKSIZE, base64_len-DBB_AES_BLOCKSIZE, &decryptedStream);
+    int outlen = 0;
+    if (!aesDecrypt(aesKey, aesIV, base64dec_c+DBB_AES_BLOCKSIZE, base64_len-DBB_AES_BLOCKSIZE, &decryptedStream, &outlen))
+        throw std::runtime_error("decryption failed");
 
     int decrypt_len = 0;
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
