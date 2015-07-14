@@ -53,15 +53,17 @@ public:
 static const CDBBCommand vCommands[] =
 {
     { "erase"           , "{\"reset\" : \"__ERASE__\"}",                            false},
-    { "password"        , "{\"password\" : \"0000\"}",                              false},
+    { "password"        , "{\"password\" : \"%newpassword%\"}",                     false},
     { "led"             , "{\"led\" : \"toggle\"}",                                 true},
-    { "seed"            , "{\"seed\" : {\"source\" : \"create\"} }",                true},
+    { "seed"            , "{\"seed\" : {\"source\" : \"create\", \"salt\" : \"%salt%\"} }",                true},
     //TODO add all missing commands
     //parameters could be added with something like "{\"seed\" : {\"source\" : \"$1\"} }" (where $1 will be replace with argv[1])
 };
 
 int main( int argc, char *argv[] )
 {
+    ParseParameters(argc, argv);
+    
     if (!DBB::openConnection())
         printf("Error: No digital bitbox connected\n");
     
@@ -75,44 +77,94 @@ int main( int argc, char *argv[] )
         }
         unsigned int i = 0, loop = 0;
         bool cmdfound = false;
-        std::string userCmd = std::string(argv[1]);
-        
-        for (loop = 0; loop < 100; loop++)
-        {
+        std::string userCmd;
+
+        //search after first argument with no -
+        std::vector<std::string> cmdArgs;
+        for (int i = 1; i < argc; i++)
+            if (strlen(argv[i]) > 0 && argv[i][0] != '-')
+                cmdArgs.push_back(std::string(argv[i]));
+
+        if (cmdArgs.size() > 0)
+            userCmd = cmdArgs.front();
+
+        //try to find the command in the dispatch table
         for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
         {
             CDBBCommand cmd = vCommands[i];
             if (cmd.cmdname == userCmd)
             {
-                std::string password = "0000";
                 std::string cmdOut;
+                std::string json = cmd.json;
+                size_t index = 0;
 
-                if (cmd.requiresEncryption)
+                //replace %vars% in json string with cmd args
+                for(std::map<std::string, std::string>::iterator it = mapArgs.begin(); it != mapArgs.end(); it++)
                 {
+                    std::string key = it->first;
+                    key.erase(0,1);
+                    key = "%"+key+"%";
+                    std::string var = it->second;
+                    while (true) {
+                        /* Locate the substring to replace. */
+                        index = json.find(key, index);
+                        if (index == std::string::npos) break;
+
+                        /* Make the replacement. */
+                        json = json.substr(0, index) + var + json.substr(index+key.size());
+
+                        /* Advance index forward so the next iteration doesn't pick it up as well. */
+                        index += key.size();
+                    }
+                }
+
+                if (cmd.requiresEncryption || mapArgs.count("-password"))
+                {
+                    if (!mapArgs.count("-password"))
+                    {
+                        printf("This command requires the -password argument\n");
+                        return 0;
+                    }
+
+                    if (!cmd.requiresEncryption)
+                    {
+                        DebugOut("main", "Using encyption because -password was set\n");
+                    }
+
+                    std::string password = GetArg("-password", "0000"); //0000 will never be used because setting a password is required
                     std::string base64str;
-                    DBB::encryptAndEncodeCommand(cmd.json, password, base64str);
-                    
-                    DBB::sendCommand(base64str, cmdOut);
-                    
                     std::string unencryptedJson;
-                    DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
-                    
+
+                    DebugOut("main", "encrypting raw json: %s\n", json.c_str());
+                    DBB::encryptAndEncodeCommand(json, password, base64str);
+                    DBB::sendCommand(base64str, cmdOut);
+                    try {
+                        //hack: decryption needs the new password in case the AES256CBC password has changed
+                        if (mapArgs.count("-newpassword"))
+                            password = GetArg("-newpassword", "");
+
+                        DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                    } catch (const std::exception& ex) {
+                        printf("%s\n", ex.what());
+                        exit(0);
+                    }
+
                     //example json en/decode
                     UniValue json;
                     json.read(unencryptedJson);
-                    std::string jsonFlat = json.write(2);
+                    std::string jsonFlat = json.write(2); //pretty print with a intend of 2
                     printf("result: %s\n", jsonFlat.c_str());
                 }
                 else
                 {
                     //send command unencrypted
-        	        DBB::sendCommand(cmd.json, cmdOut);
+        	        DBB::sendCommand(json, cmdOut);
                     printf("result: %s\n", cmdOut.c_str());
                 }
                 cmdfound = true;
             }
         }
-        }
+
         if (!cmdfound)
         {
             //try to send it as raw json
