@@ -28,6 +28,37 @@ This library includes UniValue – a tiny JSON parser/encoder written by Jeff Ga
 ## dbb-cli
 This package includes a small tool "dbb-cli" which can be used to direcly talk with your digital bitbox device.
 
+
+**Examples:**
+
+* `dbb_cli erase`
+* `dbb_cli -newpassword=0000 password`
+* `dbb_cli -newpassword=test -password=0000 password`
+* `dbb_cli -password=test led`
+* `dbb_cli -password=test seed`
+* `dbb_cli -keypath=m/44/0 xpub`
+
+Available commands with possible arguments (* = mandatory):
+
+```
+erase 
+password -*newpassword
+led 
+seed -source (default: create), -decrypt (default: no), -salt (default: no)
+backuplist 
+backuperase 
+backup -encrypt (default: no), -filename (default: backup.dat)
+sign -type (default: transaction), -data (default: transaction), -keypath (default: transaction), -changekeypath (default: transaction)
+xpub -*keypath
+name -*name
+random -mode (default: true)
+sn 
+version 
+lock 
+verifypass -operation (default: create)
+aes -type (default: encrypt), -data (default: encrypt)
+```
+
 ## Current Status
 Libdbb is at an early stage of development.
 
