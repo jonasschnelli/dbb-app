@@ -89,7 +89,86 @@ static const CDBBCommand vCommands[] =
 int main( int argc, char *argv[] )
 {
     ParseParameters(argc, argv);
-    
+
+    unsigned int i = 0, loop = 0;
+    bool cmdfound = false;
+    std::string userCmd;
+
+    //search after first argument with no -
+    std::vector<std::string> cmdArgs;
+    for (int i = 1; i < argc; i++)
+        if (strlen(argv[i]) > 0 && argv[i][0] != '-')
+            cmdArgs.push_back(std::string(argv[i]));
+
+    if (cmdArgs.size() > 0)
+        userCmd = cmdArgs.front();
+
+    if (userCmd == "help" || mapArgs.count("-help") || userCmd == "?")
+    {
+        printf("Usage: %s -<arg0>=<value> -<arg1>=<value> ... <command>\n\nAvailable commands with possible arguments (* = mandatory):\n", "dbb_cli");
+        //try to find the command in the dispatch table
+        for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
+        {
+            CDBBCommand cmd = vCommands[i];
+            printf("  %s ", cmd.cmdname.c_str());
+
+            std::string json = cmd.json;
+            int tokenOpenPos = -1;
+            int defaultDelimiterPos = -1;
+            std::string var;
+            std::string defaultValue;
+
+            bool first = true;
+            for (unsigned int sI=0;sI<json.length();sI++)
+            {
+                if (json[sI] == '|' && tokenOpenPos > 0)
+                    defaultDelimiterPos = sI;
+
+                if (json[sI] == '%' && tokenOpenPos < 0)
+                    tokenOpenPos = sI;
+
+                else if (json[sI] == '%' && tokenOpenPos >= 0)
+                {
+                    if (defaultDelimiterPos >= 0)
+                    {
+                        var = json.substr(tokenOpenPos+1, defaultDelimiterPos-tokenOpenPos-1);
+                        defaultValue = json.substr(defaultDelimiterPos+1, sI-defaultDelimiterPos-1);
+                    }
+                    else
+                    {
+                        var = json.substr(tokenOpenPos+1, sI-tokenOpenPos-1);
+                    }
+
+                    tokenOpenPos = -1;
+                    defaultDelimiterPos = -1;
+
+                    if (!first)
+                        printf(", ");
+                    first = false;
+
+                    bool mandatory = false;
+                    if (var.size() > 0 && var[0]=='!')
+                    {
+                        var.erase(0,1);
+                        mandatory = true;
+                    }
+
+                    if (!defaultValue.empty())
+                        printf("-%s (default: %s)", var.c_str(), defaultValue.c_str());
+                    else
+                        if (mandatory)
+                            printf("-*%s", var.c_str());
+                        else
+                            printf("-%s", var.c_str());
+                }
+            }
+            printf("\n");
+
+            continue;
+        }
+        return 1;
+    }
+
     if (!DBB::openConnection())
         printf("Error: No digital bitbox connected\n");
     
@@ -101,35 +180,11 @@ int main( int argc, char *argv[] )
             printf("no command given\n");
             return 0;
         }
-        unsigned int i = 0, loop = 0;
-        bool cmdfound = false;
-        std::string userCmd;
-
-        //search after first argument with no -
-        std::vector<std::string> cmdArgs;
-        for (int i = 1; i < argc; i++)
-            if (strlen(argv[i]) > 0 && argv[i][0] != '-')
-                cmdArgs.push_back(std::string(argv[i]));
-
-        if (cmdArgs.size() > 0)
-            userCmd = cmdArgs.front();
-
-        bool help = false;
-        if (userCmd == "help")
-        {
-            help = true;
-            printf("Help:\n");
-        }
 
         //try to find the command in the dispatch table
         for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
         {
             CDBBCommand cmd = vCommands[i];
-            if (help)
-            {
-                printf("%s\n", cmd.cmdname.c_str());
-            }
-
             if (cmd.cmdname == userCmd)
             {
                 std::string cmdOut;
@@ -249,7 +304,7 @@ int main( int argc, char *argv[] )
         	    cmdfound = DBB::sendCommand(userCmd, cmdOut);
             }
 
-            printf("command (%s) not found\n", SanitizeString(userCmd).c_str());
+            printf("command (%s) not found, use \"help\" to list available commands\n", SanitizeString(userCmd).c_str());
         }
     }
     return 0;
