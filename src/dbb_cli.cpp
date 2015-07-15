@@ -41,7 +41,7 @@
 #include "hidapi/hidapi.h"
 #include "openssl/sha.h"
 
-//simple dispatch class for a dbb command
+//simple class for a dbb command
 class CDBBCommand
 {
 public:
@@ -50,6 +50,12 @@ public:
     bool requiresEncryption;
 };
 
+//dispatch table
+// %var% will be replace with a corresponding command line agrument with a leading -
+//  example -password=0000 will result in a input json {"%password%"} being replace to {"0000"}
+//
+// variables with no corresponding command line argument will be replaced with a empty string
+// variables with a leading ! are mandatory and therefore missing a such will result in an error
 static const CDBBCommand vCommands[] =
 {
     { "erase"           , "{\"reset\" : \"__ERASE__\"}",                                false},
@@ -81,9 +87,6 @@ static const CDBBCommand vCommands[] =
 
     { "aes"             , "{\"aes256cbc\" : { \"type\":\"%type|encrypt%\","
                             "\"data\": \"%!data%\"}}",                                  true},
-
-    //TODO add all missing commands
-    //parameters could be added with something like "{\"seed\" : {\"source\" : \"$1\"} }" (where $1 will be replace with argv[1])
 };
 
 int main( int argc, char *argv[] )
