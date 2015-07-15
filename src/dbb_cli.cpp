@@ -59,7 +59,7 @@ public:
 static const CDBBCommand vCommands[] =
 {
     { "erase"           , "{\"reset\" : \"__ERASE__\"}",                                false},
-    { "password"        , "{\"password\" : \"%!newpassword%\"",                         false},
+    { "password"        , "{\"password\" : \"%!newpassword%\"}",                        false},
     { "led"             , "{\"led\" : \"toggle\"}",                                     true},
     { "seed"            , "{\"seed\" : {\"source\" :\"%source|create%\","
                             "\"decrypt\": \"%decrypt|no%\","
