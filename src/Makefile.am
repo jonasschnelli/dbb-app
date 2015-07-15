@@ -11,7 +11,7 @@ libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/uti
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
-bin_PROGRAMS = dbb_cli
+bin_PROGRAMS = dbb-cli
 
 dbb_cli_SOURCES = dbb_cli.cpp util.h util.cpp
 dbb_cli_CPPFLAGS = 

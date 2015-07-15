@@ -31,12 +31,12 @@ This package includes a small tool "dbb-cli" which can be used to direcly talk w
 
 **Examples:**
 
-* `dbb_cli erase`
-* `dbb_cli -newpassword=0000 password`
-* `dbb_cli -newpassword=test -password=0000 password`
-* `dbb_cli -password=test led`
-* `dbb_cli -password=test seed`
-* `dbb_cli -keypath=m/44/0 xpub`
+* `dbb-cli erase`
+* `dbb-cli -newpassword=0000 password`
+* `dbb-cli -newpassword=test -password=0000 password`
+* `dbb-cli -password=test led`
+* `dbb-cli -password=test seed`
+* `dbb-cli -keypath=m/44/0 xpub`
 
 Available commands with possible arguments (* = mandatory):
 
