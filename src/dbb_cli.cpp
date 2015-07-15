@@ -52,10 +52,36 @@ public:
 
 static const CDBBCommand vCommands[] =
 {
-    { "erase"           , "{\"reset\" : \"__ERASE__\"}",                            false},
-    { "password"        , "{\"password\" : \"%newpassword%\"}",                     false},
-    { "led"             , "{\"led\" : \"toggle\"}",                                 true},
-    { "seed"            , "{\"seed\" : {\"source\" : \"create\", \"salt\" : \"%salt%\"} }",                true},
+    { "erase"           , "{\"reset\" : \"__ERASE__\"}",                                false},
+    { "password"        , "{\"password\" : \"%!newpassword%\"",                         false},
+    { "led"             , "{\"led\" : \"toggle\"}",                                     true},
+    { "seed"            , "{\"seed\" : {\"source\" :\"%source|create%\","
+                            "\"decrypt\": \"%decrypt|no%\","
+                            "\"salt\" : \"%salt%\"} }",                                 true},
+
+    { "backuplist"      , "{\"backup\" : \"list\"}",                                    true},
+    { "backuperase"     , "{\"backup\" : \"erase\"}",                                   true},
+    { "backup"          , "{\"backup\" : { \"encrypt\":\"%encrypt|no%\","
+                            "\"filename\": \"%filename|backup.dat%\"}}",                true},
+
+    { "sign"            , "{\"sign\" : { \"type\":\"%type|transaction%\","
+                            "\"data\": \"%!data%\","
+                            "\"keypath\": \"%!keypath%\","
+                            "\"change_keypath\": \"%!changekeypath%\"}}",               true},
+
+    { "xpub"            , "{\"xpub\" : \"%!keypath%\"}",                                true},
+
+    { "name"            , "{\"name\" : \"%!name%\"}",                                   true},
+    { "random"          , "{\"random\" : \"%mode|true%\"}",                             true},
+    { "sn"              , "{\"device\" : \"serial\"}",                                  true},
+    { "version"         , "{\"device\" : \"version\"}",                                 true},
+
+    { "lock"            , "{\"device\" : \"lock\"}",                                    true},
+    { "verifypass"      , "{\"verifypass\" : \"%operation|create%\"}",                  true},
+
+    { "aes"             , "{\"aes256cbc\" : { \"type\":\"%type|encrypt%\","
+                            "\"data\": \"%!data%\"}}",                                  true},
+
     //TODO add all missing commands
     //parameters could be added with something like "{\"seed\" : {\"source\" : \"$1\"} }" (where $1 will be replace with argv[1])
 };
@@ -88,10 +114,22 @@ int main( int argc, char *argv[] )
         if (cmdArgs.size() > 0)
             userCmd = cmdArgs.front();
 
+        bool help = false;
+        if (userCmd == "help")
+        {
+            help = true;
+            printf("Help:\n");
+        }
+
         //try to find the command in the dispatch table
         for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
         {
             CDBBCommand cmd = vCommands[i];
+            if (help)
+            {
+                printf("%s\n", cmd.cmdname.c_str());
+            }
+
             if (cmd.cmdname == userCmd)
             {
                 std::string cmdOut;
@@ -99,22 +137,58 @@ int main( int argc, char *argv[] )
                 size_t index = 0;
 
                 //replace %vars% in json string with cmd args
-                for(std::map<std::string, std::string>::iterator it = mapArgs.begin(); it != mapArgs.end(); it++)
+
+                int tokenOpenPos = -1;
+                int defaultDelimiterPos = -1;
+                std::string var;
+                std::string defaultValue;
+
+                for (unsigned int sI=0;sI<json.length();sI++)
                 {
-                    std::string key = it->first;
-                    key.erase(0,1);
-                    key = "%"+key+"%";
-                    std::string var = it->second;
-                    while (true) {
-                        /* Locate the substring to replace. */
-                        index = json.find(key, index);
-                        if (index == std::string::npos) break;
+                    if (json[sI] == '|' && tokenOpenPos > 0)
+                        defaultDelimiterPos = sI;
 
-                        /* Make the replacement. */
-                        json = json.substr(0, index) + var + json.substr(index+key.size());
+                    if (json[sI] == '%' && tokenOpenPos < 0)
+                        tokenOpenPos = sI;
 
-                        /* Advance index forward so the next iteration doesn't pick it up as well. */
-                        index += key.size();
+                    else if (json[sI] == '%' && tokenOpenPos >= 0)
+                    {
+                        if (defaultDelimiterPos >= 0)
+                        {
+                            var = json.substr(tokenOpenPos+1, defaultDelimiterPos-tokenOpenPos-1);
+                            defaultValue = json.substr(defaultDelimiterPos+1, sI-defaultDelimiterPos-1);
+                        }
+                        else
+                        {
+                            var = json.substr(tokenOpenPos+1, sI-tokenOpenPos-1);
+                        }
+
+                        //always erase
+                        json.erase(tokenOpenPos,sI-tokenOpenPos+1);
+
+                        bool mandatory = false;
+                        if (var.size() > 0 && var[0] == '!')
+                        {
+                            var.erase(0,1);
+                            mandatory = true;
+                        }
+
+                        var = "-"+var; //cmd args come in over "-arg"
+                        if (mapArgs.count(var))
+                        {
+                            json.insert(tokenOpenPos, mapArgs[var]);
+                        }
+                        else if(mandatory)
+                        {
+                            printf("Argument %s is mandatory for command %s\n", var.c_str(), cmd.cmdname.c_str());
+                            return 0;
+                        }
+                        else
+                            if (defaultDelimiterPos > 0 && !defaultValue.empty())
+                                json.insert(tokenOpenPos, defaultValue);
+
+                        tokenOpenPos = -1;
+                        defaultDelimiterPos = -1;
                     }
                 }
 
