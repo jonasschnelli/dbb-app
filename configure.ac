@@ -8,7 +8,7 @@ AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
 
-AC_PROG_RANLIB
+LT_INIT([pic-only])
 
 # Enable debug
 AC_ARG_ENABLE([debug],
