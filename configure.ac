@@ -23,6 +23,17 @@ if test "x$enable_debug" = xyes; then
 		AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[1],[Define to 1 to enable debung output])
 fi
 
+AC_ARG_ENABLE([daemon],
+    [AS_HELP_STRING([--enable-daemon],
+  								[enable daemon (default is no)])],
+    [enable_daemon=$enableval],
+    [enable_daemon=yes])
+
+if test x$enable_daemon] != xno; then
+	lldp_CHECK_LIBEVENT
+  AC_DEFINE_UNQUOTED([ENABLE_DAEMON],[1],[Define to 1 to enable the dbb daemon])
+fi
+
 AC_ARG_WITH(hid-libdir,
 [  --with-hid-libdir=DIR        specify exact library dir for hid library
   --without-hid        disables hid usage completely],
@@ -53,15 +64,11 @@ if test "${with_hid}" != no ; then
 	fi
 fi
 
-AC_ARG_WITH(dbb-daemon,
-[  --with-dbb-daemon=yes        build the dbb-daemon
-  --without-dbb-daemon          disable the dbb-daemin],
-dbb_daemon="$withval")
 
-AM_CONDITIONAL([BUILD_DAEMON], [test x$dbb_daemon = xyes])
-if test "${dbb_daemon}" == yes ; then
-lldp_CHECK_LIBEVENT
-fi
+
+
+
+AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 
 AX_CHECK_OPENSSL
 
