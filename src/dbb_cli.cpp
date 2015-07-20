@@ -34,10 +34,10 @@
 
 #include <string>
 
-#include "../include/dbb.h"
+#include "dbb.h"
 #include "util.h"
 
-#include "../include/univalue.h"
+#include "univalue.h"
 #include "hidapi/hidapi.h"
 #include "openssl/sha.h"
 
