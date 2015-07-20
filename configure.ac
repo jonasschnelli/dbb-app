@@ -60,17 +60,15 @@ dbb_daemon="$withval")
 
 AM_CONDITIONAL([BUILD_DAEMON], [test x$dbb_daemon = xyes])
 if test "${dbb_daemon}" == yes ; then
-AC_SEARCH_LIBS([event_init],[event event-1.4 event2],found_libevent=yes,found_libevent=no)
-if test "x$found_libevent" = xno; then
-	AC_MSG_ERROR("libevent not found")
-fi
-LDFLAGS="$LDFLAGS -Levent"
+lldp_CHECK_LIBEVENT
 fi
 
-AC_CHECK_LIB([crypto],[main],,[AC_MSG_ERROR([*** Please install openssl on your system ***])])
-LDFLAGS="$LDFLAGS -Lcrypto"
+AX_CHECK_OPENSSL
 
 use_pkgconfig=yes
+
+
+
 case $host in
   *mingw*)
 
@@ -196,6 +194,28 @@ case $host in
    *)
      ;;
 esac
+
+if test x$use_pkgconfig = xyes; then
+
+  if test x"$PKG_CONFIG" = "x"; then
+    AC_MSG_ERROR(pkg-config not found.)
+  fi
+
+  : #NOP
+  m4_ifdef(
+    [PKG_CHECK_MODULES],
+    [
+      PKG_CHECK_MODULES([SSL], [libssl],, [AC_MSG_ERROR(openssl  not found.)])
+      PKG_CHECK_MODULES([CRYPTO], [libcrypto],,[AC_MSG_ERROR(libcrypto  not found.)])
+    ]
+  )
+else
+  AC_CHECK_HEADER([openssl/crypto.h],,AC_MSG_ERROR(libcrypto headers missing))
+  AC_CHECK_LIB([crypto],      [main],CRYPTO_LIBS=-lcrypto, AC_MSG_ERROR(libcrypto missing))
+
+  AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
+  AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
+fi
 
 BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
