@@ -14,7 +14,7 @@
 #include <stdexcept>
 
 #if defined(HAVE_CONFIG_H)
-#include "../config/dbb_cli-config.h"
+#include "../config/dbb-config.h"
 #endif
 
 #include "util.h"
