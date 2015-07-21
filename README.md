@@ -25,6 +25,11 @@ This library includes UniValue – a tiny JSON parser/encoder written by Jeff Ga
     printf("result: %s\n", jsonFlat.c_str());
 ```
 
+
+## dbb-daemon
+The dbb daemon can be enabled with the configure option `--enable-daemon`. Optional the gui can be added with `--with-gui=qt5`.
+
+
 ## dbb-cli
 This package includes a small tool "dbb-cli" which can be used to direcly talk with your digital bitbox device.
 
@@ -73,14 +78,31 @@ Dependencies:
 
 - openssl
 - https://github.com/signal11/hidapi
+- libevent2 (if daemon enabled)
+- qt5 (if UI enabled)
 
 OSX:
 
-    brew install hidapi
+    brew install hidapi libevent qt5
 
-Linux:
+Linux (Ubuntu 15.04):
 
-    sudo apt-get install libudev-dev libusb-1.0-0-dev
+Basics
+
+    sudo apt-get install build-essential libtool autotools-dev autoconf pkg-config git
+    sudo apt-get libhidapi-dev
+
+For the daemon
+
+    sudo apt-get libevent-dev
+
+For QT UI
+
+    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
+
+if libhidapi is not available, compile it yourself
+
+    sudo apt-get install libudev-dev libusb-1.0-0-dev lib
     git clone git://github.com/signal11/hidapi.git
     ./bootstrap
     ./configure
@@ -92,6 +114,6 @@ Linux:
 Basic build steps:
 
     autoreconf -i -f
-    ./configure --enable-debug (--with-hid-libdir= if you like to link to a special path where your libhdi is installed)
+    ./configure --enable-debug --enable-daemon --with-gui=qt5
     make
     sudo make install
