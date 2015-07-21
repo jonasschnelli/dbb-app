@@ -36,10 +36,10 @@ qt/moc_%.cpp: qt/%.h
 	$(MOC) -o $@ $< || (echo "Error creating $@"; false)
 
 dbb_daemon_SOURCES = dbb_daemon.cpp util.h util.cpp
-dbb_daemon_CPPFLAGS = $(AM_CPPFLAGS)
+dbb_daemon_CPPFLAGS = -fPIC $(AM_CPPFLAGS)
 dbb_daemon_CFLAGS =
 dbb_daemon_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_daemon_LDADD = libunival.a libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS)
+dbb_daemon_LDADD = libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) libunival.a 
 
 if ENABLE_QT
 dbb_daemon_SOURCES += qt/daemongui.h qt/daemongui.cpp qt/moc_daemongui.cpp qt/ui/ui_daemon.h qt/qrc_daemon.cpp
