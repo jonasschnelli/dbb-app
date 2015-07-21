@@ -1,6 +1,7 @@
 *.tar.gz
 *.exe
-src/dbb_cli
+src/dbb-cli
+src/dbb-daemon
 
 # autoreconf
 Makefile.in
@@ -16,6 +17,7 @@ build-aux/m4/lt~obsolete.m4
 build-aux/m4/ltoptions.m4
 build-aux/m4/ltsugar.m4
 build-aux/m4/ltversion.m4
+build-aux/m4/ax_boost*
 build-aux/missing
 build-aux/compile
 build-aux/test-driver
@@ -23,11 +25,17 @@ config.log
 config.status
 configure
 libtool
-src/config/bitcoin-config.h
-src/config/bitcoin-config.h.in
+src/config/dbb-config.h
+src/config/dbb-config.h.in
 src/config/stamp-h1
 share/setup.nsi
 share/qt/Info.plist
+compile
+depcomp
+missing
+install-sh
+config.sub
+config.guess
 
 .deps
 .dirstamp
@@ -67,3 +75,7 @@ Makefile.test
 # Mac specific
 .DS_Store
 src/config/*.in
+
+src/qt/*.moc
+src/qt/moc_*.cpp
+src/qt/forms/ui_*.h
