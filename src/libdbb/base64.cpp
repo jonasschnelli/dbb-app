@@ -5,7 +5,7 @@
 #include <stdio.h>
 #include <string>
 
-static const std::string base64_chars = 
+static const std::string base64_chars =
              "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
              "abcdefghijklmnopqrstuvwxyz"
              "0123456789+/";

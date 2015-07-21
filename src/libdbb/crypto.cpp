@@ -32,27 +32,27 @@ void doubleSha256(char *string, unsigned char *hashOut)
 bool aesDecrypt(unsigned char *aesKey, unsigned char *aesIV, unsigned char *encMsg, size_t encMsgLen, unsigned char **decMsg, int *outlen) {
     size_t decLen   = 0;
     size_t blockLen = 0;
- 
+
     EVP_CIPHER_CTX *aesDecryptCtx = (EVP_CIPHER_CTX*)malloc(sizeof(EVP_CIPHER_CTX));
     EVP_CIPHER_CTX_init(aesDecryptCtx);
-    
+
     *decMsg = (unsigned char*)malloc(encMsgLen);
     if(*decMsg == NULL) return false;
- 
+
     if(!EVP_DecryptInit_ex(aesDecryptCtx, EVP_aes_256_cbc(), NULL, aesKey, aesIV)) {
         return false;
     }
- 
+
     if(!EVP_DecryptUpdate(aesDecryptCtx, (unsigned char*)*decMsg, (int*)&blockLen, encMsg, (int)encMsgLen)) {
         return false;
     }
     decLen += blockLen;
- 
+
     if(!EVP_DecryptFinal_ex(aesDecryptCtx, (unsigned char*)*decMsg + decLen, (int*)&blockLen)) {
         return false;
     }
     decLen += blockLen;
- 
+
     EVP_CIPHER_CTX_cleanup(aesDecryptCtx);
     EVP_CIPHER_CTX_free(aesDecryptCtx);
     *outlen = (int)decLen;

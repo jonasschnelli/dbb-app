@@ -21,13 +21,13 @@
 		if (DEBUG_SHOW_CATEGRORY) {\
 			printf("  [DEBUG]  %s: ", category); \
 		}\
-		printf(format, ## args);			
+		printf(format, ## args);
 #else
 #define DebugOut(category,format,args...)
 #endif
-				
+
 #define PrintConsole(format,args...) printf(format, ## args);
-				
+
 //sanitize a string and clean out things which could generate harm over a RPC/JSON/Console output
 std::string SanitizeString(const std::string& str);
 

@@ -174,7 +174,7 @@ int main( int argc, char *argv[] )
 
     if (!DBB::openConnection())
         printf("Error: No digital bitbox connected\n");
-    
+
     else {
         DebugOut("main", "Digital Bitbox Connected\n");
 

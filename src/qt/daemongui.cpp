@@ -11,10 +11,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
-    
+
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     changeConnectedState(DBB::openConnection());
-    
+
     setWindowTitle("The Digital Bitbox");
 }
 

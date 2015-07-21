@@ -53,7 +53,7 @@ static bool api_hid_close(void)
         hid_close(HID_HANDLE); //vendor-id, product-id
         return true;
     }
-    
+
     return false;
 }
 
@@ -79,7 +79,7 @@ bool sendCommand(const std::string &json, std::string &resultOut)
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
-    
+
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     while (cnt < HID_REPORT_SIZE) {
         res = hid_read(HID_HANDLE, HID_REPORT + cnt, HID_REPORT_SIZE);
@@ -88,7 +88,7 @@ bool sendCommand(const std::string &json, std::string &resultOut)
         }
         cnt += res;
     }
-        
+
 	DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
 
     resultOut.assign((const char *)HID_REPORT);
@@ -103,7 +103,7 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
 
     doubleSha256((char *)password.c_str(), passwordSha256);
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
-    
+
     //decrypt result: TODO:
     UniValue valRead(UniValue::VSTR);
     if (!valRead.read(cmdIn))

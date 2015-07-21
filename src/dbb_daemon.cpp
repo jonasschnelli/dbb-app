@@ -47,7 +47,7 @@
 #include <event2/util.h>
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
-    
+
 #include <QApplication>
 #include <QPushButton>
 
@@ -105,39 +105,37 @@ void testFunc()
 char uri_root[512];
 int main(int argc, char **argv)
 {
-    
+
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-    
+
     QApplication app (argc, argv);
-    
+
     DBBDaemonGui *widget = new DBBDaemonGui(0);
     widget->show();
     app.exec();
-    
+
 	struct event_base *base;
 	struct evhttp *http;
 	struct evhttp_bound_socket *handle;
 
 	unsigned short port = 15520;
-	
+
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
 		return (1);
-    
+
     base = event_base_new();
 	if (!base) {
 		fprintf(stderr, "Couldn't create an event_base: exiting\n");
 		return 1;
 	}
-    
+
     http = evhttp_new(base);
     evhttp_set_cb(http, "/sign", dump_request_cb, NULL);
-    handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);	
+    handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
 	event_base_dispatch(base);
 
-
-        
 	return false;
 }
