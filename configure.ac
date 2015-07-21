@@ -68,7 +68,7 @@ fi
 
 
 
-AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
+
 
 AX_CHECK_OPENSSL
 
@@ -227,6 +227,15 @@ fi
 BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
+
+if test x$enable_daemon = xyes; then
+	if test x$bitcoin_enable_qt = xyes; then
+	AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
+	fi
+fi
+
+AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
+AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])

@@ -1,7 +1,7 @@
 AM_CPPFLAGS = -I$(top_srcdir)/include
 
 libunival_CONFIG_INCLUDES=-I$(builddir)/config
-libunival_INCLUDES=-I$(builddir) -I$(builddir)/obj univalue/univalue_escapes.h ../include/univalue.h 
+libunival_INCLUDES=-I$(builddir) -I$(builddir)/obj univalue/univalue_escapes.h ../include/univalue.h
 
 noinst_LIBRARIES = libunival.a libdbb.a
 
@@ -16,12 +16,14 @@ dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 bin_PROGRAMS = dbb-cli
 
 dbb_cli_SOURCES = dbb_cli.cpp util.h util.cpp
-dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) 
-dbb_cli_CFLAGS = 
+dbb_cli_CPPFLAGS = $(AM_CPPFLAGS)
+dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 dbb_cli_LDADD = libunival.a libdbb.a $(CRYPTO_LIBS)
 
 
+#check if we should build the daemon
+if ENABLE_DAEMON
 bin_PROGRAMS += dbb-daemon
 
 qt/ui/ui_%.h: qt/ui/%.ui
@@ -32,10 +34,18 @@ qt/qrc_%.cpp: qt/%.qrc
 
 qt/moc_%.cpp: qt/%.h
 	$(MOC) -o $@ $< || (echo "Error creating $@"; false)
-	
-dbb_daemon_SOURCES = dbb_daemon.cpp util.h util.cpp 
+
+dbb_daemon_SOURCES = dbb_daemon.cpp util.h util.cpp
+dbb_daemon_CPPFLAGS = $(AM_CPPFLAGS)
+dbb_daemon_CFLAGS =
+dbb_daemon_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
+dbb_daemon_LDADD = libunival.a libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS)
+
+if ENABLE_QT
 dbb_daemon_SOURCES += qt/daemongui.h qt/daemongui.cpp qt/moc_daemongui.cpp qt/ui/ui_daemon.h qt/qrc_daemon.cpp
-dbb_daemon_CPPFLAGS = $(AM_CPPFLAGS) $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
-dbb_daemon_CFLAGS = 
-dbb_daemon_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(QT_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_daemon_LDADD = libunival.a libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(QT_LIBS) $(QT_DBUS_LIBS)
+dbb_daemon_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
+dbb_daemon_LDFLAGS += $(QT_LDFLAGS)
+dbb_daemon_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS)
+endif
+
+endif

@@ -48,10 +48,12 @@
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
 
+#ifdef ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
 
 #include "qt/daemongui.h"
+#endif
 
 static void
 dump_request_cb(struct evhttp_request *req, void *arg)
@@ -97,15 +99,11 @@ dump_request_cb(struct evhttp_request *req, void *arg)
 	evhttp_send_reply(req, 200, "OK", NULL);
 }
 
-void testFunc()
-{
-    printf("TEST\n");
-}
-
 char uri_root[512];
 int main(int argc, char **argv)
 {
 
+#ifdef ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -116,6 +114,7 @@ int main(int argc, char **argv)
     DBBDaemonGui *widget = new DBBDaemonGui(0);
     widget->show();
     app.exec();
+#endif
 
 	struct event_base *base;
 	struct evhttp *http;
