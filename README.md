@@ -113,7 +113,7 @@ if libhidapi is not available, compile it yourself
 
 Basic build steps:
 
-    autoreconf -i -f
+    ./autogen
     ./configure --enable-debug --enable-daemon --with-gui=qt5
     make
     sudo make install
