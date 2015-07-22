@@ -12,12 +12,12 @@ This library includes UniValue – a tiny JSON parser/encoder written by Jeff Ga
     std::string password = "0000";
     std::string jsonIn = "{\"led\" : \"toggle\"}";
     DBB::encryptAndEncodeCommand(jsonIn, password, base64str);
-    
+
     DBB::sendCommand(base64str, cmdOut);
-    
+
     std::string decryptedJson;
     DBB::decryptAndDecodeCommand(cmdOut, password, decryptedJson);
-    
+
     //example json en/decode
     UniValue json;
     json.read(decryptedJson);
@@ -46,20 +46,20 @@ This package includes a small tool "dbb-cli" which can be used to direcly talk w
 Available commands with possible arguments (* = mandatory):
 
 ```
-erase 
+erase
 password -*newpassword
-led 
+led
 seed -source (default: create), -decrypt (default: no), -salt (default: no)
-backuplist 
-backuperase 
+backuplist
+backuperase
 backup -encrypt (default: no), -filename (default: backup.dat)
 sign -type (default: transaction), -data (default: transaction), -keypath (default: transaction), -changekeypath (default: transaction)
 xpub -*keypath
 name -*name
 random -mode (default: true)
-sn 
-version 
-lock 
+sn
+version
+lock
 verifypass -operation (default: create)
 aes -type (default: encrypt), -data (default: encrypt)
 ```
@@ -108,7 +108,7 @@ if libhidapi is not available, compile it yourself
     ./configure
     make
     sudo make install
-    
+
 
 
 Basic build steps:

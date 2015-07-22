@@ -25,19 +25,24 @@
 */
 
 #include <assert.h>
+#include <atomic>
+#include <condition_variable>
 #include <iostream>
+#include <mutex>
+#include <queue>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string>
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
-
-#include <string>
+#include <thread>
 
 #include "dbb.h"
 #include "util.h"
 
 #include "univalue.h"
+
 #include "hidapi/hidapi.h"
 #include "openssl/sha.h"
 
@@ -48,12 +53,6 @@
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
 
-#include <thread> //c++11
-#include <queue>
-#include <mutex>
-#include <condition_variable>
-#include <atomic>
-
 #ifdef ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
@@ -61,10 +60,10 @@
 #include "qt/daemongui.h"
 #endif
 
-
 std::condition_variable queueCondVar;
 std::mutex cs_queue;
 
+//TODO: migrate tuple to a class
 typedef std::tuple<std::string, std::string, std::function<void(const std::string&)> > t_cmdCB;
 std::queue<t_cmdCB> cmdQueue;
 std::atomic<bool> stopThread;
@@ -77,18 +76,18 @@ void executeCommand(const std::string &cmd, const std::string &password, std::fu
     cmdQueue.push(t_cmdCB(cmd, password, cmdFinished));
     notified = true;
     queueCondVar.notify_one();
-}    
+}
 
 //simple function for the LED blick command
 static void led_blink(struct evhttp_request *req, void *arg)
 {
     printf("Received a request for %s\nDispatching dbb command\n", evhttp_request_get_uri(req));
-    
+
     //dispatch command
     executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string &cmdOut)
         {
         });
-    
+
     //form a response, mind, no cmd result is available at this point, at the moment we don't block the http response thread
     struct evbuffer *out = evbuffer_new();
     evbuffer_add_printf(out, "Command dispatched\n");
@@ -116,14 +115,20 @@ int main(int argc, char **argv)
     http = evhttp_new(base);
     evhttp_set_cb(http, "/led/blink", led_blink, NULL);
     handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
-    
+
     //create a thread for the http handling
     std::thread httpThread([&]() {
         event_base_dispatch(base);
     });
 
-    //TODO: factor out thread 
+    //TODO: factor out thread
     std::thread cmdThread([&]() {
+        //TODO, the locking is to broad at the moment
+        //  during executing a command the queue is locked
+        //  and therefore no new commands can be added
+        //  copy the command and callback and release the lock
+        //  would be a solution
+
         std::unique_lock<std::mutex> lock(cs_queue);
         while (!stopThread) {
             while (!notified) {  // loop to avoid spurious wakeups
@@ -134,7 +139,7 @@ int main(int argc, char **argv)
                 t_cmdCB cmdCB = cmdQueue.front();
                 std::string cmd = std::get<0>(cmdCB);
                 std::string password = std::get<1>(cmdCB);
-                
+
                 if (!password.empty())
                 {
                     std::string base64str;
@@ -148,7 +153,7 @@ int main(int argc, char **argv)
                     catch (const std::exception& ex) {
                         unencryptedJson = "response decryption failed: "+cmdOut;
                     }
-                
+
                     cmdOut = unencryptedJson;
                 }
                 else
@@ -161,7 +166,7 @@ int main(int argc, char **argv)
             notified = false;
         }
     });
-    
+
 #ifdef ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
@@ -174,6 +179,6 @@ int main(int argc, char **argv)
     widget->show();
     app.exec();
 #endif
-    
+
 	exit(1);
 }

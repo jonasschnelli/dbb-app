@@ -41,10 +41,10 @@ QT_FORMS_UI = \
 
 QT_MOC_CPP = \
 	qt/moc_daemongui.cpp
-	
+
 QT_MOC = \
   qt/daemongui.moc
-	
+
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
 $(QT_MOC): $(QT_FORMS_H)
@@ -61,7 +61,7 @@ CLEANFILES = $(CLEAN_QT)
 
 dbb_daemon_clean: FORCE
 	rm -f $(CLEAN_QT) dbb-daemon$(EXEEXT)
-	
+
 ui_%.h: %.ui
 	@test -f $(UIC)
 	@$(MKDIR_P) $(@D)

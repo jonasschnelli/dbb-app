@@ -1,3 +1,7 @@
+// Copyright (c) 2015 Jonas Schnelli
+// Distributed under the MIT software license, see the accompanying
+// file COPYING or http://www.opensource.org/licenses/mit-license.php.
+
 #include "daemongui.h"
 
 #include <QApplication>
@@ -23,15 +27,15 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
-    
+
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
 
 
     changeConnectedState(DBB::openConnection());
 
     setWindowTitle("The Digital Bitbox");
-    
-    
+
+
     bool ok;
     QString text = QInputDialog::getText(this, tr("Start Session"),
                                          tr("Current Password"), QLineEdit::Normal,
@@ -40,16 +44,16 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
     {
         sessionPassword = text.toStdString();
     }
-    
+
     processComnand = false;
-        
+
 }
 
 bool DBBDaemonGui::sendCommand(const std::string &cmd, const std::string &password)
 {
     //ensure we don't fill the queue
     //at the moment the UI should only post one command into the queue
-    
+
     if (processComnand)
     {
         qDebug() << "Already processing a command\n";
