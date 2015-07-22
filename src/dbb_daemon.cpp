@@ -48,6 +48,10 @@
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
 
+#include <thread> //c++11
+#include <queue>
+#include <mutex>
+
 #ifdef ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
@@ -55,67 +59,43 @@
 #include "qt/daemongui.h"
 #endif
 
-static void
-dump_request_cb(struct evhttp_request *req, void *arg)
+
+std::condition_variable queueCondVar;
+std::mutex cs_queue;
+
+typedef std::tuple<std::string, std::string, std::function<void(const std::string&)> > t_cmdCB;
+std::queue<t_cmdCB> cmdQueue;
+std::atomic<bool> stopThread;
+std::atomic<bool> notified;
+
+//executeCommand adds a command to the thread queue and notifies the tread to work down the queue
+void executeCommand(const std::string &cmd, const std::string &password, std::function<void(const std::string&)> cmdFinished)
 {
-	const char *cmdtype;
-	struct evkeyvalq *headers;
-	struct evkeyval *header;
-	struct evbuffer *buf;
+    std::unique_lock<std::mutex> lock(cs_queue);
+    cmdQueue.push(t_cmdCB(cmd, password, cmdFinished));
+    notified = true;
+    queueCondVar.notify_one();
+}    
 
-	switch (evhttp_request_get_command(req)) {
-	case EVHTTP_REQ_GET: cmdtype = "GET"; break;
-	case EVHTTP_REQ_POST: cmdtype = "POST"; break;
-	case EVHTTP_REQ_HEAD: cmdtype = "HEAD"; break;
-	case EVHTTP_REQ_PUT: cmdtype = "PUT"; break;
-	case EVHTTP_REQ_DELETE: cmdtype = "DELETE"; break;
-	case EVHTTP_REQ_OPTIONS: cmdtype = "OPTIONS"; break;
-	case EVHTTP_REQ_TRACE: cmdtype = "TRACE"; break;
-	case EVHTTP_REQ_CONNECT: cmdtype = "CONNECT"; break;
-	case EVHTTP_REQ_PATCH: cmdtype = "PATCH"; break;
-	default: cmdtype = "unknown"; break;
-	}
-
-	printf("Received a %s request for %s\nHeaders:\n",
-	    cmdtype, evhttp_request_get_uri(req));
-
-	headers = evhttp_request_get_input_headers(req);
-	for (header = headers->tqh_first; header;
-	    header = header->next.tqe_next) {
-		printf("  %s: %s\n", header->key, header->value);
-	}
-
-	buf = evhttp_request_get_input_buffer(req);
-	puts("Input data: <<<");
-	while (evbuffer_get_length(buf)) {
-		int n;
-		char cbuf[128];
-		n = evbuffer_remove(buf, cbuf, sizeof(cbuf));
-		if (n > 0)
-			(void) fwrite(cbuf, 1, n, stdout);
-	}
-	puts(">>>");
-
-	evhttp_send_reply(req, 200, "OK", NULL);
+//simple function for the LED blick command
+static void led_blink(struct evhttp_request *req, void *arg)
+{
+    printf("Received a request for %s\nDispatching dbb command\n", evhttp_request_get_uri(req));
+    
+    //dispatch command
+    executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string &cmdOut)
+        {
+        });
+    
+    //form a response, mind, no cmd result is available at this point, at the moment we don't block the http response thread
+    struct evbuffer *out = evbuffer_new();
+    evbuffer_add_printf(out, "Command dispatched\n");
+    evhttp_send_reply(req, 200, "OK", out);
 }
 
 char uri_root[512];
 int main(int argc, char **argv)
 {
-
-#ifdef ENABLE_QT
-#if QT_VERSION > 0x050100
-    // Generate high-dpi pixmaps
-    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-
-    QApplication app (argc, argv);
-
-    DBBDaemonGui *widget = new DBBDaemonGui(0);
-    widget->show();
-    app.exec();
-#endif
-
 	struct event_base *base;
 	struct evhttp *http;
 	struct evhttp_bound_socket *handle;
@@ -132,9 +112,66 @@ int main(int argc, char **argv)
 	}
 
     http = evhttp_new(base);
-    evhttp_set_cb(http, "/sign", dump_request_cb, NULL);
+    evhttp_set_cb(http, "/led/blink", led_blink, NULL);
     handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
-	event_base_dispatch(base);
+    
+    //create a thread for the http handling
+    std::thread httpThread([&]() {
+        event_base_dispatch(base);
+    });
 
-	return false;
+    //TODO: factor out thread 
+    std::thread cmdThread([&]() {
+        std::unique_lock<std::mutex> lock(cs_queue);
+        while (!stopThread) {
+            while (!notified) {  // loop to avoid spurious wakeups
+                queueCondVar.wait(lock);
+            }
+            while (!cmdQueue.empty()) {
+                std::string cmdOut;
+                t_cmdCB cmdCB = cmdQueue.front();
+                std::string cmd = std::get<0>(cmdCB);
+                std::string password = std::get<1>(cmdCB);
+                
+                if (!password.empty())
+                {
+                    std::string base64str;
+                    std::string unencryptedJson;
+                    try
+                    {
+                        DBB::encryptAndEncodeCommand(cmd, password, base64str);
+                        DBB::sendCommand(base64str, cmdOut);
+                        DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                    }
+                    catch (const std::exception& ex) {
+                        unencryptedJson = "response decryption failed: "+cmdOut;
+                    }
+                
+                    cmdOut = unencryptedJson;
+                }
+                else
+                {
+                    DBB::sendCommand(cmd, cmdOut);
+                }
+                std::get<2>(cmdCB)(cmdOut);
+                cmdQueue.pop();
+            }
+            notified = false;
+        }
+    });
+    
+#ifdef ENABLE_QT
+#if QT_VERSION > 0x050100
+    // Generate high-dpi pixmaps
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
+
+    QApplication app (argc, argv);
+
+    DBBDaemonGui *widget = new DBBDaemonGui(0);
+    widget->show();
+    app.exec();
+#endif
+    
+	exit(1);
 }

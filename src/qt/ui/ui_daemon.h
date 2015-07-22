@@ -31,6 +31,9 @@ public:
     QPushButton *pushButton;
     QWidget *verticalLayoutWidget;
     QVBoxLayout *verticalLayout;
+    QHBoxLayout *horizontalLayout;
+    QPushButton *ledButton;
+    QPushButton *passwordButton;
     QHBoxLayout *horizontalLayout_2;
     QPushButton *eraseButton;
     QPushButton *seedButton;
@@ -50,7 +53,7 @@ public:
         pushButton = new QPushButton(centralwidget);
         pushButton->setObjectName(QStringLiteral("pushButton"));
         pushButton->setEnabled(false);
-        pushButton->setGeometry(QRect(0, 0, 321, 101));
+        pushButton->setGeometry(QRect(0, 0, 321, 71));
         QIcon icon;
         icon.addFile(QStringLiteral(":/icons/dbb"), QSize(), QIcon::Normal, QIcon::Off);
         icon.addFile(QStringLiteral(":/icons/dbb"), QSize(), QIcon::Disabled, QIcon::Off);
@@ -59,10 +62,25 @@ public:
         pushButton->setFlat(true);
         verticalLayoutWidget = new QWidget(centralwidget);
         verticalLayoutWidget->setObjectName(QStringLiteral("verticalLayoutWidget"));
-        verticalLayoutWidget->setGeometry(QRect(0, 100, 321, 141));
+        verticalLayoutWidget->setGeometry(QRect(0, 72, 321, 183));
         verticalLayout = new QVBoxLayout(verticalLayoutWidget);
         verticalLayout->setObjectName(QStringLiteral("verticalLayout"));
         verticalLayout->setContentsMargins(10, 10, 10, 10);
+        horizontalLayout = new QHBoxLayout();
+        horizontalLayout->setObjectName(QStringLiteral("horizontalLayout"));
+        ledButton = new QPushButton(verticalLayoutWidget);
+        ledButton->setObjectName(QStringLiteral("ledButton"));
+
+        horizontalLayout->addWidget(ledButton);
+
+        passwordButton = new QPushButton(verticalLayoutWidget);
+        passwordButton->setObjectName(QStringLiteral("passwordButton"));
+
+        horizontalLayout->addWidget(passwordButton);
+
+
+        verticalLayout->addLayout(horizontalLayout);
+
         horizontalLayout_2 = new QHBoxLayout();
         horizontalLayout_2->setObjectName(QStringLiteral("horizontalLayout_2"));
         eraseButton = new QPushButton(verticalLayoutWidget);
@@ -87,11 +105,11 @@ public:
         connected->setObjectName(QStringLiteral("connected"));
         connected->setEnabled(false);
         connected->setGeometry(QRect(274, 0, 51, 41));
-        connected->setFlat(true);
         QIcon icon1;
         icon1.addFile(QStringLiteral(":/icons/connected"), QSize(), QIcon::Normal, QIcon::Off);
         icon1.addFile(QStringLiteral(":/icons/connected"), QSize(), QIcon::Disabled, QIcon::Off);
         connected->setIcon(icon1);
+        connected->setFlat(true);
         MainWindow->setCentralWidget(centralwidget);
         statusbar = new QStatusBar(MainWindow);
         statusbar->setObjectName(QStringLiteral("statusbar"));
@@ -106,6 +124,8 @@ public:
     {
         MainWindow->setWindowTitle(QApplication::translate("MainWindow", "MainWindow", 0));
         pushButton->setText(QString());
+        ledButton->setText(QApplication::translate("MainWindow", "Blink LED", 0));
+        passwordButton->setText(QApplication::translate("MainWindow", "Set Password", 0));
         eraseButton->setText(QApplication::translate("MainWindow", "Erase", 0));
         seedButton->setText(QApplication::translate("MainWindow", "Seed", 0));
         connected->setText(QString());
