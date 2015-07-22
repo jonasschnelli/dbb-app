@@ -15,11 +15,10 @@
 #include <functional>
 
 
-void executeCommand(const std::string &cmd, const std::string &password, std::function<void(const std::string&)> cmdFinished);
+void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&)> cmdFinished);
 
-DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
-    QMainWindow(parent),
-    ui(new Ui::MainWindow)
+DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
+                                              ui(new Ui::MainWindow)
 {
     ui->setupUi(this);
 
@@ -37,39 +36,33 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
 
 
     bool ok;
-    QString text = QInputDialog::getText(this, tr("Start Session"),
-                                         tr("Current Password"), QLineEdit::Normal,
-                                         "", &ok);
-    if (ok && !text.isEmpty())
-    {
+    QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
+    if (ok && !text.isEmpty()) {
         sessionPassword = text.toStdString();
     }
 
     processComnand = false;
-
 }
 
-bool DBBDaemonGui::sendCommand(const std::string &cmd, const std::string &password)
+bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password)
 {
     //ensure we don't fill the queue
     //at the moment the UI should only post one command into the queue
 
-    if (processComnand)
-    {
+    if (processComnand) {
         qDebug() << "Already processing a command\n";
         return false;
     }
     this->ui->textEdit->setText("processing...");
     processComnand = true;
-    executeCommand(cmd, password, [this](const std::string &cmdOut)
-        {
+    executeCommand(cmd, password, [this](const std::string& cmdOut) {
             //send a signal to the main thread
             emit showCommandResult(QString::fromStdString(cmdOut));
-        });
+    });
     return true;
 }
 
-void DBBDaemonGui::setResultText(const QString &result)
+void DBBDaemonGui::setResultText(const QString& result)
 {
     processComnand = false;
     qDebug() << "SetResultText Called\n";
@@ -78,7 +71,6 @@ void DBBDaemonGui::setResultText(const QString &result)
 
 DBBDaemonGui::~DBBDaemonGui()
 {
-
 }
 
 void DBBDaemonGui::changeConnectedState(bool state)
@@ -104,12 +96,9 @@ void DBBDaemonGui::ledClicked()
 void DBBDaemonGui::setPasswordClicked()
 {
     bool ok;
-    QString text = QInputDialog::getText(this, tr("Set New Password"),
-                                         tr("Password"), QLineEdit::Normal,
-                                         "0000", &ok);
-    if (ok && !text.isEmpty())
-    {
-        sendCommand("{\"password\" : \""+text.toStdString()+"\"}", sessionPassword);
+    QString text = QInputDialog::getText(this, tr("Set New Password"), tr("Password"), QLineEdit::Normal, "0000", &ok);
+    if (ok && !text.isEmpty()) {
+        sendCommand("{\"password\" : \"" + text.toStdString() + "\"}", sessionPassword);
         sessionPassword = text.toStdString();
     }
 }
@@ -117,7 +106,7 @@ void DBBDaemonGui::setPasswordClicked()
 void DBBDaemonGui::seed()
 {
     sendCommand("{\"seed\" : {\"source\" :\"create\","
-                        "\"decrypt\": \"no\","
-                        "\"salt\" : \"\"} }", sessionPassword);
+                "\"decrypt\": \"no\","
+                "\"salt\" : \"\"} }",
+                sessionPassword);
 }
-

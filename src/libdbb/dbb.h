@@ -5,8 +5,8 @@
 #include <stdio.h>
 #include <string>
 
-namespace DBB {
-
+namespace DBB
+{
 //!open a connection to the digital bitbox device
 //retruns false if no connection could be made, keeps connection handling internal
 bool openConnection();
@@ -15,12 +15,11 @@ bool openConnection();
 bool closeConnection();
 
 //!send a json command to the device which is currently open
-bool sendCommand(const std::string &json, std::string &resultOut);
+bool sendCommand(const std::string& json, std::string& resultOut);
 
 //!decrypt a json result
-bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &password, std::string &stringOut);
+bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut);
 
 //!encrypts a json command
-bool encryptAndEncodeCommand(const std::string &cmd, const std::string &password, std::string &base64strOut);
-
+bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut);
 }

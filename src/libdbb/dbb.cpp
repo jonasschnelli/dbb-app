@@ -23,16 +23,17 @@
 #include "../include/univalue.h"
 #include "hidapi/hidapi.h"
 
-#define HID_REPORT_SIZE   2048
+#define HID_REPORT_SIZE 2048
 
 #ifdef ENABLE_DEBUG
-#define DBB_DEBUG_INTERNAL(format,args...) printf(format, ## args);
+#define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
 #else
-#define DBB_DEBUG_INTERNAL(format,args...)
+#define DBB_DEBUG_INTERNAL(format, args...)
 #endif
 
-namespace DBB {
-static hid_device *HID_HANDLE = NULL;
+namespace DBB
+{
+static hid_device* HID_HANDLE = NULL;
 static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
 
 static bool api_hid_init(void)
@@ -48,8 +49,7 @@ static bool api_hid_init(void)
 static bool api_hid_close(void)
 {
     //TODO: way to handle multiple DBB
-    if (HID_HANDLE)
-    {
+    if (HID_HANDLE) {
         hid_close(HID_HANDLE); //vendor-id, product-id
         return true;
     }
@@ -67,15 +67,15 @@ bool closeConnection()
     return api_hid_close();
 }
 
-bool sendCommand(const std::string &json, std::string &resultOut)
+bool sendCommand(const std::string& json, std::string& resultOut)
 {
     int res, cnt = 0;
 
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    memcpy(HID_REPORT, json.c_str(), json.size() );
-    hid_write(HID_HANDLE, (unsigned char *)HID_REPORT, HID_REPORT_SIZE);
+    memcpy(HID_REPORT, json.c_str(), json.size());
+    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, HID_REPORT_SIZE);
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
@@ -89,19 +89,19 @@ bool sendCommand(const std::string &json, std::string &resultOut)
         cnt += res;
     }
 
-	DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
+    DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
 
-    resultOut.assign((const char *)HID_REPORT);
+    resultOut.assign((const char*)HID_REPORT);
     return true;
 }
 
-bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &password, std::string &stringOut)
+bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut)
 {
     unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char *)password.c_str(), passwordSha256);
+    doubleSha256((char*)password.c_str(), passwordSha256);
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
 
     //decrypt result: TODO:
@@ -110,11 +110,10 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
         throw std::runtime_error("failed deserializing json");
 
     UniValue input = find_value(valRead, "input");
-    if (!input.isNull() && input.isObject())
-    {
+    if (!input.isNull() && input.isObject()) {
         UniValue error = find_value(input, "error");
         if (!error.isNull() && error.isStr())
-            throw std::runtime_error("Error decrypting: "+error.get_str());
+            throw std::runtime_error("Error decrypting: " + error.get_str());
     }
 
     UniValue ctext = find_value(valRead, "ciphertext");
@@ -123,18 +122,18 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
 
     std::string base64dec = base64_decode(ctext.get_str());
     unsigned int base64_len = base64dec.size();
-    unsigned char *base64dec_c = (unsigned char *)base64dec.c_str();
+    unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
-    unsigned char *decryptedStream;
-    unsigned char *decryptedCommand;
+    unsigned char* decryptedStream;
+    unsigned char* decryptedCommand;
     memcpy(aesIV, base64dec_c, DBB_AES_BLOCKSIZE); //copy first 16 bytes and take as IV
     int outlen = 0;
-    if (!aesDecrypt(aesKey, aesIV, base64dec_c+DBB_AES_BLOCKSIZE, base64_len-DBB_AES_BLOCKSIZE, &decryptedStream, &outlen))
+    if (!aesDecrypt(aesKey, aesIV, base64dec_c + DBB_AES_BLOCKSIZE, base64_len - DBB_AES_BLOCKSIZE, &decryptedStream, &outlen))
         throw std::runtime_error("decryption failed");
 
     int decrypt_len = 0;
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
-    char *dec = (char *)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
+    char* dec = (char*)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
     if (!dec) {
         decrypt_len = 0;
         memset(decryptedStream, 0, sizeof(&decryptedStream));
@@ -148,23 +147,23 @@ bool decryptAndDecodeCommand(const std::string &cmdIn, const std::string &passwo
     memset(decryptedStream, 0, sizeof(&decryptedStream));
     free(decryptedStream);
 
-    stringOut.assign((const char *)dec);
+    stringOut.assign((const char*)dec);
     free(dec);
     return true;
 }
 
-bool encryptAndEncodeCommand(const std::string &cmd, const std::string &password, std::string &base64strOut)
+bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut)
 {
     if (password.empty())
         return false;
 
     //double sha256 the password
     unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
-    unsigned char *cypher;
+    unsigned char* cypher;
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char *)password.c_str(), passwordSha256);
+    doubleSha256((char*)password.c_str(), passwordSha256);
 
     //set random IV
     getRandIV(aesIV);
@@ -179,7 +178,7 @@ bool encryptAndEncodeCommand(const std::string &cmd, const std::string &password
 
     // PKCS7 padding
     memcpy(inpad, cmd.c_str(), inlen);
-    for (pads = 0; pads < DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE; pads++ ) {
+    for (pads = 0; pads < DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE; pads++) {
         inpad[inlen + pads] = (DBB_AES_BLOCKSIZE - inlen % DBB_AES_BLOCKSIZE);
     }
 

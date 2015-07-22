@@ -70,7 +70,7 @@ std::atomic<bool> stopThread;
 std::atomic<bool> notified;
 
 //executeCommand adds a command to the thread queue and notifies the tread to work down the queue
-void executeCommand(const std::string &cmd, const std::string &password, std::function<void(const std::string&)> cmdFinished)
+void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&)> cmdFinished)
 {
     std::unique_lock<std::mutex> lock(cs_queue);
     cmdQueue.push(t_cmdCB(cmd, password, cmdFinished));
@@ -79,38 +79,37 @@ void executeCommand(const std::string &cmd, const std::string &password, std::fu
 }
 
 //simple function for the LED blick command
-static void led_blink(struct evhttp_request *req, void *arg)
+static void led_blink(struct evhttp_request* req, void* arg)
 {
     printf("Received a request for %s\nDispatching dbb command\n", evhttp_request_get_uri(req));
 
     //dispatch command
-    executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string &cmdOut)
-        {
-        });
+    executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string& cmdOut) {
+    });
 
     //form a response, mind, no cmd result is available at this point, at the moment we don't block the http response thread
-    struct evbuffer *out = evbuffer_new();
+    struct evbuffer* out = evbuffer_new();
     evbuffer_add_printf(out, "Command dispatched\n");
     evhttp_send_reply(req, 200, "OK", out);
 }
 
 char uri_root[512];
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
-	struct event_base *base;
-	struct evhttp *http;
-	struct evhttp_bound_socket *handle;
+    struct event_base* base;
+    struct evhttp* http;
+    struct evhttp_bound_socket* handle;
 
-	unsigned short port = 15520;
+    unsigned short port = 15520;
 
     if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-		return (1);
+        return (1);
 
     base = event_base_new();
-	if (!base) {
-		fprintf(stderr, "Couldn't create an event_base: exiting\n");
-		return 1;
-	}
+    if (!base) {
+        fprintf(stderr, "Couldn't create an event_base: exiting\n");
+        return 1;
+    }
 
     http = evhttp_new(base);
     evhttp_set_cb(http, "/led/blink", led_blink, NULL);
@@ -173,12 +172,12 @@ int main(int argc, char **argv)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
 
-    QApplication app (argc, argv);
+    QApplication app(argc, argv);
 
-    DBBDaemonGui *widget = new DBBDaemonGui(0);
+    DBBDaemonGui* widget = new DBBDaemonGui(0);
     widget->show();
     app.exec();
 #endif
 
-	exit(1);
+    exit(1);
 }

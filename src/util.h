@@ -17,22 +17,22 @@
 #define DEBUG_SHOW_CATEGRORY 1
 
 #ifdef ENABLE_DEBUG
-#define DebugOut(category,format,args...) \
-		if (DEBUG_SHOW_CATEGRORY) {\
-			printf("  [DEBUG]  %s: ", category); \
-		}\
-		printf(format, ## args);
+#define DebugOut(category, format, args...)  \
+    if (DEBUG_SHOW_CATEGRORY) {              \
+        printf("  [DEBUG]  %s: ", category); \
+    }                                        \
+    printf(format, ##args);
 #else
-#define DebugOut(category,format,args...)
+#define DebugOut(category, format, args...)
 #endif
 
-#define PrintConsole(format,args...) printf(format, ## args);
+#define PrintConsole(format, args...) printf(format, ##args);
 
 //sanitize a string and clean out things which could generate harm over a RPC/JSON/Console output
 std::string SanitizeString(const std::string& str);
 
 extern std::map<std::string, std::string> mapArgs;
 extern std::map<std::string, std::vector<std::string> > mapMultiArgs;
-void ParseParameters(int argc, const char*const argv[]);
+void ParseParameters(int argc, const char* const argv[]);
 std::string GetArg(const std::string& strArg, const std::string& strDefault);
 #endif // LIBDBB_UTIL_H

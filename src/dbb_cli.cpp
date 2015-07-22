@@ -89,7 +89,7 @@ static const CDBBCommand vCommands[] =
                             "\"data\": \"%!data%\"}}",                                  true},
 };
 
-int main( int argc, char *argv[] )
+int main(int argc, char* argv[])
 {
     ParseParameters(argc, argv);
 
@@ -106,12 +106,10 @@ int main( int argc, char *argv[] )
     if (cmdArgs.size() > 0)
         userCmd = cmdArgs.front();
 
-    if (userCmd == "help" || mapArgs.count("-help") || userCmd == "?")
-    {
+    if (userCmd == "help" || mapArgs.count("-help") || userCmd == "?") {
         printf("Usage: %s -<arg0>=<value> -<arg1>=<value> ... <command>\n\nAvailable commands with possible arguments (* = mandatory):\n", "dbb_cli");
         //try to find the command in the dispatch table
-        for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
-        {
+        for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++) {
             CDBBCommand cmd = vCommands[i];
             printf("  %s ", cmd.cmdname.c_str());
 
@@ -122,24 +120,19 @@ int main( int argc, char *argv[] )
             std::string defaultValue;
 
             bool first = true;
-            for (unsigned int sI=0;sI<json.length();sI++)
-            {
+            for (unsigned int sI = 0; sI < json.length(); sI++) {
                 if (json[sI] == '|' && tokenOpenPos > 0)
                     defaultDelimiterPos = sI;
 
                 if (json[sI] == '%' && tokenOpenPos < 0)
                     tokenOpenPos = sI;
 
-                else if (json[sI] == '%' && tokenOpenPos >= 0)
-                {
-                    if (defaultDelimiterPos >= 0)
-                    {
-                        var = json.substr(tokenOpenPos+1, defaultDelimiterPos-tokenOpenPos-1);
-                        defaultValue = json.substr(defaultDelimiterPos+1, sI-defaultDelimiterPos-1);
-                    }
-                    else
-                    {
-                        var = json.substr(tokenOpenPos+1, sI-tokenOpenPos-1);
+                else if (json[sI] == '%' && tokenOpenPos >= 0) {
+                    if (defaultDelimiterPos >= 0) {
+                        var = json.substr(tokenOpenPos + 1, defaultDelimiterPos - tokenOpenPos - 1);
+                        defaultValue = json.substr(defaultDelimiterPos + 1, sI - defaultDelimiterPos - 1);
+                    } else {
+                        var = json.substr(tokenOpenPos + 1, sI - tokenOpenPos - 1);
                     }
 
                     tokenOpenPos = -1;
@@ -150,19 +143,17 @@ int main( int argc, char *argv[] )
                     first = false;
 
                     bool mandatory = false;
-                    if (var.size() > 0 && var[0]=='!')
-                    {
-                        var.erase(0,1);
+                    if (var.size() > 0 && var[0] == '!') {
+                        var.erase(0, 1);
                         mandatory = true;
                     }
 
                     if (!defaultValue.empty())
                         printf("-%s (default: %s)", var.c_str(), defaultValue.c_str());
+                    else if (mandatory)
+                        printf("-*%s", var.c_str());
                     else
-                        if (mandatory)
-                            printf("-*%s", var.c_str());
-                        else
-                            printf("-%s", var.c_str());
+                        printf("-%s", var.c_str());
                 }
             }
             printf("\n");
@@ -178,18 +169,15 @@ int main( int argc, char *argv[] )
     else {
         DebugOut("main", "Digital Bitbox Connected\n");
 
-        if (argc < 2)
-        {
+        if (argc < 2) {
             printf("no command given\n");
             return 0;
         }
 
         //try to find the command in the dispatch table
-        for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++)
-        {
+        for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++) {
             CDBBCommand cmd = vCommands[i];
-            if (cmd.cmdname == userCmd)
-            {
+            if (cmd.cmdname == userCmd) {
                 std::string cmdOut;
                 std::string json = cmd.json;
                 size_t index = 0;
@@ -201,65 +189,51 @@ int main( int argc, char *argv[] )
                 std::string var;
                 std::string defaultValue;
 
-                for (unsigned int sI=0;sI<json.length();sI++)
-                {
+                for (unsigned int sI = 0; sI < json.length(); sI++) {
                     if (json[sI] == '|' && tokenOpenPos > 0)
                         defaultDelimiterPos = sI;
 
                     if (json[sI] == '%' && tokenOpenPos < 0)
                         tokenOpenPos = sI;
 
-                    else if (json[sI] == '%' && tokenOpenPos >= 0)
-                    {
-                        if (defaultDelimiterPos >= 0)
-                        {
-                            var = json.substr(tokenOpenPos+1, defaultDelimiterPos-tokenOpenPos-1);
-                            defaultValue = json.substr(defaultDelimiterPos+1, sI-defaultDelimiterPos-1);
-                        }
-                        else
-                        {
-                            var = json.substr(tokenOpenPos+1, sI-tokenOpenPos-1);
+                    else if (json[sI] == '%' && tokenOpenPos >= 0) {
+                        if (defaultDelimiterPos >= 0) {
+                            var = json.substr(tokenOpenPos + 1, defaultDelimiterPos - tokenOpenPos - 1);
+                            defaultValue = json.substr(defaultDelimiterPos + 1, sI - defaultDelimiterPos - 1);
+                        } else {
+                            var = json.substr(tokenOpenPos + 1, sI - tokenOpenPos - 1);
                         }
 
                         //always erase
-                        json.erase(tokenOpenPos,sI-tokenOpenPos+1);
+                        json.erase(tokenOpenPos, sI - tokenOpenPos + 1);
 
                         bool mandatory = false;
-                        if (var.size() > 0 && var[0] == '!')
-                        {
-                            var.erase(0,1);
+                        if (var.size() > 0 && var[0] == '!') {
+                            var.erase(0, 1);
                             mandatory = true;
                         }
 
-                        var = "-"+var; //cmd args come in over "-arg"
-                        if (mapArgs.count(var))
-                        {
+                        var = "-" + var; //cmd args come in over "-arg"
+                        if (mapArgs.count(var)) {
                             json.insert(tokenOpenPos, mapArgs[var]);
-                        }
-                        else if(mandatory)
-                        {
+                        } else if (mandatory) {
                             printf("Argument %s is mandatory for command %s\n", var.c_str(), cmd.cmdname.c_str());
                             return 0;
-                        }
-                        else
-                            if (defaultDelimiterPos > 0 && !defaultValue.empty())
-                                json.insert(tokenOpenPos, defaultValue);
+                        } else if (defaultDelimiterPos > 0 && !defaultValue.empty())
+                            json.insert(tokenOpenPos, defaultValue);
 
                         tokenOpenPos = -1;
                         defaultDelimiterPos = -1;
                     }
                 }
 
-                if (cmd.requiresEncryption || mapArgs.count("-password"))
-                {
-                    if (!mapArgs.count("-password"))
-                    {
+                if (cmd.requiresEncryption || mapArgs.count("-password")) {
+                    if (!mapArgs.count("-password")) {
                         printf("This command requires the -password argument\n");
                         return 0;
                     }
 
-                    if (!cmd.requiresEncryption)
-                    {
+                    if (!cmd.requiresEncryption) {
                         DebugOut("main", "Using encyption because -password was set\n");
                     }
 
@@ -286,25 +260,22 @@ int main( int argc, char *argv[] )
                     json.read(unencryptedJson);
                     std::string jsonFlat = json.write(2); //pretty print with a intend of 2
                     printf("result: %s\n", jsonFlat.c_str());
-                }
-                else
-                {
+                } else {
                     //send command unencrypted
-        	        DBB::sendCommand(json, cmdOut);
+                    DBB::sendCommand(json, cmdOut);
                     printf("result: %s\n", cmdOut.c_str());
                 }
                 cmdfound = true;
             }
         }
 
-        if (!cmdfound)
-        {
+        if (!cmdfound) {
             //try to send it as raw json
             if (userCmd.size() > 1 && userCmd.at(0) == '{') //todo: ignore whitespace
             {
                 std::string cmdOut;
                 DebugOut("main", "Send raw json %s\n", userCmd.c_str());
-        	    cmdfound = DBB::sendCommand(userCmd, cmdOut);
+                cmdfound = DBB::sendCommand(userCmd, cmdOut);
             }
 
             printf("command (%s) not found, use \"help\" to list available commands\n", SanitizeString(userCmd).c_str());

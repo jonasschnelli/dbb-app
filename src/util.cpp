@@ -18,8 +18,7 @@ std::string SanitizeString(const std::string& str)
      */
     static std::string safeChars("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ01234567890 .,;_/:?@()");
     std::string strResult;
-    for (std::string::size_type i = 0; i < str.size(); i++)
-    {
+    for (std::string::size_type i = 0; i < str.size(); i++) {
         if (safeChars.find(str[i]) != std::string::npos)
             strResult.push_back(str[i]);
     }
@@ -31,14 +30,12 @@ void ParseParameters(int argc, const char* const argv[])
     mapArgs.clear();
     mapMultiArgs.clear();
 
-    for (int i = 1; i < argc; i++)
-    {
+    for (int i = 1; i < argc; i++) {
         std::string str(argv[i]);
         std::string strValue;
         size_t is_index = str.find('=');
-        if (is_index != std::string::npos)
-        {
-            strValue = str.substr(is_index+1);
+        if (is_index != std::string::npos) {
+            strValue = str.substr(is_index + 1);
             str = str.substr(0, is_index);
         }
 
