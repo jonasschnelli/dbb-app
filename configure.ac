@@ -8,6 +8,8 @@ AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
 
+AX_CXX_COMPILE_STDCXX_11()
+
 LT_INIT([pic-only])
 
 # Enable debug
