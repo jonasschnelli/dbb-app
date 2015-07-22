@@ -20,8 +20,8 @@ AC_ARG_ENABLE([debug],
     [enable_debug=no])
 
 if test "x$enable_debug" = xyes; then
-    CFLAGS="-g3 -O0 -DDEBUG"
-    CXXFLAGS="-g3 -O0 -DDEBUG"
+    CFLAGS="$CFLAGS -g3 -O0 -DDEBUG"
+    CXXFLAGS="$CXXFLAGS -g3 -O0 -DDEBUG"
 		AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[1],[Define to 1 to enable debung output])
 fi
 
