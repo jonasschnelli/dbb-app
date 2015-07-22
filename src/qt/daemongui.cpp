@@ -8,6 +8,8 @@
 #include "ui/ui_daemon.h"
 #include <dbb.h>
 
+#include <functional>
+
 
 void executeCommand(const std::string &cmd, const std::string &password, std::function<void(const std::string&)> cmdFinished);
 

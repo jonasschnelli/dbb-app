@@ -51,6 +51,8 @@
 #include <thread> //c++11
 #include <queue>
 #include <mutex>
+#include <condition_variable>
+#include <atomic>
 
 #ifdef ENABLE_QT
 #include <QApplication>
