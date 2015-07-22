@@ -39,6 +39,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
     {
         sessionPassword = text.toStdString();
     }
+    
+    processComnand = false;
         
 }
 
