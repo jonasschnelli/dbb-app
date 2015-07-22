@@ -27,6 +27,7 @@ public:
 		void ledClicked();
 		void setResultText(const QString &result);
 		void setPasswordClicked();
+		void seed();
 		
 	signals:
 	    void showCommandResult(const QString &result);

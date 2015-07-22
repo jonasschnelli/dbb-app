@@ -22,6 +22,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget *parent) :
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
+    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
     
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
 
@@ -107,5 +108,12 @@ void DBBDaemonGui::setPasswordClicked()
         sendCommand("{\"password\" : \""+text.toStdString()+"\"}", sessionPassword);
         sessionPassword = text.toStdString();
     }
+}
+
+void DBBDaemonGui::seed()
+{
+    sendCommand("{\"seed\" : {\"source\" :\"create\","
+                        "\"decrypt\": \"no\","
+                        "\"salt\" : \"\"} }", sessionPassword);
 }
 
