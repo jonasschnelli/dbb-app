@@ -57,7 +57,7 @@
 #include <QApplication>
 #include <QPushButton>
 
-#include "qt/daemongui.h"
+#include "qt/dbbgui.h"
 #endif
 
 std::condition_variable queueCondVar;
@@ -115,11 +115,6 @@ int main(int argc, char** argv)
     evhttp_set_cb(http, "/led/blink", led_blink, NULL);
     handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
 
-    //create a thread for the http handling
-    std::thread httpThread([&]() {
-        event_base_dispatch(base);
-    });
-
     //TODO: factor out thread
     std::thread cmdThread([&]() {
         //TODO, the locking is to broad at the moment
@@ -172,11 +167,19 @@ int main(int argc, char** argv)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
 
+    //create a thread for the http handling
+    std::thread httpThread([&]() {
+        event_base_dispatch(base);
+    });
+    
     QApplication app(argc, argv);
 
     DBBDaemonGui* widget = new DBBDaemonGui(0);
     widget->show();
     app.exec();
+#else
+    //directly start libevents main run loop
+    event_base_dispatch(base);
 #endif
 
     exit(1);

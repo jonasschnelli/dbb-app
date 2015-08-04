@@ -2,14 +2,14 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "daemongui.h"
+#include "dbbgui.h"
 
 #include <QApplication>
 #include <QPushButton>
 #include <QDebug>
 #include <QInputDialog>
 
-#include "ui/ui_daemon.h"
+#include "ui/ui_overview.h"
 #include <dbb.h>
 
 #include <functional>

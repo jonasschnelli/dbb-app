@@ -22,45 +22,44 @@ dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
 dbb_cli_LDADD = libunival.a libdbb.a $(CRYPTO_LIBS)
 
 
-#check if we should build the daemon
-if ENABLE_DAEMON
-bin_PROGRAMS += dbb-daemon
+#check if we should build the dbb app
+if ENABLE_DBB_APP
+bin_PROGRAMS += dbb-app
 
-dbb_daemon_SOURCES = dbb_daemon.cpp util.h util.cpp
-dbb_daemon_CPPFLAGS = -fPIC $(AM_CPPFLAGS)
-dbb_daemon_CFLAGS =
-dbb_daemon_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_daemon_LDADD = libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) libunival.a
-
+dbb_app_SOURCES = dbb_app.cpp util.h util.cpp
+dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS)
+dbb_app_CFLAGS =
+dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
+dbb_app_LDADD = libdbb.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) libunival.a
 
 if ENABLE_QT
 
 QT_FORMS_UI = \
-  qt/ui/daemon.ui \
+  qt/ui/overview.ui \
 	qt/ui/transactiondialog.ui
 
 QT_MOC_CPP = \
-	qt/moc_daemongui.cpp
+	qt/moc_dbbgui.cpp
 
 QT_MOC = \
-  qt/daemongui.moc
+  qt/dbbgui.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
 $(QT_MOC): $(QT_FORMS_H)
-$(dbb_daemon_OBJECTS) $(dbb_daemon_OBJECTS) : | $(QT_MOC)
+$(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
-dbb_daemon_SOURCES += qt/daemongui.h qt/daemongui.cpp qt/qrc_daemon.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI)
-dbb_daemon_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
-dbb_daemon_LDFLAGS += $(QT_LDFLAGS)
-dbb_daemon_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS)
+dbb_app_SOURCES += qt/dbbgui.h qt/dbbgui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI)
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
+dbb_app_LDFLAGS += $(QT_LDFLAGS)
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS)
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
 
 CLEANFILES = $(CLEAN_QT)
 
-dbb_daemon_clean: FORCE
-	rm -f $(CLEAN_QT) dbb-daemon$(EXEEXT)
+dbb_app_clean: FORCE
+	rm -f $(CLEAN_QT) dbb-app$(EXEEXT)
 
 ui_%.h: %.ui
 	@test -f $(UIC)

@@ -31,9 +31,10 @@ AC_ARG_ENABLE([daemon],
     [enable_daemon=$enableval],
     [enable_daemon=yes])
 
-if test x$enable_daemon] != xno; then
-	lldp_CHECK_LIBEVENT
+if test "x$enable_daemon" = xyes; then
+  AC_CHECK_LIBEVENT
   AC_DEFINE_UNQUOTED([ENABLE_DAEMON],[1],[Define to 1 to enable the dbb daemon])
+	AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
 AC_ARG_WITH(hid-libdir,
@@ -228,18 +229,31 @@ else
   AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
 fi
 
+#######################################################################
+# we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
+# so we can copy upstreams m4 directly without merging                #
+#######################################################################
 BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
 
-if test x$enable_daemon = xyes; then
-	if test x$bitcoin_enable_qt = xyes; then
-	AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
-	fi
+if test x$bitcoin_enable_qt = xyes; then
+AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
+AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
+if test x$bitcoin_enable_qt = xno; then
+	if test x$enable_daemon] = xno; then
+	AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
+	else
+	AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
+	fi
+else
+AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
+fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
+
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])
