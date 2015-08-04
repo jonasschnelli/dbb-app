@@ -26,8 +26,8 @@ This library includes UniValue – a tiny JSON parser/encoder written by Jeff Ga
 ```
 
 
-## dbb-daemon
-The dbb daemon can be enabled with the configure option `--enable-daemon`. Optional the gui can be added with `--with-gui=qt5`.
+## dbb-app
+The dbb app will be built if `--enable-daemon` or `--with-gui=qt5` is set. The app optionaly includes the daemon functionality if `--enable-daemon` is set. The daemon can run without gui.
 
 
 ## dbb-cli
