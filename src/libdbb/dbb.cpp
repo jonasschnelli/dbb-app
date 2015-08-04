@@ -71,6 +71,9 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 {
     int res, cnt = 0;
 
+    if (!HID_HANDLE)
+        return false;
+    
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);

@@ -141,8 +141,10 @@ int main(int argc, char** argv)
                     try
                     {
                         DBB::encryptAndEncodeCommand(cmd, password, base64str);
-                        DBB::sendCommand(base64str, cmdOut);
-                        DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                        if (!DBB::sendCommand(base64str, cmdOut))
+                            unencryptedJson = "sending command failed";
+                        else
+                            DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
                     }
                     catch (const std::exception& ex) {
                         unencryptedJson = "response decryption failed: "+cmdOut;
