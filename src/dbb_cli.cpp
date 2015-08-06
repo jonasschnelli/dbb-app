@@ -91,7 +91,7 @@ static const CDBBCommand vCommands[] =
 
 int main(int argc, char* argv[])
 {
-    ParseParameters(argc, argv);
+    DBB::ParseParameters(argc, argv);
 
     unsigned int i = 0, loop = 0;
     bool cmdfound = false;
@@ -106,7 +106,7 @@ int main(int argc, char* argv[])
     if (cmdArgs.size() > 0)
         userCmd = cmdArgs.front();
 
-    if (userCmd == "help" || mapArgs.count("-help") || userCmd == "?") {
+    if (userCmd == "help" || DBB::mapArgs.count("-help") || userCmd == "?") {
         printf("Usage: %s -<arg0>=<value> -<arg1>=<value> ... <command>\n\nAvailable commands with possible arguments (* = mandatory):\n", "dbb_cli");
         //try to find the command in the dispatch table
         for (i = 0; i < (sizeof(vCommands) / sizeof(vCommands[0])); i++) {
@@ -214,8 +214,8 @@ int main(int argc, char* argv[])
                         }
 
                         var = "-" + var; //cmd args come in over "-arg"
-                        if (mapArgs.count(var)) {
-                            json.insert(tokenOpenPos, mapArgs[var]);
+                        if (DBB::mapArgs.count(var)) {
+                            json.insert(tokenOpenPos, DBB::mapArgs[var]);
                         } else if (mandatory) {
                             printf("Argument %s is mandatory for command %s\n", var.c_str(), cmd.cmdname.c_str());
                             return 0;
@@ -227,8 +227,8 @@ int main(int argc, char* argv[])
                     }
                 }
 
-                if (cmd.requiresEncryption || mapArgs.count("-password")) {
-                    if (!mapArgs.count("-password")) {
+                if (cmd.requiresEncryption || DBB::mapArgs.count("-password")) {
+                    if (!DBB::mapArgs.count("-password")) {
                         printf("This command requires the -password argument\n");
                         return 0;
                     }
@@ -237,7 +237,7 @@ int main(int argc, char* argv[])
                         DebugOut("main", "Using encyption because -password was set\n");
                     }
 
-                    std::string password = GetArg("-password", "0000"); //0000 will never be used because setting a password is required
+                    std::string password = DBB::GetArg("-password", "0000"); //0000 will never be used because setting a password is required
                     std::string base64str;
                     std::string unencryptedJson;
 
@@ -246,8 +246,8 @@ int main(int argc, char* argv[])
                     DBB::sendCommand(base64str, cmdOut);
                     try {
                         //hack: decryption needs the new password in case the AES256CBC password has changed
-                        if (mapArgs.count("-newpassword"))
-                            password = GetArg("-newpassword", "");
+                        if (DBB::mapArgs.count("-newpassword"))
+                            password = DBB::GetArg("-newpassword", "");
 
                         DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
                     } catch (const std::exception& ex) {
@@ -278,7 +278,7 @@ int main(int argc, char* argv[])
                 cmdfound = DBB::sendCommand(userCmd, cmdOut);
             }
 
-            printf("command (%s) not found, use \"help\" to list available commands\n", SanitizeString(userCmd).c_str());
+            printf("command (%s) not found, use \"help\" to list available commands\n", DBB::SanitizeString(userCmd).c_str());
         }
     }
     return 0;
