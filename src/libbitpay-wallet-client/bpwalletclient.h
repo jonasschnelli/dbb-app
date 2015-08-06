@@ -28,7 +28,6 @@
 #include <openssl/err.h>
 #include <openssl/rand.h>
 
-#include <secp256k1.h>
 
 #include <stdio.h>
 #include <string>
@@ -65,7 +64,4 @@ public:
     
     CKey GetNewKey();
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);
-    
-private:
-    void InitECContext();
 };
