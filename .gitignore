@@ -78,4 +78,5 @@ src/config/*.in
 
 src/qt/*.moc
 src/qt/moc_*.cpp
-src/qt/forms/ui_*.h
+src/qt/ui/ui_*.h
+src/qt/qrc_*.cpp
