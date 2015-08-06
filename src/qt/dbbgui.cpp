@@ -8,8 +8,10 @@
 #include <QPushButton>
 #include <QDebug>
 #include <QInputDialog>
+#include <QSpacerItem>
 
 #include "ui/ui_overview.h"
+#include "seeddialog.h"
 #include <dbb.h>
 
 #include <functional>
@@ -28,12 +30,31 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
+    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
+
+    //set window icon
+    QApplication::setWindowIcon(QIcon(":/icons/dbb"));
+
+    //set status bar
+    QWidget* spacer = new QWidget();
+    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
+    spacer->setMinimumWidth(3);
+    spacer->setMaximumHeight(10);
+    statusBar()->addWidget(spacer);
+    this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
+    this->statusBarButton->setEnabled(false);
+    this->statusBarButton->setFlat(true);
+    this->statusBarButton->setMaximumWidth(18);
+    this->statusBarButton->setMaximumHeight(18);
+    this->statusBarButton->setVisible(false);
+    statusBar()->addWidget(this->statusBarButton);
+
+    this->statusBarLabel = new QLabel("");
+    statusBar()->addWidget(this->statusBarLabel);
 
 
-    changeConnectedState(DBB::openConnection());
-
+    changeConnectedState(DBB::isConnectionOpen());
     setWindowTitle("The Digital Bitbox");
-
 
     bool ok;
     QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
@@ -75,10 +96,15 @@ DBBDaemonGui::~DBBDaemonGui()
 
 void DBBDaemonGui::changeConnectedState(bool state)
 {
-    if (state)
-        ui->connected->setVisible(true);
-    else
-        ui->connected->setVisible(false);
+    if (state) {
+        this->statusBarLabel->setText("Device connected");
+        this->statusBarButton->setVisible(true);
+    } else {
+        this->statusBarLabel->setText("no device found");
+        this->statusBarButton->setVisible(false);
+    }
+
+    this->ui->widget->setEnabled(state);
 }
 
 void DBBDaemonGui::eraseClicked()
@@ -105,8 +131,14 @@ void DBBDaemonGui::setPasswordClicked()
 
 void DBBDaemonGui::seed()
 {
-    sendCommand("{\"seed\" : {\"source\" :\"create\","
-                "\"decrypt\": \"no\","
-                "\"salt\" : \"\"} }",
-                sessionPassword);
+    SeedDialog* dialog = new SeedDialog();
+    dialog->setWindowTitle("Dialog");
+    if (dialog->exec() == 1) {
+        if (dialog->SelectedWalletType() == 0) {
+            sendCommand("{\"seed\" : {\"source\" :\"create\","
+                        "\"decrypt\": \"no\","
+                        "\"salt\" : \"\"} }",
+                        sessionPassword);
+        }
+    }
 }

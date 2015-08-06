@@ -57,6 +57,25 @@ static bool api_hid_close(void)
     return false;
 }
 
+bool isConnectionOpen()
+{
+    if (!HID_HANDLE)
+        return false;
+
+    struct hid_device_info* devs, *cur_dev;
+
+    devs = hid_enumerate(0x03eb, 0x2402);
+    cur_dev = devs;
+    bool found = false;
+    while (cur_dev) {
+        found = true;
+        break;
+    }
+    hid_free_enumeration(devs);
+
+    return found;
+}
+
 bool openConnection()
 {
     return api_hid_init();
@@ -73,7 +92,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 
     if (!HID_HANDLE)
         return false;
-    
+
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
     memset(HID_REPORT, 0, HID_REPORT_SIZE);

@@ -7,6 +7,8 @@
 
 #include <QMainWindow>
 #include <QWidget>
+#include <QLabel>
+#include <QPushButton>
 
 namespace Ui
 {
@@ -23,10 +25,11 @@ public:
 
 private:
     Ui::MainWindow* ui;
+    QLabel* statusBarLabel;
+    QPushButton* statusBarButton;
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
 
-    void changeConnectedState(bool state);
     bool sendCommand(const std::string& cmd, const std::string& password);
 
 public slots:
@@ -36,9 +39,11 @@ public slots:
     void setResultText(const QString& result);
     void setPasswordClicked();
     void seed();
+    void changeConnectedState(bool state);
 
 signals:
     void showCommandResult(const QString& result);
+    void deviceStateHasChanged(bool state);
 };
 
 #endif

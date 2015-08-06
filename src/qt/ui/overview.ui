@@ -56,92 +56,78 @@
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QWidget" name="verticalLayoutWidget">
+   <widget class="QWidget" name="widget" native="true">
     <property name="geometry">
      <rect>
       <x>0</x>
-      <y>72</y>
+      <y>60</y>
       <width>321</width>
-      <height>183</height>
+      <height>221</height>
      </rect>
     </property>
-    <layout class="QVBoxLayout" name="verticalLayout">
-     <property name="leftMargin">
-      <number>10</number>
+    <widget class="QWidget" name="verticalLayoutWidget">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>321</width>
+       <height>221</height>
+      </rect>
      </property>
-     <property name="topMargin">
-      <number>10</number>
-     </property>
-     <property name="rightMargin">
-      <number>10</number>
-     </property>
-     <property name="bottomMargin">
-      <number>10</number>
-     </property>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout">
-       <item>
-        <widget class="QPushButton" name="ledButton">
-         <property name="text">
-          <string>Blink LED</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="passwordButton">
-         <property name="text">
-          <string>Set Password</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <layout class="QHBoxLayout" name="horizontalLayout_2">
-       <item>
-        <widget class="QPushButton" name="eraseButton">
-         <property name="text">
-          <string>Erase</string>
-         </property>
-        </widget>
-       </item>
-       <item>
-        <widget class="QPushButton" name="seedButton">
-         <property name="text">
-          <string>Seed</string>
-         </property>
-        </widget>
-       </item>
-      </layout>
-     </item>
-     <item>
-      <widget class="QTextEdit" name="textEdit"/>
-     </item>
-    </layout>
-   </widget>
-   <widget class="QPushButton" name="connected">
-    <property name="enabled">
-     <bool>false</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>274</x>
-      <y>0</y>
-      <width>51</width>
-      <height>41</height>
-     </rect>
-    </property>
-    <property name="text">
-     <string/>
-    </property>
-    <property name="icon">
-     <iconset>
-      <normaloff>:/icons/connected</normaloff>
-      <disabledoff>:/icons/connected</disabledoff>:/icons/connected</iconset>
-    </property>
-    <property name="flat">
-     <bool>true</bool>
-    </property>
+     <layout class="QVBoxLayout" name="verticalLayout">
+      <property name="leftMargin">
+       <number>10</number>
+      </property>
+      <property name="topMargin">
+       <number>10</number>
+      </property>
+      <property name="rightMargin">
+       <number>10</number>
+      </property>
+      <property name="bottomMargin">
+       <number>10</number>
+      </property>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout">
+        <item>
+         <widget class="QPushButton" name="ledButton">
+          <property name="text">
+           <string>Blink LED</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="passwordButton">
+          <property name="text">
+           <string>Set Password</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <layout class="QHBoxLayout" name="horizontalLayout_2">
+        <item>
+         <widget class="QPushButton" name="eraseButton">
+          <property name="text">
+           <string>Erase</string>
+          </property>
+         </widget>
+        </item>
+        <item>
+         <widget class="QPushButton" name="seedButton">
+          <property name="text">
+           <string>Seed</string>
+          </property>
+         </widget>
+        </item>
+       </layout>
+      </item>
+      <item>
+       <widget class="QTextEdit" name="textEdit"/>
+      </item>
+     </layout>
+    </widget>
    </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
