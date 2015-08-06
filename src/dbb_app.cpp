@@ -26,6 +26,7 @@
 
 #include <assert.h>
 #include <atomic>
+#include <chrono>
 #include <condition_variable>
 #include <iostream>
 #include <mutex>
@@ -42,9 +43,12 @@
 #include "util.h"
 
 #include "univalue.h"
+#include "libbitpay-wallet-client/bpwalletclient.h"
 
 #include "hidapi/hidapi.h"
 #include "openssl/sha.h"
+#include <openssl/err.h>
+#include <openssl/rand.h>
 
 #include <event2/event.h>
 #include <event2/http.h>
@@ -58,6 +62,10 @@
 #include <QPushButton>
 
 #include "qt/dbbgui.h"
+
+extern void doubleSha256(char* string, unsigned char* hashOut);
+
+static DBBDaemonGui* widget;
 #endif
 
 std::condition_variable queueCondVar;
@@ -163,6 +171,73 @@ int main(int argc, char** argv)
         }
     });
 
+    //create a thread for the http handling
+    std::thread usbCheckThread([&]() {
+        while(1)
+        {
+            //check devices
+            if (!DBB::isConnectionOpen())
+            {
+                printf("no connection\n");
+                if (DBB::openConnection())
+                {
+#ifdef ENABLE_QT
+                //TODO, check if this requires locking
+                if (widget)
+                    widget->deviceStateHasChanged(true);
+#endif
+                }
+                else
+                {
+#ifdef ENABLE_QT
+                if (widget)
+                    widget->deviceStateHasChanged(false);
+#endif
+                }
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+        }
+    });
+    
+    
+    BitPayWalletClient client;
+    ECKey aKey = client.GetNewKey();
+    assert(aKey.VerifyPubKey() == 1);
+
+    
+    // unsigned char vchPub[65];
+    // int clen = 65;
+    // secp256k1_pubkey_t pubkey;
+    // assert(secp256k1_ec_seckey_verify(secp256k1_context, vch) == 1);
+    // int ret = secp256k1_ec_pubkey_create(secp256k1_context, &pubkey, vch);
+    // unsigned char pubkeyc[65];
+    // int pubkeyclen = 65;
+    // secp256k1_ec_pubkey_serialize(secp256k1_context, pubkeyc, &pubkeyclen, &pubkey, true);
+    
+    // std::string hexStr = HexStr(pubkeyc, pubkeyc+pubkeyclen, false);
+    //
+    // secp256k1_pubkey_t pubkeyNew;
+    // std::vector<unsigned char> vPubKey = ParseHex(hexStr);
+    // int suc = secp256k1_ec_pubkey_parse(secp256k1_context, &pubkeyNew, &vPubKey[0], vPubKey.size());
+    
+
+    
+    //var message = [method.toLowerCase(), url, JSON.stringify(args)].join('|');
+    // std::string requestString = "get|/v1/wallets/?r=62416|{}";
+    // unsigned char hashD[32];
+    // doubleSha256((char*)requestString.c_str(), hashD);
+    // secp256k1_ecdsa_signature_t signature;
+    // suc = secp256k1_ecdsa_sign(secp256k1_context, hashD, &signature, vch, NULL, NULL);
+    //
+    // unsigned char sig[74];
+    // int siglen = 74;
+    // suc = secp256k1_ecdsa_signature_serialize_der(secp256k1_context, sig, &siglen, &signature);
+    // std::string hexStrDER = HexStr(sig, sig+siglen, false);
+    //
+    //
+    // std::string header = "\n\ncurl --header \"x-identity: "+hexStr+"\" --header \"x-signature: "+hexStrDER+"\"  -v https://bws.bitpay.com/bws/api/v1/wallets/\n\n";
+    // printf("header: %s", header.c_str());
+    
 #ifdef ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
@@ -176,7 +251,7 @@ int main(int argc, char** argv)
     
     QApplication app(argc, argv);
 
-    DBBDaemonGui* widget = new DBBDaemonGui(0);
+    widget = new DBBDaemonGui(0);
     widget->show();
     app.exec();
 #else
