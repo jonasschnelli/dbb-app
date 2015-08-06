@@ -200,10 +200,13 @@ int main(int argc, char** argv)
     });
     
     
+    ECC_Start();
+    
     BitPayWalletClient client;
-    ECKey aKey = client.GetNewKey();
-    assert(aKey.VerifyPubKey() == 1);
+    CKey aKey = client.GetNewKey();
+    assert(aKey.VerifyPubKey(aKey.GetPubKey()) == 1);
 
+    ECC_Stop();
     
     // unsigned char vchPub[65];
     // int clen = 65;

@@ -1,5 +1,5 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
-AC_PREREQ([2.60])
+AC_PREREQ([2.69])
 AC_INIT([Digital Bitbox CLI],[0.1],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
 AC_CONFIG_SRCDIR([src/config])
 AC_CONFIG_HEADERS([src/config/dbb-config.h])
@@ -229,6 +229,43 @@ else
   AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
 fi
 
+LIBCURL_CHECK_CONFIG(, 7.15.2, , [AC_MSG_ERROR([Missing required libcurl >= 7.15.2])])
+
+dnl Check for boost libs
+AX_BOOST_BASE
+AX_BOOST_SYSTEM
+AX_BOOST_FILESYSTEM
+AX_BOOST_PROGRAM_OPTIONS
+AX_BOOST_THREAD
+AX_BOOST_CHRONO
+
+if test x$use_reduce_exports = xyes; then
+  AC_MSG_CHECKING([for working boost reduced exports])
+  TEMP_CPPFLAGS="$CPPFLAGS"
+  CPPFLAGS="$BOOST_CPPFLAGS $CPPFLAGS"
+  AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
+      @%:@include <boost/version.hpp>
+    ]], [[
+      #if BOOST_VERSION >= 104900
+      // Everything is okay
+      #else
+      #  error Boost version is too old
+      #endif
+    ]])],[
+      AC_MSG_RESULT(yes)
+    ],[
+    AC_MSG_ERROR([boost versions < 1.49 are known to be broken with reduced exports. Use --disable-reduce-exports.])
+  ])
+  CPPFLAGS="$TEMP_CPPFLAGS"
+fi
+
+if test x$use_reduce_exports = xyes; then
+    CXXFLAGS="$CXXFLAGS $RE_CXXFLAGS"
+    AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]], [RELDFLAGS="-Wl,--exclude-libs,ALL"])
+fi
+
+BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB"
+
 #######################################################################
 # we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
 # so we can copy upstreams m4 directly without merging                #
@@ -253,7 +290,10 @@ AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
 fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
+AC_SUBST(BOOST_LIBS)
 
+ac_configure_args="${ac_configure_args} --enable-gui=no --enable-wallet=no --enable-tests=no --enable-static=yes"
+AC_CONFIG_SUBDIRS([vendor/bitcoin])
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])
