@@ -17,7 +17,6 @@ build-aux/m4/lt~obsolete.m4
 build-aux/m4/ltoptions.m4
 build-aux/m4/ltsugar.m4
 build-aux/m4/ltversion.m4
-build-aux/m4/ax_boost*
 build-aux/missing
 build-aux/compile
 build-aux/test-driver
