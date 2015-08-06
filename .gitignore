@@ -1,7 +1,7 @@
 *.tar.gz
 *.exe
 src/dbb-cli
-src/dbb-daemon
+src/dbb-app
 
 # autoreconf
 Makefile.in
