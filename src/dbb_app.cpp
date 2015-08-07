@@ -57,7 +57,7 @@
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
 
-#ifdef ENABLE_QT
+#ifdef DBB_ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
 
@@ -181,7 +181,7 @@ int main(int argc, char** argv)
                 printf("no connection\n");
                 if (DBB::openConnection())
                 {
-#ifdef ENABLE_QT
+#ifdef DBB_ENABLE_QT
                 //TODO, check if this requires locking
                 if (widget)
                     widget->deviceStateHasChanged(true);
@@ -189,7 +189,7 @@ int main(int argc, char** argv)
                 }
                 else
                 {
-#ifdef ENABLE_QT
+#ifdef DBB_ENABLE_QT
                 if (widget)
                     widget->deviceStateHasChanged(false);
 #endif
@@ -201,7 +201,7 @@ int main(int argc, char** argv)
     
     
     ECC_Start();
-    
+        
     BitPayWalletClient client;
     CKey aKey = client.GetNewKey();
     assert(aKey.VerifyPubKey(aKey.GetPubKey()) == 1);
@@ -241,7 +241,7 @@ int main(int argc, char** argv)
     // std::string header = "\n\ncurl --header \"x-identity: "+hexStr+"\" --header \"x-signature: "+hexStrDER+"\"  -v https://bws.bitpay.com/bws/api/v1/wallets/\n\n";
     // printf("header: %s", header.c_str());
     
-#ifdef ENABLE_QT
+#ifdef DBB_ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);

@@ -13,8 +13,8 @@
 #include <string>
 #include <stdexcept>
 
-#if defined(HAVE_CONFIG_H)
-#include "../config/dbb-config.h"
+#if defined(_SRC_CONFIG__DBB_CONFIG_H)
+#include "config/_dbb-config.h"
 #endif
 
 #include "util.h"
@@ -25,7 +25,7 @@
 
 #define HID_REPORT_SIZE 2048
 
-#ifdef ENABLE_DEBUG
+#ifdef DBB_ENABLE_DEBUG
 #define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
 #else
 #define DBB_DEBUG_INTERNAL(format, args...)

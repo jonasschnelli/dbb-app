@@ -10,8 +10,8 @@
 #include <map>
 #include <vector>
 
-#if defined(HAVE_CONFIG_H)
-#include "config/dbb-config.h"
+#if defined(_SRC_CONFIG__DBB_CONFIG_H)
+#include "config/_dbb-config.h"
 #endif
 
 
@@ -19,7 +19,7 @@ namespace DBB
 {
 #define DEBUG_SHOW_CATEGRORY 1
 
-#ifdef ENABLE_DEBUG
+#ifdef DBB_ENABLE_DEBUG
 #define DebugOut(category, format, args...)  \
     if (DEBUG_SHOW_CATEGRORY) {              \
         printf("  [DEBUG]  %s: ", category); \

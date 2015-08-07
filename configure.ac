@@ -3,6 +3,7 @@ AC_PREREQ([2.69])
 AC_INIT([Digital Bitbox CLI],[0.1],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
 AC_CONFIG_SRCDIR([src/config])
 AC_CONFIG_HEADERS([src/config/dbb-config.h])
+AX_PREFIX_CONFIG_H([src/config/_dbb-config.h], [DBB])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_HOST
@@ -292,7 +293,7 @@ AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 AC_SUBST(BOOST_LIBS)
 
-ac_configure_args="${ac_configure_args} --enable-gui=no --enable-wallet=no --enable-tests=no --enable-static=yes"
+ac_configure_args="--with-daemon=no --with-gui=no --enable-wallet=no --with-libs=yes --enable-tests=no --enable-static=yes"
 AC_CONFIG_SUBDIRS([vendor/bitcoin])
 
 AC_PROG_CXX
