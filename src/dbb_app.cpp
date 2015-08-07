@@ -203,9 +203,53 @@ int main(int argc, char** argv)
     ECC_Start();
         
     BitPayWalletClient client;
+    
+    std::string myName = "test";
+    
+    printf("start seed\n");
+    client.seed();
+    printf("seed done\n");
+    std::string requestPubKey;
+    if (!client.GetRequestPubKey(requestPubKey))
+        printf("Retriving request key failed!\n");
+    
+    std::string copayerHash;
+    client.GetCopayerHash(myName, copayerHash);
+    printf("---copayer hash: %s\n", copayerHash.c_str());
     CKey aKey = client.GetNewKey();
     assert(aKey.VerifyPubKey(aKey.GetPubKey()) == 1);
 
+    BitpayWalletInvitation invitation;
+    if (!client.ParseWalletInvitation("MJRiJFPTE8cJtQ2YBHtasnL3vNy8NF4BRLBNLemcBCMg55DmEWeY9FaXGrQEBjRd1ZsoZ9hVfgL", invitation))
+        printf("parse invitation failed!\n");
+    
+    std::string copayerSignature;
+    client.GetCopayerSignature(copayerHash, invitation.walletPrivKey, copayerSignature);
+    printf("copayerSignature %s\n", copayerSignature.c_str());
+    printf("walletid: %s\n", invitation.walletID.c_str());
+    printf("network: %s\n", invitation.network.c_str());
+    
+    UniValue jsonArgs(UniValue::VOBJ);
+    jsonArgs.push_back(Pair("walletId", invitation.walletID));
+    jsonArgs.push_back(Pair("name", myName));
+    jsonArgs.push_back(Pair("xPubKey", client.GetXPubKey()));
+    jsonArgs.push_back(Pair("requestPubKey", requestPubKey));
+    jsonArgs.push_back(Pair("isTemporaryRequestKey", false));
+    jsonArgs.push_back(Pair("copayerSignature", copayerSignature));
+    
+    std::string json = jsonArgs.write();
+    printf("JSON: %s", json.c_str());
+    
+    std::string method = "post";
+    std::string url = "/v1/wallets/"+invitation.walletID+"/copayers";
+    
+    std::string xSignature = client.SignRequest(method, url, json);
+    std::string xIdentity = requestPubKey;
+    std::string postUrl = "https://bws.bitpay.com/bws/api";
+    
+    std::string header = "\n\ncurl -X POST -H \"Content-Type: application/json\" -d '"+json+"' --header \"x-identity: "+xIdentity+"\" --header \"x-signature: "+xSignature+"\"  -v "+postUrl+url+"\n\n";
+    printf("header: %s", header.c_str());
+    
     ECC_Stop();
     
     // unsigned char vchPub[65];

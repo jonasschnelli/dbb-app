@@ -64,4 +64,21 @@ public:
     
     CKey GetNewKey();
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);
+    bool GetRequestPubKey(std::string &pubKeyOut);
+    bool GetCopayerHash(const std::string &name, std::string &hashOut);
+    bool GetCopayerSignature(const std::string& stringToHash, const CKey& privKey, std::string& sigHexOut);
+    void seed();
+    std::string GetXPubKey();
+    std::string SignRequest(const std::string& method,
+                                                     const std::string& url,
+                                                     const std::string& args);
+private:
+    
+    CExtKey masterPrivKey; // "m/45'"
+    CExtPubKey masterPubKey; // "m/45'"
+    
+    CKey requestKey; //"m/1'/0"
+    
+    std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
+    std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);
 };

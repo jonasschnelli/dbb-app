@@ -1,4 +1,4 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include -I../vendor/bitcoin/src
+AM_CPPFLAGS = -I$(top_srcdir)/include -I../vendor/bitcoin/src -I../vendor/bitcoin/src/config
 
 libunival_CONFIG_INCLUDES=-I$(builddir)/config
 libunival_INCLUDES=-I$(builddir) -I$(builddir)/obj univalue/univalue_escapes.h ../include/univalue.h
