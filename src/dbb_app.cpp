@@ -57,6 +57,8 @@
 #include <event2/keyvalq_struct.h>
 #include <sys/signal.h>
 
+#include "config/_dbb-config.h"
+
 #ifdef DBB_ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
@@ -178,7 +180,6 @@ int main(int argc, char** argv)
             //check devices
             if (!DBB::isConnectionOpen())
             {
-                printf("no connection\n");
                 if (DBB::openConnection())
                 {
 #ifdef DBB_ENABLE_QT
@@ -198,93 +199,9 @@ int main(int argc, char** argv)
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
     });
-    
-    
+
     ECC_Start();
-        
-    BitPayWalletClient client;
-    
-    std::string myName = "test";
-    
-    printf("start seed\n");
-    client.seed();
-    printf("seed done\n");
-    std::string requestPubKey;
-    if (!client.GetRequestPubKey(requestPubKey))
-        printf("Retriving request key failed!\n");
-    
-    std::string copayerHash;
-    client.GetCopayerHash(myName, copayerHash);
-    printf("---copayer hash: %s\n", copayerHash.c_str());
-    CKey aKey = client.GetNewKey();
-    assert(aKey.VerifyPubKey(aKey.GetPubKey()) == 1);
 
-    BitpayWalletInvitation invitation;
-    if (!client.ParseWalletInvitation("MJRiJFPTE8cJtQ2YBHtasnL3vNy8NF4BRLBNLemcBCMg55DmEWeY9FaXGrQEBjRd1ZsoZ9hVfgL", invitation))
-        printf("parse invitation failed!\n");
-    
-    std::string copayerSignature;
-    client.GetCopayerSignature(copayerHash, invitation.walletPrivKey, copayerSignature);
-    printf("copayerSignature %s\n", copayerSignature.c_str());
-    printf("walletid: %s\n", invitation.walletID.c_str());
-    printf("network: %s\n", invitation.network.c_str());
-    
-    UniValue jsonArgs(UniValue::VOBJ);
-    jsonArgs.push_back(Pair("walletId", invitation.walletID));
-    jsonArgs.push_back(Pair("name", myName));
-    jsonArgs.push_back(Pair("xPubKey", client.GetXPubKey()));
-    jsonArgs.push_back(Pair("requestPubKey", requestPubKey));
-    jsonArgs.push_back(Pair("isTemporaryRequestKey", false));
-    jsonArgs.push_back(Pair("copayerSignature", copayerSignature));
-    
-    std::string json = jsonArgs.write();
-    printf("JSON: %s", json.c_str());
-    
-    std::string method = "post";
-    std::string url = "/v1/wallets/"+invitation.walletID+"/copayers";
-    
-    std::string xSignature = client.SignRequest(method, url, json);
-    std::string xIdentity = requestPubKey;
-    std::string postUrl = "https://bws.bitpay.com/bws/api";
-    
-    std::string header = "\n\ncurl -X POST -H \"Content-Type: application/json\" -d '"+json+"' --header \"x-identity: "+xIdentity+"\" --header \"x-signature: "+xSignature+"\"  -v "+postUrl+url+"\n\n";
-    printf("header: %s", header.c_str());
-    
-    ECC_Stop();
-    
-    // unsigned char vchPub[65];
-    // int clen = 65;
-    // secp256k1_pubkey_t pubkey;
-    // assert(secp256k1_ec_seckey_verify(secp256k1_context, vch) == 1);
-    // int ret = secp256k1_ec_pubkey_create(secp256k1_context, &pubkey, vch);
-    // unsigned char pubkeyc[65];
-    // int pubkeyclen = 65;
-    // secp256k1_ec_pubkey_serialize(secp256k1_context, pubkeyc, &pubkeyclen, &pubkey, true);
-    
-    // std::string hexStr = HexStr(pubkeyc, pubkeyc+pubkeyclen, false);
-    //
-    // secp256k1_pubkey_t pubkeyNew;
-    // std::vector<unsigned char> vPubKey = ParseHex(hexStr);
-    // int suc = secp256k1_ec_pubkey_parse(secp256k1_context, &pubkeyNew, &vPubKey[0], vPubKey.size());
-    
-
-    
-    //var message = [method.toLowerCase(), url, JSON.stringify(args)].join('|');
-    // std::string requestString = "get|/v1/wallets/?r=62416|{}";
-    // unsigned char hashD[32];
-    // doubleSha256((char*)requestString.c_str(), hashD);
-    // secp256k1_ecdsa_signature_t signature;
-    // suc = secp256k1_ecdsa_sign(secp256k1_context, hashD, &signature, vch, NULL, NULL);
-    //
-    // unsigned char sig[74];
-    // int siglen = 74;
-    // suc = secp256k1_ecdsa_signature_serialize_der(secp256k1_context, sig, &siglen, &signature);
-    // std::string hexStrDER = HexStr(sig, sig+siglen, false);
-    //
-    //
-    // std::string header = "\n\ncurl --header \"x-identity: "+hexStr+"\" --header \"x-signature: "+hexStrDER+"\"  -v https://bws.bitpay.com/bws/api/v1/wallets/\n\n";
-    // printf("header: %s", header.c_str());
-    
 #ifdef DBB_ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
@@ -295,7 +212,7 @@ int main(int argc, char** argv)
     std::thread httpThread([&]() {
         event_base_dispatch(base);
     });
-    
+
     QApplication app(argc, argv);
 
     widget = new DBBDaemonGui(0);
@@ -306,5 +223,6 @@ int main(int argc, char** argv)
     event_base_dispatch(base);
 #endif
 
+    ECC_Stop();
     exit(1);
 }

@@ -13,6 +13,7 @@
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
 #include <dbb.h>
+#include "libbitpay-wallet-client/bpwalletclient.h"
 
 #include <functional>
 
@@ -28,6 +29,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
+    connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
@@ -104,7 +106,7 @@ void DBBDaemonGui::changeConnectedState(bool state)
         this->statusBarButton->setVisible(false);
     }
 
-    this->ui->widget->setEnabled(state);
+    //this->ui->widget->setEnabled(state);
 }
 
 void DBBDaemonGui::eraseClicked()
@@ -141,4 +143,20 @@ void DBBDaemonGui::seed()
                         sessionPassword);
         }
     }
+}
+
+void DBBDaemonGui::JoinCopayWallet()
+{
+    bool ok;
+    QString text = QInputDialog::getText(this, tr("Join Copay Wallet"), tr("Wallet Invitation Code"), QLineEdit::Normal, "", &ok);
+    if (!ok || text.isEmpty())
+        return;
+    
+    BitPayWalletClient client;
+    client.seed(); //generate a new wallet
+    
+    std::string result;
+    bool ret = client.JoinWallet("digitalbitbox", text.toStdString(), result);
+    
+    setResultText(QString::fromStdString(result));
 }

@@ -40,6 +40,7 @@ public slots:
     void setPasswordClicked();
     void seed();
     void changeConnectedState(bool state);
+    void JoinCopayWallet();
 
 signals:
     void showCommandResult(const QString& result);

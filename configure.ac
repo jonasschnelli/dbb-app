@@ -293,8 +293,10 @@ AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 AC_SUBST(BOOST_LIBS)
 
+oldVars = ${ac_configure_args};
 ac_configure_args="--with-daemon=no --with-gui=no --enable-wallet=no --with-libs=yes --enable-tests=no --enable-static=yes"
 AC_CONFIG_SUBDIRS([vendor/bitcoin])
+ac_configure_args = ${oldVars}
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])
