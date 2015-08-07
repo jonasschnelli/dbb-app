@@ -1,8 +1,8 @@
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
 
-**C++ library for communicating with the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 
-This library includes UniValue – a tiny JSON parser/encoder written by Jeff Garzik (stable and also used in bitcoin-core).
+## DBB-APP
+A QT based application for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet. The application support managing your dbb device (create new wallet, backup, set 2FA key, etc.). It also supports co-signing together with a [Bitpay Copay Wallet](http://copay.io).
 
 ## Example
 
@@ -63,6 +63,8 @@ lock
 verifypass -operation (default: create)
 aes -type (default: encrypt), -data (default: encrypt)
 ```
+## libdbb
+**C++ library for communicating with the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
 
 ## Current Status
 Libdbb is at an early stage of development.
@@ -76,6 +78,11 @@ Libdbb is at an early stage of development.
 ## Build Instructions
 Dependencies:
 
+dbb-cli and dbb-app depend on bitcoin-core for key generation, signing, hashing, crypto, etc.
+bitcoin-core is has proven to manage 4 billion USD and is therefore very stable.
+During the compile process dbb compiles the common and util classes.
+
+- bitcoin-core (included as git submodule)
 - openssl
 - https://github.com/signal11/hidapi
 - libevent2 (if daemon enabled)
@@ -113,6 +120,7 @@ if libhidapi is not available, compile it yourself
 
 Basic build steps:
 
+    git submodule update --init --recursive
     ./autogen
     ./configure --enable-debug --enable-daemon --with-gui=qt5
     make
