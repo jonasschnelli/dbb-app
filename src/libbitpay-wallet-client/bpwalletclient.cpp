@@ -6,18 +6,25 @@
 
 #include "config/_dbb-config.h"
 
+#include <algorithm>
+
 #include <assert.h>
 #include <string.h>
 
 #include "base58.h"
 #include "eccryptoverify.h"
 #include "keystore.h"
+#include "serialize.h"
+#include "streams.h"
+#include "pubkey.h"
 #include "univalue/univalue.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include "libdbb/crypto.h"
+#include "dbb_util.h"
 
+#include <boost/filesystem.hpp>
 
 //ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -90,6 +97,51 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
     return true;
 };
 
+void BitPayWalletClient::setPubKeys(const std::string& xPubKeyRequestKeyEntropy, const std::string& xPubKey)
+{
+    //set the extended public key from the key chain
+    CBitcoinExtPubKey b58keyDecodeCheckXPubKey(xPubKey);
+    CExtPubKey checkKey = b58keyDecodeCheckXPubKey.GetKey();
+    masterPubKey = checkKey;
+    
+    //now this is a ugly workaround because we need a request keypair (pub/priv)
+    //for signing the requests after BitAuth
+    //Signing over the hardware wallet would be a very bad UX (press button on
+    // every request) and it would be slow
+    //the request key should be deterministic and linked to the master key
+    //
+    //we now generate a private key by (miss)using the xpub at m/1'/0' as entropy
+    //for a new private key
+    CBitcoinExtPubKey requestXPub(xPubKeyRequestKeyEntropy);
+    CExtPubKey requestEntropyKey = requestXPub.GetKey();
+    std::vector<unsigned char> data;
+    data.resize(72);
+    requestEntropyKey.Encode(&data[0]);
+
+    CKeyingMaterial vSeed;
+    vSeed.resize(32);
+    int shift = 0;
+    int cnt = 0;
+    do {
+        memcpy(&vSeed[0], (void *)(&data[0]+shift), 32);
+        printf("current hex: %s\n", HexStr(vSeed, false).c_str());
+        printf("seed round: %d shift: %d \n", cnt, shift);
+        shift++;
+
+        if (shift+32 >= data.size())
+        {
+            printf("reverse\n");
+            shift = 0;
+            //might turn into a endless loop
+            std::reverse(data.begin(), data.end()); //do some more deterministic byte shuffeling
+        }
+    } while (!eccrypto::Check(&vSeed[0]));
+    
+    requestKey.Set(vSeed.begin(), vSeed.end(), true);
+    
+    SaveLocalData();
+}
+
 void BitPayWalletClient::seed()
 {
     CKeyingMaterial vSeed;
@@ -112,6 +164,7 @@ void BitPayWalletClient::seed()
     requestKeyChain.Derive(requestKeyExt, 0);
 
     requestKey = requestKeyExt.key;
+    printf("seed: request key: %s\n", HexStr(requestKey.begin(),requestKey.end(), false).c_str());
 }
 
 bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
@@ -178,8 +231,11 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const std::string& 
     jsonArgs.push_back(Pair("copayerSignature", copayerSignature));
     std::string json = jsonArgs.write();
 
-    response = SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json);
-    //TODO check response
+    long httpStatusCode = 0;
+    SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode);
+
+    if (httpStatusCode != 200)
+        return false;
 
     return true;
 }
@@ -191,6 +247,7 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
     std::string message = method + "|" + url + "|" + args;
     uint256 hash = Hash(message.begin(), message.end());
     std::vector<unsigned char> signature;
+    printf("signing request key: %s\n", HexStr(requestKey.begin(),requestKey.end(), false).c_str());
     requestKey.Sign(hash, signature);
     return HexStr(signature);
 };
@@ -201,14 +258,17 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
     return size * nmemb;
 }
 
-std::string BitPayWalletClient::SendRequest(const std::string& method,
+bool BitPayWalletClient::SendRequest(const std::string& method,
                                             const std::string& url,
-                                            const std::string& args)
+                                            const std::string& args,
+                                            std::string& responseOut,
+                                            long& httpcodeOut)
 {
     CURL* curl;
     CURLcode res;
-    std::string writeBuffer;
 
+    bool error = false;
+    
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
     if (curl) {
@@ -223,7 +283,7 @@ std::string BitPayWalletClient::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
         curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &writeBuffer);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
 
 #ifdef DBB_ENABLE_DEBUG
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -231,15 +291,105 @@ std::string BitPayWalletClient::SendRequest(const std::string& method,
 
         res = curl_easy_perform(curl);
         if (res != CURLE_OK)
+        {
             fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            error = true;
+        }
+        else
+        {
+            curl_easy_getinfo (curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
+            if (httpcodeOut != 200)
+                error = true;
+        }
 
         curl_easy_cleanup(curl);
     }
     curl_global_cleanup();
 
 #ifdef DBB_ENABLE_DEBUG
-    printf("response: %s", writeBuffer.c_str());
+    printf("response: %s", responseOut.c_str());
 #endif
 
-    return writeBuffer;
+    return error;
 };
+
+
+boost::filesystem::path GetDefaultDBBDataDir()
+{
+    namespace fs = boost::filesystem;
+    // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
+    // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
+    // Mac: ~/Library/Application Support/Bitcoin
+    // Unix: ~/.bitcoin
+#ifdef WIN32
+    // Windows
+    return GetSpecialFolderPath(CSIDL_APPDATA) / "DBB";
+#else
+    fs::path pathRet;
+    char* pszHome = getenv("HOME");
+    if (pszHome == NULL || strlen(pszHome) == 0)
+        pathRet = fs::path("/");
+    else
+        pathRet = fs::path(pszHome);
+#ifdef MAC_OSX
+    // Mac
+    pathRet /= "Library/Application Support";
+    TryCreateDirectory(pathRet);
+    return pathRet / "DBB";
+#else
+    // Unix
+    return pathRet / ".dbb";
+#endif
+#endif
+}
+
+bool BitPayWalletClient::IsSeeded()
+{
+    if (requestKey.IsValid())
+        return true;
+    
+    return false;
+}
+
+void BitPayWalletClient::SaveLocalData()
+{
+    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
+    boost::filesystem::create_directories(dataDir);
+    FILE *writeFile = fopen( (dataDir / "copay.dat").string().c_str(), "wb");
+    if (writeFile)
+    {
+        CAutoFile copayDatFile(writeFile, SER_DISK, 1);
+        copayDatFile << requestKey.GetPrivKey();
+        
+        CKeyingMaterial encoded;
+        encoded.resize(72);
+
+        masterPubKey.Encode(&encoded[0]);
+        copayDatFile << encoded;
+    }
+    fclose(writeFile);
+}
+
+void BitPayWalletClient::LoadLocalData()
+{
+    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
+    boost::filesystem::create_directories(dataDir);
+    FILE* fh = fopen( (dataDir / "copay.dat").string().c_str(), "rb");
+    if (fh)
+    {
+        CAutoFile copayDatFile(fh, SER_DISK, 1);
+        if (!copayDatFile.IsNull())
+        {
+            CPrivKey pkey;
+            copayDatFile >> pkey;
+            requestKey.SetPrivKey(pkey, false);
+            
+            CKeyingMaterial encoded;
+            encoded.resize(72);
+            copayDatFile >> encoded;
+            
+            masterPubKey.Decode(&encoded[0]);
+        }
+        fclose(fh);
+    }
+}

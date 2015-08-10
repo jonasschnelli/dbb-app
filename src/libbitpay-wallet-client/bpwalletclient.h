@@ -24,6 +24,9 @@
 
 */
 
+#ifndef BP_WALLET_CLIENT_H
+#define BP_WALLET_CLIENT_H
+
 #include <openssl/sha.h>
 #include <openssl/err.h>
 #include <openssl/rand.h>
@@ -73,10 +76,17 @@ public:
     std::string SignRequest(const std::string& method,
                             const std::string& url,
                             const std::string& args);
-    std::string SendRequest(const std::string& method,
+    bool SendRequest(const std::string& method,
                             const std::string& url,
-                            const std::string& args);
+                            const std::string& args,
+                            std::string& responseOut,
+                            long& httpStatusCodeOut);
+                            
+    void setPubKeys(const std::string& xPubKeyRequestKeyEntropy, const std::string& xPubKey);
 
+    bool IsSeeded();
+    void SaveLocalData();
+    void LoadLocalData();
 private:
     CExtKey masterPrivKey;   // "m/45'"
     CExtPubKey masterPubKey; // "m/45'"
@@ -87,3 +97,4 @@ private:
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
     std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);
 };
+#endif //BP_WALLET_CLIENT_H

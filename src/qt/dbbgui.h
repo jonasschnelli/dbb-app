@@ -10,6 +10,8 @@
 #include <QLabel>
 #include <QPushButton>
 
+#include "libbitpay-wallet-client/bpwalletclient.h"
+
 namespace Ui
 {
 class MainWindow;
@@ -22,6 +24,8 @@ class DBBDaemonGui : public QMainWindow
 public:
     explicit DBBDaemonGui(QWidget* parent = 0);
     ~DBBDaemonGui();
+    
+    void GetXPubKey();
 
 private:
     Ui::MainWindow* ui;
@@ -30,7 +34,10 @@ private:
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
 
+    BitPayWalletClient client;
+    
     bool sendCommand(const std::string& cmd, const std::string& password);
+    void _JoinCopayWallet();
 
 public slots:
     /** Set number of connections shown in the UI */
@@ -41,10 +48,14 @@ public slots:
     void seed();
     void changeConnectedState(bool state);
     void JoinCopayWallet();
+    void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
+    void GetRequestXPubKey(const QString& xPubKey);
 
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
+    void XPubForCopayWalletIsAvailable(const QString& xPubKey);
+    void RequestXPubKeyForCopayWalletIsAvailable(const QString& requestKey, const QString& xPubKey);
 };
 
 #endif
