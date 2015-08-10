@@ -40,7 +40,7 @@
 #include <thread>
 
 #include "dbb.h"
-#include "util.h"
+#include "dbb_util.h"
 
 #include "univalue.h"
 #include "libbitpay-wallet-client/bpwalletclient.h"

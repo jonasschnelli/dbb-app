@@ -2,7 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#include "util.h"
+#include "dbb_util.h"
 
 #include <stdio.h>
 #include <string.h>

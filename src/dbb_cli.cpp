@@ -35,7 +35,7 @@
 #include <string>
 
 #include "dbb.h"
-#include "util.h"
+#include "dbb_util.h"
 
 #include "univalue.h"
 #include "hidapi/hidapi.h"

@@ -17,7 +17,7 @@
 #include "config/_dbb-config.h"
 #endif
 
-#include "util.h"
+#include "dbb_util.h"
 #include "crypto.h"
 
 #include "../include/univalue.h"

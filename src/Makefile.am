@@ -7,8 +7,8 @@ noinst_LIBRARIES = libunival.a libdbb.a libbpwalletclient.a
 
 libunival_a_SOURCES = univalue/univalue.cpp univalue/univalue_read.cpp univalue/univalue_write.cpp
 
-libdbb_a_INCLUDES = ../include/dbb.h libdbb/util.h libdbb/crypto.h
-libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/util.h
+libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h
+libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
 libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
 libbpwalletclient_a_SOURCES = libbitpay-wallet-client/bpwalletclient.cpp
@@ -18,7 +18,7 @@ dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
 bin_PROGRAMS = dbb-cli
 
-dbb_cli_SOURCES = dbb_cli.cpp util.h util.cpp
+dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
@@ -30,7 +30,7 @@ if ENABLE_DBB_APP
 bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_app_SOURCES = dbb_app.cpp util.h util.cpp
+dbb_app_SOURCES = dbb_app.cpp dbb_util.h dbb_util.cpp
 dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
