@@ -26,6 +26,8 @@ configure
 libtool
 src/config/dbb-config.h
 src/config/dbb-config.h.in
+src/config/_dbb-config.h
+src/config/_dbb-config.h.in
 src/config/stamp-h1
 share/setup.nsi
 share/qt/Info.plist
