@@ -85,12 +85,13 @@ During the compile process dbb compiles the common and util classes.
 - bitcoin-core (included as git submodule)
 - openssl
 - https://github.com/signal11/hidapi
+- [boost](http://www.boost.org/)
 - libevent2 (if daemon enabled)
 - qt5 (if UI enabled)
 
 OSX:
 
-    brew install hidapi libevent qt5
+    brew install hidapi libevent qt5 boost
 
 Linux (Ubuntu 15.04):
 
@@ -121,7 +122,7 @@ if libhidapi is not available, compile it yourself
 Basic build steps:
 
     git submodule update --init --recursive
-    ./autogen
+    ./autogen.sh
     ./configure --enable-debug --enable-daemon --with-gui=qt5
     make
     sudo make install
