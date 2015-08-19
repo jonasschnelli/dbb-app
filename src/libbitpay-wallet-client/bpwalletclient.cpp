@@ -12,26 +12,45 @@
 #include <string.h>
 
 #include "base58.h"
+#include "core_io.h"
 #include "eccryptoverify.h"
 #include "keystore.h"
 #include "serialize.h"
 #include "streams.h"
 #include "pubkey.h"
-#include "univalue/univalue.h"
 #include "util.h"
 #include "utilstrencodings.h"
 
 #include "libdbb/crypto.h"
 #include "dbb_util.h"
+#include "libdbb/crypto.h"
+
+#include "../include/secp256k1.h"
 
 #include <boost/filesystem.hpp>
 
 //ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
 
+#include <climits>
+
+std::string BitPayWalletClient::ReversePairs(std::string const & src)
+{
+    assert(src.size() % 2 == 0);
+    std::string result;
+    result.reserve(src.size());
+
+    for (std::size_t i = src.size(); i != 0; i -= 2)
+    {
+        result.append(src, i - 2, 2);
+    }
+
+    return result;
+}
+
 BitPayWalletClient::BitPayWalletClient()
 {
-    SelectParams(CBaseChainParams::MAIN);
+    SelectParams(CBaseChainParams::TESTNET);
     baseURL = "https://bws.bitpay.com/bws/api";
 }
 
@@ -99,10 +118,14 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
 
 void BitPayWalletClient::setPubKeys(const std::string& xPubKeyRequestKeyEntropy, const std::string& xPubKey)
 {
+    printf("Set IN Master XPubKey: %s\n", xPubKey.c_str());
     //set the extended public key from the key chain
     CBitcoinExtPubKey b58keyDecodeCheckXPubKey(xPubKey);
     CExtPubKey checkKey = b58keyDecodeCheckXPubKey.GetKey();
     masterPubKey = checkKey;
+    
+    CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
+    printf("Set Master XPubKey: %s\n", b58PubkeyDecodeCheck.ToString().c_str());
     
     //now this is a ugly workaround because we need a request keypair (pub/priv)
     //for signing the requests after BitAuth
@@ -115,7 +138,7 @@ void BitPayWalletClient::setPubKeys(const std::string& xPubKeyRequestKeyEntropy,
     CBitcoinExtPubKey requestXPub(xPubKeyRequestKeyEntropy);
     CExtPubKey requestEntropyKey = requestXPub.GetKey();
     std::vector<unsigned char> data;
-    data.resize(72);
+    data.resize(74);
     requestEntropyKey.Encode(&data[0]);
 
     CKeyingMaterial vSeed;
@@ -176,6 +199,17 @@ bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
     return true;
 }
 
+std::string BitPayWalletClient::GetCopayerId()
+{
+    CBitcoinExtPubKey base58(masterPubKey);
+    std::string output = base58.ToString();
+    
+    std::vector<unsigned char> vch;
+    vch.resize(DBB_SHA256_DIGEST_LENGTH);
+    singleSha256((char *)output.c_str(), &vch[0]);
+    return HexStr(vch, false);
+}
+
 bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut)
 {
     std::vector<int> splits = {22, 74};
@@ -193,11 +227,13 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     std::vector<std::string> walletIdParts = split(widHex, splits);
     invitationOut.walletID = walletIdParts[0] + "-" + walletIdParts[1] + "-" + walletIdParts[2] + "-" + walletIdParts[3] + "-" + walletIdParts[4];
 
+    SelectParams(CBaseChainParams::MAIN);
     std::string walletPrivKeyStr = secretSplit[1];
     CBitcoinSecret vchSecret;
     if (!vchSecret.SetString(walletPrivKeyStr))
         return false;
 
+    SelectParams(CBaseChainParams::TESTNET);
     invitationOut.walletPrivKey = vchSecret.GetKey();
     invitationOut.network = secretSplit[2] == "T" ? "testnet" : "livenet";
     return true;
@@ -234,11 +270,258 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const std::string& 
     long httpStatusCode = 0;
     SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode);
 
+
+    std::string getWalletsResponse;
+    GetWallets(getWalletsResponse);
+    
     if (httpStatusCode != 200)
         return false;
 
     return true;
 }
+
+bool BitPayWalletClient::GetWallets(std::string& response)
+{
+    std::string requestPubKey;
+    if (!GetRequestPubKey(requestPubKey))
+        return false;
+
+    long httpStatusCode = 0;
+    SendRequest("get", "/v1/wallets/?r=16354", "{}", response, httpStatusCode);
+
+    if (httpStatusCode != 200)
+        return false;
+
+    return true;
+}
+
+std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string,uint256> >& vInputTxHashes)
+{
+    CMutableTransaction t;
+    std::vector<std::string> keys = txProposal.getKeys();
+    std::vector<UniValue> values = txProposal.getValues();
+    
+    std::string toAddress;
+    CAmount toAmount = -1;
+    CAmount fee = -1;
+    std::vector<int> outputOrder;
+    int requiredSignatures = -1;
+    int i = 0; int j = 0;
+    for(i = 0; i < keys.size();i++)
+    {
+        UniValue val = values[i];
+
+        if (keys[i] == "toAddress")
+            toAddress = val.get_str();
+        
+        if (keys[i] == "amount")
+            toAmount = val.get_int64();
+        
+        if (keys[i] == "fee")
+            fee = val.get_int64();
+        
+        if (keys[i] == "outputOrder")
+            for(UniValue aVal: val.getValues())
+                outputOrder.push_back(aVal.get_int());
+        
+        if (keys[i] == "requiredSignatures")
+            requiredSignatures = val.get_int();
+    }
+    
+    UniValue inputsObj = find_value(txProposal, "inputs");
+    std::vector<UniValue> inputs = inputsObj.getValues();
+    CAmount inTotal = 0;
+    
+    CScript checkScript;
+    std::vector<std::pair<std::string, CScript> > inputsScriptAndPath;
+    for(i = 0; i < inputs.size();i++)
+    {
+        UniValue aInput = inputs[i];
+        std::vector<std::string> keys = aInput.getKeys();
+        std::vector<UniValue> values = aInput.getValues();
+        
+        std::string txId;
+        std::vector<CPubKey> publicKeys;
+        std::string path;
+        CScript script;
+        int nInput = -1;
+        
+        for(j = 0; j < keys.size();j++)
+        {
+            UniValue val = values[j];
+            if (keys[j] == "txid")
+                txId = val.get_str();
+            
+            if (keys[j] == "vout")
+                nInput = val.get_int();
+            
+            if (keys[j] == "satoshis")
+                inTotal = val.get_int();
+            
+            if (keys[j] == "path")
+                path = val.get_str();
+            
+            if (keys[j] == "publicKeys")
+            {
+                std::vector<UniValue> pubKeyValue = val.getValues();
+                std::vector<std::string> keys;
+                int k;
+                for(k = 0; k < pubKeyValue.size(); k++)
+                {
+                    UniValue aPubKeyObj = pubKeyValue[k];
+                    keys.push_back(aPubKeyObj.get_str());
+                }
+                std::sort(keys.begin(), keys.end());
+                for(k = 0; k < keys.size(); k++)
+                {
+                    CPubKey vchPubKey(ParseHex(keys[k]));
+                    publicKeys.push_back(vchPubKey);
+                }
+            }
+        }
+        uint256 aHash;
+        aHash.SetHex(txId);
+        script << OP_0 << OP_PUSHDATA1 << OP_VERIFY;
+        script += GetScriptForMultisig(requiredSignatures, publicKeys);
+        
+        path.erase(0,2); //remove m/ from path
+        inputsScriptAndPath.push_back(std::make_pair(path, GetScriptForMultisig(requiredSignatures, publicKeys)));
+        t.vin.insert(t.vin.begin(), CTxIn(aHash, nInput, script));
+    }
+    
+    UniValue changeAddrObj = find_value(txProposal, "changeAddress");
+    keys = changeAddrObj.getKeys();
+    values = changeAddrObj.getValues();
+    std::string changeAdr = "";
+    for(i = 0; i < keys.size();i++)
+    {
+        UniValue val = values[i];
+        
+        if (keys[i] == "address")
+            changeAdr = val.get_str();
+    }
+    
+
+    SelectParams(CBaseChainParams::TESTNET);
+    CBitcoinAddress addr(toAddress);
+    CBitcoinAddress addrC(changeAdr);
+    CScript scriptPubKey = GetScriptForDestination(addr.Get());
+    CScript scriptPubKeyC = GetScriptForDestination(addrC.Get());
+    
+    CTxOut txout(toAmount, scriptPubKey);
+    t.vout.push_back(txout);
+    
+    CTxOut txoutC(inTotal-toAmount-fee, scriptPubKeyC);
+    if(outputOrder[1] == 0)
+        t.vout.insert(t.vout.begin(), txoutC);
+    else
+        t.vout.push_back(txoutC);
+    
+    int cnt = 0;
+    for (const CTxIn& txIn : t.vin)
+    {
+        std::pair<std::string, CScript> scriptAndPath = inputsScriptAndPath[cnt];
+        CScript aScript = scriptAndPath.second;
+        uint256 hash = SignatureHash(aScript, t, 0, SIGHASH_ALL);
+        vInputTxHashes.push_back(std::make_pair(scriptAndPath.first, hash));
+        cnt++;
+    }   
+    std::string hex = EncodeHexTx(t);
+    SelectParams(CBaseChainParams::TESTNET);
+    
+    return hex;
+}
+
+int ecdsa_sig_to_der(const uint8_t *sig, uint8_t *der)
+{
+    int i;
+    uint8_t *p = der, *len, *len1, *len2;
+    *p = 0x30; p++;                        // sequence
+    *p = 0x00; len = p; p++;               // len(sequence)
+
+    *p = 0x02; p++;                        // integer
+    *p = 0x00; len1 = p; p++;              // len(integer)
+
+    // process R
+    i = 0;
+    while (sig[i] == 0 && i < 32) { i++; } // skip leading zeroes
+    if (sig[i] >= 0x80) { // put zero in output if MSB set
+        *p = 0x00; p++; *len1 = *len1 + 1;
+    }
+    while (i < 32) { // copy bytes to output
+        *p = sig[i]; p++; *len1 = *len1 + 1; i++;
+    }
+
+    *p = 0x02; p++;                        // integer
+    *p = 0x00; len2 = p; p++;              // len(integer)
+
+    // process S
+    i = 32;
+    while (sig[i] == 0 && i < 64) { i++; } // skip leading zeroes
+    if (sig[i] >= 0x80) { // put zero in output if MSB set
+        *p = 0x00; p++; *len2 = *len2 + 1;
+    }
+    while (i < 64) { // copy bytes to output
+        *p = sig[i]; p++; *len2 = *len2 + 1; i++;
+    }
+
+    *len = *len1 + *len2 + 4;
+    return *len + 2;
+}
+
+bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs)
+{
+    //parse out the txpid
+    UniValue pID = find_value(txProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+    
+    UniValue signaturesRequest = UniValue(UniValue::VOBJ);
+    UniValue sigs = UniValue(UniValue::VARR);
+    for(const std::string& sSig: vHexSigs)
+    {
+        std::vector<unsigned char> data = ParseHex(sSig);
+        unsigned char sig[74];
+        int sizeN = ecdsa_sig_to_der(&data[0], sig);
+        std::string sSigDER = HexStr(sig, sig+sizeN);
+        sigs.push_back(sSigDER);
+    }
+    signaturesRequest.push_back(Pair("signatures", sigs));
+    std::string response;
+    long httpStatusCode = 0;
+    SendRequest("post", "/v1/txproposals/" + txpID + "/signatures/", signaturesRequest.write(), response, httpStatusCode);
+    if (httpStatusCode != 200)
+        return false;
+    
+    return true;
+}
+
+bool BitPayWalletClient::BroadcastProposal(const UniValue& txProposal)
+{
+    std::string requestPubKey;
+    if (!GetRequestPubKey(requestPubKey))
+        return false;
+    
+    UniValue pID = find_value(txProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+    
+    std::string response;
+    long httpStatusCode = 0;
+    SendRequest("post", "/v1/txproposals/" + txpID + "/broadcast/", "{}", response, httpStatusCode);
+    printf("Response: %s\n", response.c_str());
+    if (httpStatusCode != 200)
+        return false;
+    
+    return true;
+}
+
+
+
+
+
 
 std::string BitPayWalletClient::SignRequest(const std::string& method,
                                             const std::string& url,
@@ -247,7 +530,7 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
     std::string message = method + "|" + url + "|" + args;
     uint256 hash = Hash(message.begin(), message.end());
     std::vector<unsigned char> signature;
-    printf("signing request key: %s\n", HexStr(requestKey.begin(),requestKey.end(), false).c_str());
+    printf("signing message: %s\n", message.c_str());
     requestKey.Sign(hash, signature);
     return HexStr(signature);
 };
@@ -276,12 +559,13 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         std::string requestPubKey;
         GetRequestPubKey(requestPubKey);
         std::string signature = SignRequest(method, url, args);
-        chunk = curl_slist_append(chunk, ("x-identity: " + requestPubKey).c_str());
+        chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
         chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
         chunk = curl_slist_append(chunk, "Content-Type: application/json");
         res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
-        curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+        if (method == "post")
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
 
@@ -361,9 +645,13 @@ void BitPayWalletClient::SaveLocalData()
         CAutoFile copayDatFile(writeFile, SER_DISK, 1);
         copayDatFile << requestKey.GetPrivKey();
         
+        
         CKeyingMaterial encoded;
-        encoded.resize(72);
+        encoded.resize(76);
 
+        CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
+        printf("Save Master XPubKey: %s\n ", b58PubkeyDecodeCheck.ToString().c_str());
+        
         masterPubKey.Encode(&encoded[0]);
         copayDatFile << encoded;
     }
@@ -382,13 +670,16 @@ void BitPayWalletClient::LoadLocalData()
         {
             CPrivKey pkey;
             copayDatFile >> pkey;
-            requestKey.SetPrivKey(pkey, false);
+            requestKey.SetPrivKey(pkey, true);
             
             CKeyingMaterial encoded;
-            encoded.resize(72);
+            encoded.resize(74);
             copayDatFile >> encoded;
             
             masterPubKey.Decode(&encoded[0]);
+            
+            CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
+            printf("Load Master XPubKey: %s\n", b58PubkeyDecodeCheck.ToString().c_str());
         }
         fclose(fh);
     }

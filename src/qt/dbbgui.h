@@ -50,7 +50,8 @@ public slots:
     void JoinCopayWallet();
     void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
     void GetRequestXPubKey(const QString& xPubKey);
-
+    bool checkPaymentProposals();
+    
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);

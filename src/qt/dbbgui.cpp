@@ -14,6 +14,8 @@
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
 #include <dbb.h>
+#include "pubkey.h"
+#include "base58.h"
 
 #include "univalue/univalue.h"
 
@@ -32,6 +34,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
+    connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
@@ -73,8 +76,95 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     }
 
     processComnand = false;
+    
+    
+    //load local pubkeys
+    client.LoadLocalData();
 }
 
+
+bool DBBDaemonGui::checkPaymentProposals()
+{
+    bool ret = false;
+    int copayerIndex = INT_MAX;
+    
+    std::string walletsResponse;
+    client.GetWallets(walletsResponse);
+    UniValue response;
+    if (response.read(walletsResponse))
+    {
+        if (response.isObject())
+        {
+            printf("Wallet: %s\n", response.write(true, 2).c_str());
+            
+            std::string currentXPub = client.GetXPubKey();
+            UniValue wallet = find_value(response, "wallet");
+            UniValue copayers = find_value(wallet, "copayers");
+            for(const UniValue& copayer : copayers.getValues())
+            {
+                UniValue copayerXPub = find_value(copayer, "xPubKey");
+                if (!copayerXPub.isNull())
+                {
+                    if (currentXPub == copayerXPub.get_str())
+                    {
+                        UniValue addressManager = find_value(copayer, "addressManager");
+                        UniValue copayerIndexObject = find_value(addressManager, "copayerIndex");
+                        copayerIndex = copayerIndexObject.get_int();
+                    }
+                }
+            }
+            
+            UniValue pendingTxps;
+            pendingTxps = find_value(response, "pendingTxps");
+            if (!pendingTxps.isNull() && pendingTxps.isArray() )
+            {
+                printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
+                std::vector<UniValue> values = pendingTxps.getValues();
+                if (values.size() == 0)
+                    return false;
+                
+                std::vector<std::pair<std::string,uint256> > inputHashesAndPaths;
+                client.ParseTxProposal(values[0], inputHashesAndPaths);
+                
+                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \""+BitPayWalletClient::ReversePairs( inputHashesAndPaths[0].second.GetHex())+"\", \"keypath\" : \"m/45'/"+inputHashesAndPaths[0].first+"\" }}";
+                printf("Command: %s\n", command.c_str());
+
+                executeCommand(command, sessionPassword, [&ret, values,inputHashesAndPaths,this](const std::string& cmdOut) {
+                        //send a signal to the main thread
+                    printf("cmd back: %s\n", cmdOut.c_str());
+                    UniValue jsonOut(UniValue::VOBJ);
+                    jsonOut.read(cmdOut);
+                    
+                    UniValue echoStr = find_value(jsonOut, "echo");
+                    if (!echoStr.isNull() && echoStr.isStr())
+                    {
+                        int ret = QMessageBox::warning(this, tr("Verify"),
+                                                       tr("ToDo Verify (%1)").arg(QString::fromStdString(echoStr.get_str())),
+                                                       QMessageBox::Cancel);
+                    }
+                    else
+                    {                    
+                        UniValue signObject = find_value(jsonOut, "sign");
+                        UniValue sigObjetc = find_value(signObject, "sig");
+                        UniValue pubKey = find_value(signObject, "pubkey");
+                        if (!sigObjetc.isNull() && sigObjetc.isStr())
+                        {                    
+                            //TODO: verify signature
+                    
+                            std::vector<std::string> sigs;
+                            sigs.push_back(sigObjetc.get_str());
+                            client.PostSignaturesForTxProposal(values[0], sigs);
+                            ret = true;
+                            //client.BroadcastProposal(values[0]);
+                        }
+                        
+                    }
+                });
+            }
+        }
+    }
+    return ret;
+}
 bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password)
 {
     //ensure we don't fill the queue
@@ -156,10 +246,7 @@ void DBBDaemonGui::seed()
 void DBBDaemonGui::JoinCopayWallet()
 {
     setResultText(QString::fromStdString(""));
-    
-    //check if there are local stored keys
-    client.LoadLocalData();
-    
+
     if (!client.IsSeeded())
     {
         //if there is no xpub and request key, seed over DBB
@@ -205,15 +292,31 @@ void DBBDaemonGui::_JoinCopayWallet()
 void DBBDaemonGui::GetXPubKey()
 {
     //Export external chain extended public key
-    executeCommand("{\"xpub\":\"m/45'/0\"}", sessionPassword, [this](const std::string& cmdOut) {
+    executeCommand("{\"xpub\":\"m/45'\"}", sessionPassword, [this](const std::string& cmdOut) {
             //send a signal to the main thread
         UniValue jsonOut(UniValue::VOBJ);
         jsonOut.read(cmdOut);
         UniValue xPubKeyUV = find_value(jsonOut, "xpub");
+        
+        printf("XPub: %s \n\n", xPubKeyUV.get_str().c_str());
         if (!xPubKeyUV.isNull() && xPubKeyUV.isStr())
-            emit XPubForCopayWalletIsAvailable(QString::fromStdString(xPubKeyUV.get_str()));
+        {
+            
+            SelectParams(CBaseChainParams::MAIN);
+            CBitcoinExtPubKey b58PubkeyDecodeCheck(xPubKeyUV.get_str());
+            CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+            
+            SelectParams(CBaseChainParams::TESTNET);
+            CBitcoinExtPubKey newKey(pubKey);
+            std::string  xPubKeyNew = newKey.ToString();
+            
+            
+            emit XPubForCopayWalletIsAvailable(QString::fromStdString(xPubKeyNew));
+        }
         else
+        {
             emit showCommandResult(QString::fromStdString("Could not load xpub (m/45'/0) key from DBB"));
+        }
     });
 }
 
@@ -226,9 +329,21 @@ void DBBDaemonGui::GetRequestXPubKey(const QString& xPub)
         jsonOut.read(cmdOut);
         UniValue requestXPubKeyUV = find_value(jsonOut, "xpub");
         if (!requestXPubKeyUV.isNull() && requestXPubKeyUV.isStr())
-            emit RequestXPubKeyForCopayWalletIsAvailable(xPub, QString::fromStdString(requestXPubKeyUV.get_str()));
+        {
+            SelectParams(CBaseChainParams::MAIN);
+            CBitcoinExtPubKey b58PubkeyDecodeCheck(requestXPubKeyUV.get_str());
+            CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+            
+            SelectParams(CBaseChainParams::TESTNET);
+            CBitcoinExtPubKey newKey(pubKey);
+            std::string  xRequestKeyNew = newKey.ToString();
+            
+            emit RequestXPubKeyForCopayWalletIsAvailable(QString::fromStdString(xRequestKeyNew), xPub);
+        }
         else
+        {
             emit showCommandResult(QString::fromStdString("Could not load xpub (m/1'/0') key from DBB"));
+        }
     });
 }
 

@@ -49,6 +49,7 @@
 #include "pubkey.h"
 #include "key.h"
 #include "random.h"
+#include "univalue/univalue.h"
 
 
 class BitpayWalletInvitation
@@ -68,10 +69,16 @@ public:
     CKey GetNewKey();
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);
     bool GetRequestPubKey(std::string& pubKeyOut);
+    std::string GetCopayerId();
     bool GetCopayerHash(const std::string& name, std::string& hashOut);
     bool GetCopayerSignature(const std::string& stringToHash, const CKey& privKey, std::string& sigHexOut);
     void seed();
     bool JoinWallet(const std::string& name, const std::string& walletInvitation, std::string& response);
+    bool GetWallets(std::string& response);
+    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string,uint256> >& vInputTxHashes);
+    bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
+    bool BroadcastProposal(const UniValue& txProposal);
+    
     std::string GetXPubKey();
     std::string SignRequest(const std::string& method,
                             const std::string& url,
@@ -87,6 +94,10 @@ public:
     bool IsSeeded();
     void SaveLocalData();
     void LoadLocalData();
+    
+    //flip byte order
+    static std::string ReversePairs(const std::string& strIn);
+
 private:
     CExtKey masterPrivKey;   // "m/45'"
     CExtPubKey masterPubKey; // "m/45'"
