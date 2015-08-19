@@ -29,6 +29,16 @@ void doubleSha256(char* string, unsigned char* hashOut)
     SHA256_Final(hashOut, &sha256);
 }
 
+
+void singleSha256(char* string, unsigned char* hashOut)
+{
+    SHA256_CTX sha256;
+    SHA256_Init(&sha256);
+    SHA256_Update(&sha256, string, strlen(string));
+    SHA256_Final(hashOut, &sha256);
+}
+
+
 bool aesDecrypt(unsigned char* aesKey, unsigned char* aesIV, unsigned char* encMsg, size_t encMsgLen, unsigned char** decMsg, int* outlen)
 {
     size_t decLen = 0;

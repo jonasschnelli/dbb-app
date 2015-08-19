@@ -18,6 +18,7 @@ int aesEncrypt(unsigned char* aesKey, unsigned char* aesIV, const unsigned char*
 
 //generate a two round sha256 hash
 void doubleSha256(char* string, unsigned char* hashOut);
+void singleSha256(char* string, unsigned char* hashOut);
 
 //get random aes IV (16 bytes)
 void getRandIV(unsigned char* ivOut);
