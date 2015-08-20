@@ -23,9 +23,6 @@
 
 #include "libdbb/crypto.h"
 #include "dbb_util.h"
-#include "libdbb/crypto.h"
-
-#include "../include/secp256k1.h"
 
 #include <boost/filesystem.hpp>
 

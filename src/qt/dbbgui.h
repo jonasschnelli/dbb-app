@@ -17,6 +17,16 @@ namespace Ui
 class MainWindow;
 }
 
+class DBBMultisigWallet
+{
+public:
+    BitPayWalletClient client;
+    std::string baseKeyPath;
+    DBBMultisigWallet() {
+        baseKeyPath = "m/110'";
+    }
+};
+
 class DBBDaemonGui : public QMainWindow
 {
     Q_OBJECT
@@ -34,7 +44,7 @@ private:
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
 
-    BitPayWalletClient client;
+    std::vector<DBBMultisigWallet> vMultisigWallets;
     
     bool sendCommand(const std::string& cmd, const std::string& password);
     void _JoinCopayWallet();
