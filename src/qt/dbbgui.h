@@ -22,7 +22,8 @@ class DBBMultisigWallet
 public:
     BitPayWalletClient client;
     std::string baseKeyPath;
-    DBBMultisigWallet() {
+    DBBMultisigWallet()
+    {
         baseKeyPath = "m/110'";
     }
 };
@@ -34,7 +35,7 @@ class DBBDaemonGui : public QMainWindow
 public:
     explicit DBBDaemonGui(QWidget* parent = 0);
     ~DBBDaemonGui();
-    
+
     void GetXPubKey();
 
 private:
@@ -45,7 +46,7 @@ private:
     std::string sessionPassword; //TODO: needs secure space / mem locking
 
     std::vector<DBBMultisigWallet> vMultisigWallets;
-    
+
     bool sendCommand(const std::string& cmd, const std::string& password);
     void _JoinCopayWallet();
 
@@ -61,7 +62,7 @@ public slots:
     void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
     void GetRequestXPubKey(const QString& xPubKey);
     bool checkPaymentProposals();
-    
+
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);

@@ -44,7 +44,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(const QString&, const QString&)), this, SLOT(JoinCopayWalletWithXPubKey(const QString&, const QString&)));
 
-    
+
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
 
@@ -76,8 +76,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     }
 
     processComnand = false;
-    
-    
+
+
     //load local pubkeys
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
@@ -89,49 +89,43 @@ bool DBBDaemonGui::checkPaymentProposals()
 {
     bool ret = false;
     int copayerIndex = INT_MAX;
-    
+
     std::string walletsResponse;
     vMultisigWallets[0].client.GetWallets(walletsResponse);
     UniValue response;
-    if (response.read(walletsResponse))
-    {
-        if (response.isObject())
-        {
+    if (response.read(walletsResponse)) {
+        if (response.isObject()) {
             printf("Wallet: %s\n", response.write(true, 2).c_str());
-            
+
             std::string currentXPub = vMultisigWallets[0].client.GetXPubKey();
             UniValue wallet = find_value(response, "wallet");
             UniValue copayers = find_value(wallet, "copayers");
-            for(const UniValue& copayer : copayers.getValues())
-            {
+            for (const UniValue& copayer : copayers.getValues()) {
                 UniValue copayerXPub = find_value(copayer, "xPubKey");
-                if (!copayerXPub.isNull())
-                {
-                    if (currentXPub == copayerXPub.get_str())
-                    {
+                if (!copayerXPub.isNull()) {
+                    if (currentXPub == copayerXPub.get_str()) {
                         UniValue addressManager = find_value(copayer, "addressManager");
                         UniValue copayerIndexObject = find_value(addressManager, "copayerIndex");
                         copayerIndex = copayerIndexObject.get_int();
                     }
                 }
             }
-            
+
             UniValue pendingTxps;
             pendingTxps = find_value(response, "pendingTxps");
-            if (!pendingTxps.isNull() && pendingTxps.isArray() )
-            {
+            if (!pendingTxps.isNull() && pendingTxps.isArray()) {
                 printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
                 std::vector<UniValue> values = pendingTxps.getValues();
                 if (values.size() == 0)
                     return false;
-                
-                std::vector<std::pair<std::string,uint256> > inputHashesAndPaths;
+
+                std::vector<std::pair<std::string, uint256> > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
-                
-                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \""+BitPayWalletClient::ReversePairs( inputHashesAndPaths[0].second.GetHex())+"\", \"keypath\" : \""+vMultisigWallets[0].baseKeyPath+"/45'/"+inputHashesAndPaths[0].first+"\" }}";
+
+                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 printf("Command: %s\n", command.c_str());
 
-                executeCommand(command, sessionPassword, [&ret, values,inputHashesAndPaths,this](const std::string& cmdOut) {
+                executeCommand(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut) {
                         //send a signal to the main thread
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
@@ -249,14 +243,11 @@ void DBBDaemonGui::JoinCopayWallet()
 {
     setResultText(QString::fromStdString(""));
 
-    if (!vMultisigWallets[0].client.IsSeeded())
-    {
+    if (!vMultisigWallets[0].client.IsSeeded()) {
         //if there is no xpub and request key, seed over DBB
         setResultText("Initializing Copay Client... this might take some seconds.");
         GetXPubKey();
-    }
-    else
-    {
+    } else {
         //send a join request
         _JoinCopayWallet();
     }
@@ -268,29 +259,23 @@ void DBBDaemonGui::_JoinCopayWallet()
     QString text = QInputDialog::getText(this, tr("Join Copay Wallet"), tr("Wallet Invitation Code"), QLineEdit::Normal, "", &ok);
     if (!ok || text.isEmpty())
         return;
-    
+
     std::string result;
     bool ret = vMultisigWallets[0].client.JoinWallet("digitalbitbox", text.toStdString(), result);
-    
-    if (!ret)
-    {
+
+    if (!ret) {
         UniValue responseJSON;
         std::string additionalErrorText = "unknown";
-        if (responseJSON.read(result))
-        {
+        if (responseJSON.read(result)) {
             UniValue errorText;
             errorText = find_value(responseJSON, "message");
             if (!errorText.isNull() && errorText.isStr())
                 additionalErrorText = errorText.get_str();
         }
         setResultText(QString::fromStdString(result));
-        
-        int ret = QMessageBox::warning(this, tr("Copay Wallet Response"),
-                                       tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)),
-                                       QMessageBox::Cancel);
-    }
-    else
-    {
+
+        int ret = QMessageBox::warning(this, tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)), QMessageBox::Cancel);
+    } else {
         emit showCommandResult(QString::fromStdString("Sucessfully joined wallet"));
     }
 }
@@ -298,7 +283,7 @@ void DBBDaemonGui::_JoinCopayWallet()
 void DBBDaemonGui::GetXPubKey()
 {
     //Export external chain extended public key
-    executeCommand("{\"xpub\":\""+vMultisigWallets[0].baseKeyPath+"/45'\"}", sessionPassword, [this](const std::string& cmdOut) {
+    executeCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, [this](const std::string& cmdOut) {
             //send a signal to the main thread
         UniValue jsonOut(UniValue::VOBJ);
         jsonOut.read(cmdOut);
@@ -330,7 +315,7 @@ void DBBDaemonGui::GetRequestXPubKey(const QString& xPub)
 {
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    executeCommand("{\"xpub\":\""+vMultisigWallets[0].baseKeyPath+"/1'/0\"}", sessionPassword, [this, xPub](const std::string& cmdOut) {
+    executeCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, [this, xPub](const std::string& cmdOut) {
         UniValue jsonOut(UniValue::VOBJ);
         jsonOut.read(cmdOut);
         UniValue requestXPubKeyUV = find_value(jsonOut, "xpub");
