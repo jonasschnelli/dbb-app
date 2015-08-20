@@ -203,11 +203,9 @@ std::string BitPayWalletClient::GetCopayerId()
 {
     CBitcoinExtPubKey base58(masterPubKey);
     std::string output = base58.ToString();
-    
-    std::vector<unsigned char> vch;
-    vch.resize(DBB_SHA256_DIGEST_LENGTH);
-    singleSha256((char *)output.c_str(), &vch[0]);
-    return HexStr(vch, false);
+    unsigned char rkey[32];
+    CSHA256().Write((const unsigned char *)output.c_str(), output.size()).Finalize(rkey);
+    return HexStr(rkey,rkey+DBB_SHA256_DIGEST_LENGTH);
 }
 
 bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut)
