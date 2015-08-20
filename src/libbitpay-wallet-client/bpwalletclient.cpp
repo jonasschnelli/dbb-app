@@ -55,14 +55,6 @@ BitPayWalletClient::~BitPayWalletClient()
 {
 }
 
-CKey BitPayWalletClient::GetNewKey()
-{
-    CKey key;
-    key.MakeNewKey(true);
-    return key;
-}
-
-
 std::vector<std::string> BitPayWalletClient::split(const std::string& str, std::vector<int> indexes)
 {
     std::vector<std::string> parts;
