@@ -29,6 +29,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 {
     ui->setupUi(this);
 
+    qRegisterMetaType<UniValue>("UniValue");
+
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
@@ -45,6 +47,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(const QString&, const QString&)), this, SLOT(JoinCopayWalletWithXPubKey(const QString&, const QString&)));
 
 
+    connect(this, SIGNAL(gotResponse(const UniValue&, int)), this, SLOT(parseResponse(const UniValue&, int)));
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
 
@@ -213,6 +216,60 @@ void DBBDaemonGui::eraseClicked()
 void DBBDaemonGui::ledClicked()
 {
     sendCommand("{\"led\" : \"toggle\"}", sessionPassword);
+}
+
+
+
+void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
+{
+    if (response.isObject())
+    {
+        if (tag == 0)
+        {
+            UniValue versionObj = find_value(response, "version");
+            if ( versionObj.isStr())
+                versionString += QString::fromStdString(versionObj.get_str());
+        }
+        if (tag == 1)
+        {
+            UniValue versionObj = find_value(response, "serial");
+            if ( versionObj.isStr())
+                versionString += " S/N:"+QString::fromStdString(versionObj.get_str());
+        }
+        if (tag == 2)
+        {
+            UniValue versionObj = find_value(response, "name");
+            if ( versionObj.isStr())
+                versionString += " ("+QString::fromStdString(versionObj.get_str())+")";
+        }
+    }
+
+    if (tag < 2)
+    {
+        emit getInfo(tag+1);
+    }
+    else if (tag == 2)
+    {
+        versionStringLoaded = true;
+    }
+
+}
+
+void DBBDaemonGui::getInfo(int step)
+{
+    versionStringLoaded = false;
+    std::string command = "{\"device\":\"version\"}";
+    if (step == 1)
+        command = "{\"device\":\"serial\"}";
+    else if (step == 2)
+        command = "{\"name\":\"\"}";
+    
+    int stepTrans = step;
+    executeCommand(command, sessionPassword, [this, stepTrans](const std::string& cmdOut) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, stepTrans);
+    });
 }
 
 void DBBDaemonGui::setPasswordClicked()

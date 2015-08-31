@@ -45,6 +45,8 @@ private:
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
 
+    QString versionString;
+    bool versionStringLoaded;
     std::vector<DBBMultisigWallet> vMultisigWallets;
 
     bool sendCommand(const std::string& cmd, const std::string& password);
@@ -62,12 +64,15 @@ public slots:
     void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
     void GetRequestXPubKey(const QString& xPubKey);
     bool checkPaymentProposals();
+    void getInfo(int step);
+    void parseResponse(const UniValue& response, int tag);
 
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
     void XPubForCopayWalletIsAvailable(const QString& xPubKey);
     void RequestXPubKeyForCopayWalletIsAvailable(const QString& requestKey, const QString& xPubKey);
+    void gotResponse(const UniValue& response, int tag);
 };
 
 #endif
