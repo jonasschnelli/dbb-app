@@ -4,12 +4,14 @@
 
 #include "dbbgui.h"
 
+#include <QAction>
 #include <QApplication>
 #include <QPushButton>
 #include <QDebug>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSpacerItem>
+#include <QToolBar>
 
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
@@ -27,6 +29,8 @@ void executeCommand(const std::string& cmd, const std::string& password, std::fu
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               ui(new Ui::MainWindow)
 {
+    QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+    
     ui->setupUi(this);
 
     qRegisterMetaType<UniValue>("UniValue");
@@ -45,7 +49,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
 
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(const QString&, const QString&)), this, SLOT(JoinCopayWalletWithXPubKey(const QString&, const QString&)));
-
 
     connect(this, SIGNAL(gotResponse(const UniValue&, int)), this, SLOT(parseResponse(const UniValue&, int)));
     //set window icon
@@ -80,11 +83,61 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     processComnand = false;
 
-
+    QActionGroup *tabGroup = new QActionGroup(this);
+    QAction *overviewAction = new QAction(QIcon(":/icons/home").pixmap(64), tr("&Overview"), this);
+        overviewAction->setToolTip(tr("Show general overview of wallet"));
+        overviewAction->setCheckable(true);
+        overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
+    tabGroup->addAction(overviewAction);
+    
+    QAction *copayAction = new QAction(QIcon(":/icons/copay"), tr("&Copay"), this);
+        copayAction->setToolTip(tr("Show Copay wallet screen"));
+        copayAction->setCheckable(true);
+        copayAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
+    tabGroup->addAction(copayAction);
+    
+    QAction *settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Settings"), this);
+        settingsAction->setToolTip(tr("Show Settings wallet screen"));
+        settingsAction->setCheckable(true);
+        settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
+    tabGroup->addAction(settingsAction);
+     
+    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
+            toolbar->setMovable(false);
+            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+            toolbar->addAction(overviewAction);
+            toolbar->addAction(copayAction);
+            toolbar->addAction(settingsAction);
+            overviewAction->setChecked(true);
+    toolbar->setStyleSheet("QToolButton{padding: 5px; font-size:11pt;}");
+    
+    connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
+    connect(copayAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
+    connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
+    
     //load local pubkeys
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
+
+    versionStringLoaded = false;
+    versionString = "";
+    getInfo(0);
+}
+
+void DBBDaemonGui::gotoOverviewPage()
+{
+    this->ui->stackedWidget->setCurrentIndex(0);
+}
+
+void DBBDaemonGui::gotoMultisigPage()
+{
+    this->ui->stackedWidget->setCurrentIndex(1);
+}
+
+void DBBDaemonGui::gotoSettingsPage()
+{
+    this->ui->stackedWidget->setCurrentIndex(2);
 }
 
 

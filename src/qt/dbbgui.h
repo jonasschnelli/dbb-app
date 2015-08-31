@@ -44,14 +44,13 @@ private:
     QPushButton* statusBarButton;
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
-
     QString versionString;
     bool versionStringLoaded;
     std::vector<DBBMultisigWallet> vMultisigWallets;
 
     bool sendCommand(const std::string& cmd, const std::string& password);
     void _JoinCopayWallet();
-
+        
 public slots:
     /** Set number of connections shown in the UI */
     void eraseClicked();
@@ -64,7 +63,11 @@ public slots:
     void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
     void GetRequestXPubKey(const QString& xPubKey);
     bool checkPaymentProposals();
+    void gotoOverviewPage();
+    void gotoMultisigPage();
+    void gotoSettingsPage();
     void getInfo(int step);
+
     void parseResponse(const UniValue& response, int tag);
 
 signals:
