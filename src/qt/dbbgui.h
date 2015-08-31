@@ -40,7 +40,8 @@ public:
 
 private:
     Ui::MainWindow* ui;
-    QLabel* statusBarLabel;
+    QLabel* statusBarLabelLeft;
+    QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking

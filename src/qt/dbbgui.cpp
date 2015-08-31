@@ -68,8 +68,12 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->statusBarButton->setVisible(false);
     statusBar()->addWidget(this->statusBarButton);
 
-    this->statusBarLabel = new QLabel("");
-    statusBar()->addWidget(this->statusBarLabel);
+    this->statusBarLabelLeft = new QLabel("");
+    statusBar()->addWidget(this->statusBarLabelLeft);
+
+    this->statusBarLabelRight = new QLabel("");
+    statusBar()->addPermanentWidget(this->statusBarLabelRight);
+    
 
 
     changeConnectedState(DBB::isConnectionOpen());
@@ -122,6 +126,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     versionStringLoaded = false;
     versionString = "";
+    
+    this->ui->versionLabel->setText("loading info...");
+    this->ui->nameLabel->setText("loading info...");
     getInfo(0);
 }
 
@@ -226,11 +233,14 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
         qDebug() << "Already processing a command\n";
         return false;
     }
+    this->statusBarLabelRight->setText("processing...");
     this->ui->textEdit->setText("processing...");
     processComnand = true;
     executeCommand(cmd, password, [this](const std::string& cmdOut) {
             //send a signal to the main thread
-            emit showCommandResult(QString::fromStdString(cmdOut));
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, -1);
     });
     return true;
 }
@@ -240,6 +250,7 @@ void DBBDaemonGui::setResultText(const QString& result)
     processComnand = false;
     qDebug() << "SetResultText Called\n";
     this->ui->textEdit->setText(result);
+    this->statusBarLabelRight->setText("");
 }
 
 DBBDaemonGui::~DBBDaemonGui()
@@ -249,10 +260,10 @@ DBBDaemonGui::~DBBDaemonGui()
 void DBBDaemonGui::changeConnectedState(bool state)
 {
     if (state) {
-        this->statusBarLabel->setText("Device connected");
+        this->statusBarLabelLeft->setText("Device Connected");
         this->statusBarButton->setVisible(true);
     } else {
-        this->statusBarLabel->setText("no device found");
+        this->statusBarLabelLeft->setText("No Device Found");
         this->statusBarButton->setVisible(false);
     }
 
@@ -275,34 +286,38 @@ void DBBDaemonGui::ledClicked()
 
 void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
 {
+    processComnand = false;
+    
     if (response.isObject())
     {
         if (tag == 0)
         {
             UniValue versionObj = find_value(response, "version");
             if ( versionObj.isStr())
-                versionString += QString::fromStdString(versionObj.get_str());
+                this->ui->versionLabel->setText(QString::fromStdString(versionObj.get_str()));
         }
-        if (tag == 1)
+        else if (tag == 1)
         {
-            UniValue versionObj = find_value(response, "serial");
-            if ( versionObj.isStr())
-                versionString += " S/N:"+QString::fromStdString(versionObj.get_str());
+            UniValue nameObj = find_value(response, "name");
+            if ( nameObj.isStr())
+                this->ui->nameLabel->setText(QString::fromStdString(nameObj.get_str()));
         }
-        if (tag == 2)
+        else
         {
-            UniValue versionObj = find_value(response, "name");
-            if ( versionObj.isStr())
-                versionString += " ("+QString::fromStdString(versionObj.get_str())+")";
+            //general non specific response
+            qDebug() << "SetResultText Called\n";
+            this->ui->textEdit->setText(QString::fromStdString(response.write()));
+            this->statusBarLabelRight->setText("");
         }
     }
 
-    if (tag < 2)
+    if (tag == 0)
     {
-        emit getInfo(tag+1);
+        emit getInfo(1);
     }
-    else if (tag == 2)
+    else if (tag == 1)
     {
+        qDebug() << versionString;
         versionStringLoaded = true;
     }
 
@@ -313,8 +328,6 @@ void DBBDaemonGui::getInfo(int step)
     versionStringLoaded = false;
     std::string command = "{\"device\":\"version\"}";
     if (step == 1)
-        command = "{\"device\":\"serial\"}";
-    else if (step == 2)
         command = "{\"name\":\"\"}";
     
     int stepTrans = step;

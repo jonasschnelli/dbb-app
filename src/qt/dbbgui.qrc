@@ -6,5 +6,7 @@
         <file alias="copay">res/group-outline.png</file>
         <file alias="home">res/home-outline.png</file>
         <file alias="settings">res/cog-outline.png</file>
+        <file alias="warning">res/warning.png</file>
+        <file alias="okay">res/check_green.png</file>
     </qresource>
 </RCC>
