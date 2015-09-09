@@ -562,6 +562,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         std::string signature = SignRequest(method, url, args);
         chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
         chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
+        chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
         chunk = curl_slist_append(chunk, "Content-Type: application/json");
         res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
