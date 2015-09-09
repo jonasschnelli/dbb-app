@@ -41,7 +41,7 @@
       <x>0</x>
       <y>0</y>
       <width>320</width>
-      <height>381</height>
+      <height>380</height>
      </rect>
     </property>
     <property name="sizePolicy">
@@ -58,15 +58,12 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-2</y>
+        <y>0</y>
         <width>320</width>
-        <height>411</height>
+        <height>331</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
-       <property name="spacing">
-        <number>0</number>
-       </property>
        <property name="leftMargin">
         <number>10</number>
        </property>
@@ -264,14 +261,17 @@
         </layout>
        </item>
        <item>
-        <widget class="QTextEdit" name="textEdit">
-         <property name="sizePolicy">
-          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-           <horstretch>0</horstretch>
-           <verstretch>0</verstretch>
-          </sizepolicy>
+        <spacer name="verticalSpacer">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
          </property>
-        </widget>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
        </item>
       </layout>
      </widget>
@@ -287,8 +287,8 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-2</y>
-        <width>323</width>
+        <y>0</y>
+        <width>320</width>
         <height>331</height>
        </rect>
       </property>
@@ -367,9 +367,9 @@
       <property name="geometry">
        <rect>
         <x>0</x>
-        <y>-2</y>
-        <width>323</width>
-        <height>331</height>
+        <y>0</y>
+        <width>320</width>
+        <height>390</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -444,6 +444,16 @@
           </widget>
          </item>
         </layout>
+       </item>
+       <item>
+        <widget class="QTextEdit" name="textEdit">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+        </widget>
        </item>
       </layout>
      </widget>
