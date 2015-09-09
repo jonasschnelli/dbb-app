@@ -23,8 +23,7 @@
 
 #include <functional>
 
-
-void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&)> cmdFinished);
+void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, DBB_CMD_EXECUTION_STATUS status)> cmdFinished);
 
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               ui(new Ui::MainWindow)
@@ -34,6 +33,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     ui->setupUi(this);
 
     qRegisterMetaType<UniValue>("UniValue");
+    qRegisterMetaType<DBB_CMD_EXECUTION_STATUS>("DBB_CMD_EXECUTION_STATUS");
+    qRegisterMetaType<DBB_RESPONSE_TYPE>("DBB_RESPONSE_TYPE");
+    qRegisterMetaType<std::vector<std::string>>("std::vector<std::string>");
 
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
@@ -50,7 +52,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable()), this, SLOT(JoinCopayWalletWithXPubKey()));
 
-    connect(this, SIGNAL(gotResponse(const UniValue&, int)), this, SLOT(parseResponse(const UniValue&, int)));
+    connect(this, SIGNAL(gotResponse(const UniValue&, DBB_CMD_EXECUTION_STATUS, DBB_RESPONSE_TYPE)), this, SLOT(parseResponse(const UniValue&, DBB_CMD_EXECUTION_STATUS, DBB_RESPONSE_TYPE)));
     connect(this, SIGNAL(shouldVerifySigning(const QString&)), this, SLOT(showEchoVerification(const QString&)));
     connect(this, SIGNAL(signedProposalAvailable(const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignedPaymentProposal(const UniValue&, const std::vector<std::string> &)));
     //set window icon
@@ -131,7 +133,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     
     this->ui->versionLabel->setText("loading info...");
     this->ui->nameLabel->setText("loading info...");
-    getInfo(0);
+    getInfo(DBB_RESPONSE_TYPE_VERSION);
 }
 
 void DBBDaemonGui::gotoOverviewPage()
@@ -171,6 +173,14 @@ bool DBBDaemonGui::checkPaymentProposals()
 
     std::string walletsResponse;
     bool walletsAvailable = vMultisigWallets[0].client.GetWallets(walletsResponse);
+
+    if (walletsAvailable)
+    {
+        QMessageBox::warning(this, tr("No Wallet"),
+                                 tr("No Copay Wallet Available"),
+                                 QMessageBox::Ok);
+    }
+
     UniValue response;
     if (response.read(walletsResponse)) {
         if (response.isObject()) {
@@ -220,10 +230,10 @@ bool DBBDaemonGui::checkPaymentProposals()
                 std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 //printf("Command: %s\n", command.c_str());
 
-                //command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash:\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ], \"checkpub\" : [] } }";
+                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
-                executeCommand(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut) {
+                executeCommand(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
                         //send a signal to the main thread
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
@@ -242,14 +252,14 @@ bool DBBDaemonGui::checkPaymentProposals()
                             std::vector<UniValue> vSignatureObjects;
                             vSignatureObjects = signObject.getValues();
                             if (vSignatureObjects.size() > 0) {
-                                UniValue sigObjetc = find_value(vSignatureObjects[0], "sig");
-                                UniValue pubKey = find_value(signObject, "pubkey");
-                                if (!sigObjetc.isNull() && sigObjetc.isStr())
+                                UniValue sigObject = find_value(vSignatureObjects[0], "sig");
+                                UniValue pubKey = find_value(vSignatureObjects[0], "pubkey");
+                                if (!sigObject.isNull() && sigObject.isStr())
                                 {                    
                                     //TODO: verify signature
                             
                                     std::vector<std::string> sigs;
-                                    sigs.push_back(sigObjetc.get_str());
+                                    sigs.push_back(sigObject.get_str());
                                     emit signedProposalAvailable(values[0], sigs);
                                     ret = true;
                                     //client.BroadcastProposal(values[0]);
@@ -264,7 +274,7 @@ bool DBBDaemonGui::checkPaymentProposals()
     }
     return ret;
 }
-bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password, int tag)
+bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password, DBB_RESPONSE_TYPE tag)
 {
     //ensure we don't fill the queue
     //at the moment the UI should only post one command into the queue
@@ -276,11 +286,11 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
     this->statusBarLabelRight->setText("processing...");
     this->ui->textEdit->setText("processing...");
     processComnand = true;
-    executeCommand(cmd, password, [this, tag](const std::string& cmdOut) {
+    executeCommand(cmd, password, [this, tag](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
             //send a signal to the main thread
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, tag);
+        emit gotResponse(jsonOut, status, tag);
     });
     return true;
 }
@@ -325,25 +335,25 @@ void DBBDaemonGui::ledClicked()
 
 
 
-void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
+void DBBDaemonGui::parseResponse(const UniValue &response, DBB_CMD_EXECUTION_STATUS status, DBB_RESPONSE_TYPE tag)
 {
     processComnand = false;
     
     if (response.isObject())
     {
-        if (tag == 0)
+        if (tag == DBB_RESPONSE_TYPE_VERSION)
         {
             UniValue versionObj = find_value(response, "version");
             if ( versionObj.isStr())
                 this->ui->versionLabel->setText(QString::fromStdString(versionObj.get_str()));
         }
-        else if (tag == 1)
+        else if (tag == DBB_RESPONSE_TYPE_NAME)
         {
             UniValue nameObj = find_value(response, "name");
             if ( nameObj.isStr())
                 this->ui->nameLabel->setText(QString::fromStdString(nameObj.get_str()));
         }
-        else if (tag == 120)
+        else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET)
         {
             UniValue touchbuttonObj = find_value(response, "touchbutton");
             UniValue seedObj = find_value(response, "seed");
@@ -363,32 +373,32 @@ void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
                 QMessageBox::warning(this, tr("Wallet Error"), tr("Could not initialize your wallet (error: %1)!").arg(errorString), QMessageBox::Ok);
             }
         }
-        else if (tag == 130)
+        else if (tag == DBB_RESPONSE_TYPE_PASSWORD)
         {
-            UniValue passwordObj = find_value(response, "password");
-            UniValue touchbuttonObj = find_value(response, "touchbutton");
-            QString errorString;
-            if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
+            if (status != DBB_CMD_EXECUTION_STATUS_OK)
             {
-                UniValue errorObj = find_value(touchbuttonObj, "error");
-                if (!errorObj.isNull() && errorObj.isStr())
-                    errorString = QString::fromStdString(errorObj.get_str());
-            }
-
-            if (!passwordObj.isNull() && passwordObj.isStr() && passwordObj.get_str() == "success")
-            {
+                //could not decrypt, password was changed successfully
                 QMessageBox::information(this, tr("Password Set"), tr("Password has been set successfully!"), QMessageBox::Ok);
             }
-            else
-            {
+            else {
+                QString errorString;
+                UniValue passwordObj = find_value(response, "password");
+                UniValue touchbuttonObj = find_value(response, "touchbutton");
+                if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
+                {
+                    UniValue errorObj = find_value(touchbuttonObj, "error");
+                    if (!errorObj.isNull() && errorObj.isStr())
+                        errorString = QString::fromStdString(errorObj.get_str());
+                }
+
                 //reset password in case of an error
                 sessionPassword = sessionPasswordDuringChangeProcess;
                 sessionPasswordDuringChangeProcess.clear();
-                
+
                 QMessageBox::warning(this, tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString), QMessageBox::Ok);
             }
         }
-        else if(tag == 180)
+        else if(tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER)
         {
             UniValue xPubKeyUV = find_value(response, "xpub");
             QString errorString;
@@ -420,7 +430,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
                 QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Cancel);
             }
         }
-        else if(tag == 185)
+        else if(tag == DBB_RESPONSE_TYPE_XPUB_MS_REQUEST)
         {
             UniValue requestXPubKeyUV = find_value(response, "xpub");
             QString errorString;
@@ -460,11 +470,11 @@ void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
         }
     }
 
-    if (tag == 0)
+    if (tag == DBB_RESPONSE_TYPE_VERSION)
     {
-        emit getInfo(1);
+        emit getInfo(DBB_RESPONSE_TYPE_NAME);
     }
-    else if (tag == 1)
+    else if (tag == DBB_RESPONSE_TYPE_NAME)
     {
         qDebug() << versionString;
         versionStringLoaded = true;
@@ -472,18 +482,18 @@ void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
 
 }
 
-void DBBDaemonGui::getInfo(int step)
+void DBBDaemonGui::getInfo(DBB_RESPONSE_TYPE step)
 {
     versionStringLoaded = false;
     std::string command = "{\"device\":\"version\"}";
-    if (step == 1)
+    if (step == DBB_RESPONSE_TYPE_NAME)
         command = "{\"name\":\"\"}";
     
-    int stepTrans = step;
-    executeCommand(command, sessionPassword, [this, stepTrans](const std::string& cmdOut) {
+    DBB_RESPONSE_TYPE stepTrans = step;
+    executeCommand(command, sessionPassword, [this, stepTrans](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, stepTrans);
+        emit gotResponse(jsonOut, status, stepTrans);
     });
 }
 
@@ -494,10 +504,10 @@ void DBBDaemonGui::setPasswordClicked()
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
-        executeCommand(command, sessionPassword, [this](const std::string& cmdOut) {
+        executeCommand(command, sessionPassword, [this](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
-            emit gotResponse(jsonOut, 130);
+            emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
         });
 
         // change the password, assuming the new password could be set
@@ -515,10 +525,10 @@ void DBBDaemonGui::seed()
                         "\"decrypt\": \"no\","
                         "\"salt\" : \"\"} }";
     
-    executeCommand(command, sessionPassword, [this](const std::string& cmdOut) {
+    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, 120);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
     });
 }
 
@@ -565,14 +575,14 @@ void DBBDaemonGui::_JoinCopayWallet()
 
 void DBBDaemonGui::GetXPubKey()
 {
-    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, 180);
+    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, DBB_RESPONSE_TYPE_XPUB_MS_MASTER);
 }
 
 void DBBDaemonGui::GetRequestXPubKey()
 {
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, 185);
+    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST);
 }
 
 
