@@ -150,20 +150,26 @@ int main(int argc, char** argv)
                     std::string unencryptedJson;
                     try
                     {
+                        DebugOut("sendcmd", ("encrypt&send: "+cmd+"\n").c_str());
                         DBB::encryptAndEncodeCommand(cmd, password, base64str);
                         if (!DBB::sendCommand(base64str, cmdOut))
+                        {
                             unencryptedJson = "sending command failed";
+                            DebugOut("sendcmd", (unencryptedJson+"\n").c_str());
+                        }
                         else
                             DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
                     }
                     catch (const std::exception& ex) {
-                        unencryptedJson = "response decryption failed: "+cmdOut;
+                        unencryptedJson = cmdOut;
+                        DebugOut("sendcmd", ("response decryption failed: "+unencryptedJson+"\n").c_str());
                     }
 
                     cmdOut = unencryptedJson;
                 }
                 else
                 {
+                    DebugOut("sendcmd", ("send unencrypted: "+cmd+"\n").c_str());
                     DBB::sendCommand(cmd, cmdOut);
                 }
                 std::get<2>(cmdCB)(cmdOut);
