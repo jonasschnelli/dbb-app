@@ -74,13 +74,13 @@ std::condition_variable queueCondVar;
 std::mutex cs_queue;
 
 //TODO: migrate tuple to a class
-typedef std::tuple<std::string, std::string, std::function<void(const std::string&)> > t_cmdCB;
+typedef std::tuple<std::string, std::string, std::function<void(const std::string&, DBB_CMD_EXECUTION_STATUS status)> > t_cmdCB;
 std::queue<t_cmdCB> cmdQueue;
 std::atomic<bool> stopThread;
 std::atomic<bool> notified;
 
 //executeCommand adds a command to the thread queue and notifies the tread to work down the queue
-void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&)> cmdFinished)
+void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, DBB_CMD_EXECUTION_STATUS status)> cmdFinished)
 {
     std::unique_lock<std::mutex> lock(cs_queue);
     cmdQueue.push(t_cmdCB(cmd, password, cmdFinished));
@@ -94,7 +94,7 @@ static void led_blink(struct evhttp_request* req, void* arg)
     printf("Received a request for %s\nDispatching dbb command\n", evhttp_request_get_uri(req));
 
     //dispatch command
-    executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string& cmdOut) {
+    executeCommand("{\"led\" : \"toggle\"}", "0000", [](const std::string& cmdOut, DBB_CMD_EXECUTION_STATUS status) {
     });
 
     //form a response, mind, no cmd result is available at this point, at the moment we don't block the http response thread
@@ -143,6 +143,7 @@ int main(int argc, char** argv)
                 t_cmdCB cmdCB = cmdQueue.front();
                 std::string cmd = std::get<0>(cmdCB);
                 std::string password = std::get<1>(cmdCB);
+                DBB_CMD_EXECUTION_STATUS status = DBB_CMD_EXECUTION_STATUS_OK;
 
                 if (!password.empty())
                 {
@@ -156,6 +157,7 @@ int main(int argc, char** argv)
                         {
                             unencryptedJson = "sending command failed";
                             DebugOut("sendcmd", (unencryptedJson+"\n").c_str());
+                            status = DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED;
                         }
                         else
                             DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
@@ -163,6 +165,7 @@ int main(int argc, char** argv)
                     catch (const std::exception& ex) {
                         unencryptedJson = cmdOut;
                         DebugOut("sendcmd", ("response decryption failed: "+unencryptedJson+"\n").c_str());
+                        status = DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED;
                     }
 
                     cmdOut = unencryptedJson;
@@ -172,7 +175,7 @@ int main(int argc, char** argv)
                     DebugOut("sendcmd", ("send unencrypted: "+cmd+"\n").c_str());
                     DBB::sendCommand(cmd, cmdOut);
                 }
-                std::get<2>(cmdCB)(cmdOut);
+                std::get<2>(cmdCB)(cmdOut, status);
                 cmdQueue.pop();
             }
             notified = false;
