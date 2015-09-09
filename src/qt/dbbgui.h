@@ -45,11 +45,12 @@ private:
     QPushButton* statusBarButton;
     bool processComnand;
     std::string sessionPassword; //TODO: needs secure space / mem locking
+    std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     QString versionString;
     bool versionStringLoaded;
     std::vector<DBBMultisigWallet> vMultisigWallets;
 
-    bool sendCommand(const std::string& cmd, const std::string& password);
+    bool sendCommand(const std::string& cmd, const std::string& password, int tag = -1);
     void _JoinCopayWallet();
         
 public slots:
@@ -61,8 +62,8 @@ public slots:
     void seed();
     void changeConnectedState(bool state);
     void JoinCopayWallet();
-    void JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey);
-    void GetRequestXPubKey(const QString& xPubKey);
+    void JoinCopayWalletWithXPubKey();
+    void GetRequestXPubKey();
     bool checkPaymentProposals();
     void gotoOverviewPage();
     void gotoMultisigPage();
@@ -70,13 +71,18 @@ public slots:
     void getInfo(int step);
 
     void parseResponse(const UniValue& response, int tag);
+    void showEchoVerification(QString echoStr);
+    void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
-    void XPubForCopayWalletIsAvailable(const QString& xPubKey);
-    void RequestXPubKeyForCopayWalletIsAvailable(const QString& requestKey, const QString& xPubKey);
+    void XPubForCopayWalletIsAvailable();
+    void RequestXPubKeyForCopayWalletIsAvailable();
     void gotResponse(const UniValue& response, int tag);
+
+    void shouldVerifySigning(const QString& signature);
+    void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
 };
 
 #endif

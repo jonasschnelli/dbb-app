@@ -45,12 +45,14 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
 
-    connect(this, SIGNAL(XPubForCopayWalletIsAvailable(const QString&)), this, SLOT(GetRequestXPubKey(const QString&)));
+    connect(this, SIGNAL(XPubForCopayWalletIsAvailable()), this, SLOT(GetRequestXPubKey()));
 
 
-    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(const QString&, const QString&)), this, SLOT(JoinCopayWalletWithXPubKey(const QString&, const QString&)));
+    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable()), this, SLOT(JoinCopayWalletWithXPubKey()));
 
     connect(this, SIGNAL(gotResponse(const UniValue&, int)), this, SLOT(parseResponse(const UniValue&, int)));
+    connect(this, SIGNAL(shouldVerifySigning(const QString&)), this, SLOT(showEchoVerification(const QString&)));
+    connect(this, SIGNAL(signedProposalAvailable(const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignedPaymentProposal(const UniValue&, const std::vector<std::string> &)));
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
 
@@ -148,13 +150,27 @@ void DBBDaemonGui::gotoSettingsPage()
 }
 
 
+void DBBDaemonGui::showEchoVerification(QString echoStr)
+{
+    QMessageBox::information(this, tr("Verify"),
+                             tr("ToDo Verify (%1)").arg(echoStr),
+                             QMessageBox::Ok);
+}
+
+void DBBDaemonGui::postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs)
+{
+    vMultisigWallets[0].client.PostSignaturesForTxProposal(proposal, vSigs);
+}
+
+
+
 bool DBBDaemonGui::checkPaymentProposals()
 {
     bool ret = false;
     int copayerIndex = INT_MAX;
 
     std::string walletsResponse;
-    vMultisigWallets[0].client.GetWallets(walletsResponse);
+    bool walletsAvailable = vMultisigWallets[0].client.GetWallets(walletsResponse);
     UniValue response;
     if (response.read(walletsResponse)) {
         if (response.isObject()) {
@@ -182,10 +198,29 @@ bool DBBDaemonGui::checkPaymentProposals()
                 if (values.size() == 0)
                     return false;
 
+                bool ok;
+
+                QString amount;
+                QString toAddress;
+
+                UniValue toAddressUni = find_value(values[0], "toAddress");
+                UniValue amountUni = find_value(values[0], "amount");
+                if (toAddressUni.isStr())
+                    toAddress = QString::fromStdString(toAddressUni.get_str());
+                if (amountUni.isNum())
+                    amount = QString::number(((double)amountUni.get_int64()/100000000.0));
+
+                QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
+                if (reply == QMessageBox::No)
+                    return false;
+
                 std::vector<std::pair<std::string, uint256> > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
 
                 std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
+                //printf("Command: %s\n", command.c_str());
+
+                //command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash:\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ], \"checkpub\" : [] } }";
                 printf("Command: %s\n", command.c_str());
 
                 executeCommand(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut) {
@@ -197,24 +232,29 @@ bool DBBDaemonGui::checkPaymentProposals()
                     UniValue echoStr = find_value(jsonOut, "echo");
                     if (!echoStr.isNull() && echoStr.isStr())
                     {
-                        int ret = QMessageBox::warning(this, tr("Verify"),
-                                                       tr("ToDo Verify (%1)").arg(QString::fromStdString(echoStr.get_str())),
-                                                       QMessageBox::Cancel);
+
+                        emit shouldVerifySigning(QString::fromStdString(echoStr.get_str()));
                     }
                     else
                     {                    
                         UniValue signObject = find_value(jsonOut, "sign");
-                        UniValue sigObjetc = find_value(signObject, "sig");
-                        UniValue pubKey = find_value(signObject, "pubkey");
-                        if (!sigObjetc.isNull() && sigObjetc.isStr())
-                        {                    
-                            //TODO: verify signature
-                    
-                            std::vector<std::string> sigs;
-                            sigs.push_back(sigObjetc.get_str());
-                            vMultisigWallets[0].client.PostSignaturesForTxProposal(values[0], sigs);
-                            ret = true;
-                            //client.BroadcastProposal(values[0]);
+                        if (signObject.isArray()) {
+                            std::vector<UniValue> vSignatureObjects;
+                            vSignatureObjects = signObject.getValues();
+                            if (vSignatureObjects.size() > 0) {
+                                UniValue sigObjetc = find_value(vSignatureObjects[0], "sig");
+                                UniValue pubKey = find_value(signObject, "pubkey");
+                                if (!sigObjetc.isNull() && sigObjetc.isStr())
+                                {                    
+                                    //TODO: verify signature
+                            
+                                    std::vector<std::string> sigs;
+                                    sigs.push_back(sigObjetc.get_str());
+                                    emit signedProposalAvailable(values[0], sigs);
+                                    ret = true;
+                                    //client.BroadcastProposal(values[0]);
+                                }
+                            }
                         }
                         
                     }
@@ -224,7 +264,7 @@ bool DBBDaemonGui::checkPaymentProposals()
     }
     return ret;
 }
-bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password)
+bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password, int tag)
 {
     //ensure we don't fill the queue
     //at the moment the UI should only post one command into the queue
@@ -236,11 +276,11 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
     this->statusBarLabelRight->setText("processing...");
     this->ui->textEdit->setText("processing...");
     processComnand = true;
-    executeCommand(cmd, password, [this](const std::string& cmdOut) {
+    executeCommand(cmd, password, [this, tag](const std::string& cmdOut) {
             //send a signal to the main thread
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, -1);
+        emit gotResponse(jsonOut, tag);
     });
     return true;
 }
@@ -274,6 +314,7 @@ void DBBDaemonGui::eraseClicked()
 {
     std::string password;
     sendCommand("{\"reset\" : \"__ERASE__\"}", password); //no password required
+    vMultisigWallets[0].client.RemoveLocalData();
     sessionPassword.clear();
 }
 
@@ -301,6 +342,114 @@ void DBBDaemonGui::parseResponse(const UniValue &response, int tag)
             UniValue nameObj = find_value(response, "name");
             if ( nameObj.isStr())
                 this->ui->nameLabel->setText(QString::fromStdString(nameObj.get_str()));
+        }
+        else if (tag == 120)
+        {
+            UniValue touchbuttonObj = find_value(response, "touchbutton");
+            UniValue seedObj = find_value(response, "seed");
+            QString errorString;
+            if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
+            {
+                UniValue errorObj = find_value(touchbuttonObj, "error");
+                if (!errorObj.isNull() && errorObj.isStr())
+                    errorString = QString::fromStdString(errorObj.get_str());
+            }
+            if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success")
+            {
+                QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
+            }
+            else
+            {
+                QMessageBox::warning(this, tr("Wallet Error"), tr("Could not initialize your wallet (error: %1)!").arg(errorString), QMessageBox::Ok);
+            }
+        }
+        else if (tag == 130)
+        {
+            UniValue passwordObj = find_value(response, "password");
+            UniValue touchbuttonObj = find_value(response, "touchbutton");
+            QString errorString;
+            if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
+            {
+                UniValue errorObj = find_value(touchbuttonObj, "error");
+                if (!errorObj.isNull() && errorObj.isStr())
+                    errorString = QString::fromStdString(errorObj.get_str());
+            }
+
+            if (!passwordObj.isNull() && passwordObj.isStr() && passwordObj.get_str() == "success")
+            {
+                QMessageBox::information(this, tr("Password Set"), tr("Password has been set successfully!"), QMessageBox::Ok);
+            }
+            else
+            {
+                //reset password in case of an error
+                sessionPassword = sessionPasswordDuringChangeProcess;
+                sessionPasswordDuringChangeProcess.clear();
+                
+                QMessageBox::warning(this, tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString), QMessageBox::Ok);
+            }
+        }
+        else if(tag == 180)
+        {
+            UniValue xPubKeyUV = find_value(response, "xpub");
+            QString errorString;
+
+            if (!xPubKeyUV.isNull() && xPubKeyUV.isStr())
+            {
+
+                SelectParams(CBaseChainParams::MAIN);
+                CBitcoinExtPubKey b58PubkeyDecodeCheck(xPubKeyUV.get_str());
+                CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+
+                SelectParams(CBaseChainParams::TESTNET);
+                CBitcoinExtPubKey newKey(pubKey);
+                std::string  xPubKeyNew = newKey.ToString();
+
+
+                vMultisigWallets[0].client.setMasterPubKey(xPubKeyNew);
+                emit XPubForCopayWalletIsAvailable();
+            }
+            else
+            {
+                if (xPubKeyUV.isObject())
+                {
+                    UniValue errorObj = find_value(xPubKeyUV, "error");
+                    if (!errorObj.isNull() && errorObj.isStr())
+                        errorString = QString::fromStdString(errorObj.get_str());
+                }
+
+                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Cancel);
+            }
+        }
+        else if(tag == 185)
+        {
+            UniValue requestXPubKeyUV = find_value(response, "xpub");
+            QString errorString;
+            
+            if (!requestXPubKeyUV.isNull() && requestXPubKeyUV.isStr())
+            {
+                SelectParams(CBaseChainParams::MAIN);
+                CBitcoinExtPubKey b58PubkeyDecodeCheck(requestXPubKeyUV.get_str());
+                CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+
+                SelectParams(CBaseChainParams::TESTNET);
+                CBitcoinExtPubKey newKey(pubKey);
+                std::string  xRequestKeyNew = newKey.ToString();
+
+                vMultisigWallets[0].client.setRequestPubKey(xRequestKeyNew);
+
+                emit RequestXPubKeyForCopayWalletIsAvailable();
+            }
+            else
+            {
+                if (requestXPubKeyUV.isObject())
+                {
+                    UniValue errorObj = find_value(requestXPubKeyUV, "error");
+                    if (!errorObj.isNull() && errorObj.isStr())
+                        errorString = QString::fromStdString(errorObj.get_str());
+                }
+
+                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Cancel);
+            }
         }
         else
         {
@@ -343,23 +492,34 @@ void DBBDaemonGui::setPasswordClicked()
     bool ok;
     QString text = QInputDialog::getText(this, tr("Set New Password"), tr("Password"), QLineEdit::Normal, "0000", &ok);
     if (ok && !text.isEmpty()) {
-        sendCommand("{\"password\" : \"" + text.toStdString() + "\"}", sessionPassword);
+        std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
+
+        executeCommand(command, sessionPassword, [this](const std::string& cmdOut) {
+            UniValue jsonOut;
+            jsonOut.read(cmdOut);
+            emit gotResponse(jsonOut, 130);
+        });
+
+        // change the password, assuming the new password could be set
+        // possible chance of error
+        // TODO: need to store old password in case of an unsuccessfull password change
+        sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword = text.toStdString();
     }
+
 }
 
 void DBBDaemonGui::seed()
 {
-    SeedDialog* dialog = new SeedDialog();
-    dialog->setWindowTitle("Dialog");
-    if (dialog->exec() == 1) {
-        if (dialog->SelectedWalletType() == 0) {
-            sendCommand("{\"seed\" : {\"source\" :\"create\","
+    std::string command = "{\"seed\" : {\"source\" :\"create\","
                         "\"decrypt\": \"no\","
-                        "\"salt\" : \"\"} }",
-                        sessionPassword);
-        }
-    }
+                        "\"salt\" : \"\"} }";
+    
+    executeCommand(command, sessionPassword, [this](const std::string& cmdOut) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, 120);
+    });
 }
 
 void DBBDaemonGui::JoinCopayWallet()
@@ -397,74 +557,27 @@ void DBBDaemonGui::_JoinCopayWallet()
         }
         setResultText(QString::fromStdString(result));
 
-        int ret = QMessageBox::warning(this, tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)), QMessageBox::Cancel);
+        int ret = QMessageBox::warning(this, tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)), QMessageBox::Ok);
     } else {
-        emit showCommandResult(QString::fromStdString("Sucessfully joined wallet"));
+        QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfull joined Copay Wallet"), QMessageBox::Ok);
     }
 }
 
 void DBBDaemonGui::GetXPubKey()
 {
-    //Export external chain extended public key
-    executeCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, [this](const std::string& cmdOut) {
-            //send a signal to the main thread
-        UniValue jsonOut(UniValue::VOBJ);
-        jsonOut.read(cmdOut);
-        UniValue xPubKeyUV = find_value(jsonOut, "xpub");
-        
-        printf("XPub: %s \n\n", xPubKeyUV.get_str().c_str());
-        if (!xPubKeyUV.isNull() && xPubKeyUV.isStr())
-        {
-            
-            SelectParams(CBaseChainParams::MAIN);
-            CBitcoinExtPubKey b58PubkeyDecodeCheck(xPubKeyUV.get_str());
-            CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
-            
-            SelectParams(CBaseChainParams::TESTNET);
-            CBitcoinExtPubKey newKey(pubKey);
-            std::string  xPubKeyNew = newKey.ToString();
-            
-            
-            emit XPubForCopayWalletIsAvailable(QString::fromStdString(xPubKeyNew));
-        }
-        else
-        {
-            emit showCommandResult(QString::fromStdString("Could not load xpub (m/45'/0) key from DBB"));
-        }
-    });
+    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, 180);
 }
 
-void DBBDaemonGui::GetRequestXPubKey(const QString& xPub)
+void DBBDaemonGui::GetRequestXPubKey()
 {
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    executeCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, [this, xPub](const std::string& cmdOut) {
-        UniValue jsonOut(UniValue::VOBJ);
-        jsonOut.read(cmdOut);
-        UniValue requestXPubKeyUV = find_value(jsonOut, "xpub");
-        if (!requestXPubKeyUV.isNull() && requestXPubKeyUV.isStr())
-        {
-            SelectParams(CBaseChainParams::MAIN);
-            CBitcoinExtPubKey b58PubkeyDecodeCheck(requestXPubKeyUV.get_str());
-            CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
-            
-            SelectParams(CBaseChainParams::TESTNET);
-            CBitcoinExtPubKey newKey(pubKey);
-            std::string  xRequestKeyNew = newKey.ToString();
-            
-            emit RequestXPubKeyForCopayWalletIsAvailable(QString::fromStdString(xRequestKeyNew), xPub);
-        }
-        else
-        {
-            emit showCommandResult(QString::fromStdString("Could not load xpub (m/1'/0') key from DBB"));
-        }
-    });
+    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, 185);
 }
 
 
-void DBBDaemonGui::JoinCopayWalletWithXPubKey(const QString& requestKey, const QString& xPubKey)
+void DBBDaemonGui::JoinCopayWalletWithXPubKey()
 {
     //set the keys and try to join the wallet
-    vMultisigWallets[0].client.setPubKeys(requestKey.toStdString(), xPubKey.toStdString());
     _JoinCopayWallet();
 }
