@@ -113,8 +113,12 @@ public:
                      const std::string& args,
                      std::string& responseOut,
                      long& httpStatusCodeOut);
-    //!set the pubkeys (m -> XPub and request key [for signing http request])
-    void setPubKeys(const std::string& xPubKeyRequestKeyEntropy, const std::string& xPubKey);
+
+    //!set the master extended public key
+    void setMasterPubKey(const std::string& xPubKey);
+
+    //!set the request pubkey over a xpubkey as deterministic entropy
+    void setRequestPubKey(const std::string& xPubKeyRequestKeyEntropy);
 
     //!returns true in case of an available xpub/request key
     bool IsSeeded();

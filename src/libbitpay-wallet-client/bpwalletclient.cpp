@@ -104,7 +104,7 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
     return true;
 };
 
-void BitPayWalletClient::setPubKeys(const std::string& xPubKeyRequestKeyEntropy, const std::string& xPubKey)
+void BitPayWalletClient::setMasterPubKey(const std::string& xPubKey)
 {
     printf("Set IN Master XPubKey: %s\n", xPubKey.c_str());
     //set the extended public key from the key chain
@@ -112,6 +112,11 @@ void BitPayWalletClient::setPubKeys(const std::string& xPubKeyRequestKeyEntropy,
     CExtPubKey checkKey = b58keyDecodeCheckXPubKey.GetKey();
     masterPubKey = checkKey;
 
+    SaveLocalData();
+}
+
+void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEntropy)
+{
     CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
     printf("Set Master XPubKey: %s\n", b58PubkeyDecodeCheck.ToString().c_str());
 
@@ -630,6 +635,9 @@ bool BitPayWalletClient::IsSeeded()
 
 void BitPayWalletClient::SaveLocalData()
 {
+    if (!requestKey.IsValid())
+        return;
+
     boost::filesystem::path dataDir = GetDefaultDBBDataDir();
     boost::filesystem::create_directories(dataDir);
     FILE* writeFile = fopen((dataDir / "copay.dat").string().c_str(), "wb");
