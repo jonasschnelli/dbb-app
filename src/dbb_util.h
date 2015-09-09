@@ -10,7 +10,7 @@
 #include <map>
 #include <vector>
 
-#if defined(_SRC_CONFIG__DBB_CONFIG_H)
+#ifndef _SRC_CONFIG__DBB_CONFIG_H
 #include "config/_dbb-config.h"
 #endif
 
