@@ -125,6 +125,8 @@ public:
     //!retrive local data
     void LoadLocalData();
 
+    void RemoveLocalData();
+    
     //flip byte order, required to reverse a given LE hash in hex to BE
     static std::string ReversePairs(const std::string& strIn);
 

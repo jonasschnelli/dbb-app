@@ -674,3 +674,9 @@ void BitPayWalletClient::LoadLocalData()
         fclose(fh);
     }
 }
+
+void BitPayWalletClient::RemoveLocalData()
+{
+    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
+    boost::filesystem::remove(dataDir / "copay.dat");
+}
