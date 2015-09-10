@@ -293,6 +293,9 @@ AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 AC_SUBST(BOOST_LIBS)
 
+BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], [have_qrencode=no])])
+BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, have_qrencode=no)])
+
 oldVars = ${ac_configure_args};
 ac_configure_args="--with-daemon=no --with-gui=no --enable-wallet=no --with-libs=yes --enable-tests=no --enable-static=yes"
 AC_CONFIG_SUBDIRS([vendor/bitcoin])
