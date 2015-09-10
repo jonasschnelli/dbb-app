@@ -63,7 +63,7 @@
 #include <QApplication>
 #include <QPushButton>
 
-#include "qt/dbbgui.h"
+#include "qt/dbb_gui.h"
 
 extern void doubleSha256(char* string, unsigned char* hashOut);
 

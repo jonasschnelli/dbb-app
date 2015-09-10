@@ -50,11 +50,11 @@ DBB_GUI_CPP = \
 	qt/seeddialog.cpp
 
 QT_MOC_CPP = \
-	qt/moc_dbbgui.cpp \
+	qt/moc_dbb_gui.cpp \
 	qt/moc_seeddialog.cpp
 
 QT_MOC = \
-  qt/dbbgui.moc \
+  qt/dbb_gui.moc \
 	qt/seeddialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
@@ -62,7 +62,7 @@ QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:
 $(QT_MOC): $(QT_FORMS_H)
 $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
-dbb_app_SOURCES += qt/dbbgui.h $(DBB_GUI_H) qt/dbbgui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
+dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
 dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
 dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) ../vendor/bitcoin/src/libbitcoin_common.a ../vendor/bitcoin/src/libbitcoin_util.a ../vendor/bitcoin/src/crypto/libbitcoin_crypto.a ../vendor/bitcoin/src/univalue/libbitcoin_univalue.a ../vendor/bitcoin/src/secp256k1/libsecp256k1.la $(BOOST_LIBS) -lcurl
