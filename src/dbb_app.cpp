@@ -24,6 +24,8 @@
 
 */
 
+#include "dbb_app.h"
+
 #include <assert.h>
 #include <atomic>
 #include <chrono>

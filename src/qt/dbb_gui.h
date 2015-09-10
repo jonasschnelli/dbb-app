@@ -11,6 +11,7 @@
 #include <QPushButton>
 
 #include "libbitpay-wallet-client/bpwalletclient.h"
+#include "dbb_app.h"
 
 namespace Ui
 {
@@ -27,13 +28,6 @@ public:
         baseKeyPath = "m/110'";
     }
 };
-
-
-typedef enum DBB_CMD_EXECUTION_STATUS
-{
-    DBB_CMD_EXECUTION_STATUS_OK,
-    DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED
-} dbb_cmd_execution_status_t;
 
 
 typedef enum DBB_RESPONSE_TYPE

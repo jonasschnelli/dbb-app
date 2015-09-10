@@ -30,11 +30,11 @@ if ENABLE_DBB_APP
 bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_app_SOURCES = dbb_app.cpp dbb_util.h dbb_util.cpp
+dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
 dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) ../vendor/bitcoin/src/libbitcoin_common.a ../vendor/bitcoin/src/libbitcoin_util.a ../vendor/bitcoin/src/crypto/libbitcoin_crypto.a ../vendor/bitcoin/src/univalue/libbitcoin_univalue.a ../vendor/bitcoin/src/secp256k1/libsecp256k1.la $(BOOST_LIBS)
 
 if ENABLE_QT
 
@@ -65,7 +65,7 @@ $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
 dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) ../vendor/bitcoin/src/libbitcoin_common.a ../vendor/bitcoin/src/libbitcoin_util.a ../vendor/bitcoin/src/crypto/libbitcoin_crypto.a ../vendor/bitcoin/src/univalue/libbitcoin_univalue.a ../vendor/bitcoin/src/secp256k1/libsecp256k1.la $(BOOST_LIBS) -lcurl
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
 
