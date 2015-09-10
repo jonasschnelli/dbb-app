@@ -33,7 +33,7 @@ typedef enum DBB_CMD_EXECUTION_STATUS
 {
     DBB_CMD_EXECUTION_STATUS_OK,
     DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED
-} DBB_CMD_EXECUTION_STATUS;
+} dbb_cmd_execution_status_t;
 
 
 typedef enum DBB_RESPONSE_TYPE
@@ -45,7 +45,7 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_CREATE_WALLET,
     DBB_RESPONSE_TYPE_VERSION,
     DBB_RESPONSE_TYPE_NAME,
-} DBB_RESPONSE_TYPE;
+} dbb_response_type_t;
 
 class DBBDaemonGui : public QMainWindow
 {
@@ -69,7 +69,7 @@ private:
     bool versionStringLoaded;
     std::vector<DBBMultisigWallet> vMultisigWallets;
 
-    bool sendCommand(const std::string& cmd, const std::string& password, DBB_RESPONSE_TYPE tag = DBB_RESPONSE_TYPE_UNKNOWN);
+    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
     void _JoinCopayWallet();
         
 public slots:
@@ -87,9 +87,9 @@ public slots:
     void gotoOverviewPage();
     void gotoMultisigPage();
     void gotoSettingsPage();
-    void getInfo(DBB_RESPONSE_TYPE step);
+    void getInfo(dbb_response_type_t step);
 
-    void parseResponse(const UniValue& response, DBB_CMD_EXECUTION_STATUS status, DBB_RESPONSE_TYPE tag);
+    void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
     void showEchoVerification(QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
@@ -98,7 +98,7 @@ signals:
     void deviceStateHasChanged(bool state);
     void XPubForCopayWalletIsAvailable();
     void RequestXPubKeyForCopayWalletIsAvailable();
-    void gotResponse(const UniValue& response, DBB_CMD_EXECUTION_STATUS status, DBB_RESPONSE_TYPE tag);
+    void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
 
     void shouldVerifySigning(const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
