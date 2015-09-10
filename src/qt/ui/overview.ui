@@ -101,7 +101,7 @@
         </widget>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_3">
+        <layout class="QHBoxLayout" name="horizontalLayout3">
          <property name="topMargin">
           <number>0</number>
          </property>
@@ -217,7 +217,7 @@
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_5">
+        <layout class="QHBoxLayout" name="horizontalLayout_6">
          <property name="topMargin">
           <number>0</number>
          </property>
@@ -363,7 +363,7 @@
        <verstretch>0</verstretch>
       </sizepolicy>
      </property>
-     <widget class="QWidget" name="verticalLayoutWidget_3">
+     <widget class="QWidget" name="verticalLayoutWidget_4">
       <property name="geometry">
        <rect>
         <x>0</x>
@@ -372,7 +372,7 @@
         <height>390</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <property name="leftMargin">
         <number>10</number>
        </property>
@@ -386,7 +386,7 @@
         <number>10</number>
        </property>
        <item>
-        <widget class="QPushButton" name="pushButton_3">
+        <widget class="QPushButton" name="pushButton_4">
          <property name="enabled">
           <bool>false</bool>
          </property>
