@@ -108,6 +108,24 @@ For QT UI
 
     sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
 
+
+Linux (Fedora 21/22):
+
+Basics
+
+    sudo yum groupinstall "C Development Tests and Libraries"
+    sudo yum install git hidapi-devel
+
+For the daemon
+
+    sudo yum install libevent-devel
+
+For the QT UI
+
+    sudo yum install mesa-libGL-devel qt5-qttools-devel
+
+
+
 if libhidapi is not available, compile it yourself
 
     sudo apt-get install libudev-dev libusb-1.0-0-dev lib
