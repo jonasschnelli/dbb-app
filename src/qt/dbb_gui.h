@@ -37,8 +37,7 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_XPUB_MS_MASTER,
     DBB_RESPONSE_TYPE_XPUB_MS_REQUEST,
     DBB_RESPONSE_TYPE_CREATE_WALLET,
-    DBB_RESPONSE_TYPE_VERSION,
-    DBB_RESPONSE_TYPE_NAME,
+    DBB_RESPONSE_TYPE_INFO,
 } dbb_response_type_t;
 
 class DBBDaemonGui : public QMainWindow
@@ -57,6 +56,7 @@ private:
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
     bool processComnand;
+    bool deviceConnected;
     std::string sessionPassword; //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     QString versionString;
@@ -74,6 +74,15 @@ public slots:
     void setPasswordClicked();
     void seed();
     void changeConnectedState(bool state);
+
+    //!enable or disable loading indication in the UI
+    void setLoading(bool status);
+    //!check device state and do a UI update
+    void checkDevice();
+    //!resets device infos (in case of a disconnect)
+    void resetInfos();
+    //!update overview flags (wallet / lock, etc)
+    void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
     void JoinCopayWallet();
     void JoinCopayWalletWithXPubKey();
     void GetRequestXPubKey();
@@ -81,7 +90,7 @@ public slots:
     void gotoOverviewPage();
     void gotoMultisigPage();
     void gotoSettingsPage();
-    void getInfo(dbb_response_type_t step);
+    void getInfo();
 
     void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
     void showEchoVerification(QString echoStr);

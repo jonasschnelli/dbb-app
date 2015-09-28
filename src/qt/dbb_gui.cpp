@@ -126,9 +126,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     copayWallet.client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
     
-    this->ui->versionLabel->setText("loading info...");
-    this->ui->nameLabel->setText("loading info...");
-    getInfo(DBB_RESPONSE_TYPE_VERSION);
+    resetInfos();
+    getInfo();
 }
 
 DBBDaemonGui::~DBBDaemonGui()
@@ -281,7 +280,6 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
         qDebug() << "Already processing a command\n";
         return false;
     }
-    this->statusBarLabelRight->setText("processing...");
     this->ui->textEdit->setText("processing...");
     processComnand = true;
     executeCommand(cmd, password, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -303,15 +301,19 @@ void DBBDaemonGui::setResultText(const QString& result)
 
 void DBBDaemonGui::changeConnectedState(bool state)
 {
+    bool stateChanged = deviceConnected != state;
     if (state) {
+        deviceConnected = true;
         this->statusBarLabelLeft->setText("Device Connected");
         this->statusBarButton->setVisible(true);
     } else {
+        deviceConnected = false;
         this->statusBarLabelLeft->setText("No Device Found");
         this->statusBarButton->setVisible(false);
     }
 
-    //this->ui->widget->setEnabled(state);
+    if (stateChanged)
+        checkDevice();
 }
 
 void DBBDaemonGui::eraseClicked()
@@ -332,26 +334,42 @@ void DBBDaemonGui::ledClicked()
 void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_status_t status, dbb_response_type_t tag)
 {
     processComnand = false;
-    
+    setLoading(false);
     if (response.isObject())
     {
-        if (tag == DBB_RESPONSE_TYPE_VERSION)
+        if (tag == DBB_RESPONSE_TYPE_INFO)
         {
-            UniValue versionObj = find_value(response, "version");
-            if ( versionObj.isStr())
-                this->ui->versionLabel->setText(QString::fromStdString(versionObj.get_str()));
-        }
-        else if (tag == DBB_RESPONSE_TYPE_NAME)
-        {
-            UniValue nameObj = find_value(response, "name");
-            if ( nameObj.isStr())
-                this->ui->nameLabel->setText(QString::fromStdString(nameObj.get_str()));
+            UniValue deviceObj = find_value(response, "device");
+            if (deviceObj.isObject())
+            {
+                UniValue version = find_value(deviceObj, "version");
+                UniValue name = find_value(deviceObj, "name");
+                UniValue xpub = find_value(deviceObj, "xpub");
+                UniValue lock = find_value(deviceObj, "lock");
+                bool walletAvailable = (xpub.isStr() && xpub.get_str().size() > 0);
+                bool lockAvailable = (lock.isStr() && lock.get_str().size() > 0);
+
+                if (version.isStr())
+                    this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
+                if (name.isStr())
+                    this->ui->nameLabel->setText(QString::fromStdString(name.get_str()));
+
+                updateOverviewFlags(walletAvailable,lockAvailable,false);
+            }
         }
         else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET)
         {
             UniValue touchbuttonObj = find_value(response, "touchbutton");
             UniValue seedObj = find_value(response, "seed");
+            UniValue errorObj = find_value(response, "error");
             QString errorString;
+
+            if (errorObj.isObject())
+            {
+                UniValue errorMsgObj = find_value(errorObj, "message");
+                if (errorMsgObj.isStr())
+                    errorString = QString::fromStdString(errorMsgObj.get_str());
+            }
             if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
             {
                 UniValue errorObj = find_value(touchbuttonObj, "error");
@@ -364,7 +382,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             }
             else
             {
-                QMessageBox::warning(this, tr("Wallet Error"), tr("Could not initialize your wallet (error: %1)!").arg(errorString), QMessageBox::Ok);
+                QMessageBox::warning(this, tr("Wallet Error"), errorString, QMessageBox::Ok);
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_PASSWORD)
@@ -463,25 +481,65 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             this->statusBarLabelRight->setText("");
         }
     }
+}
 
-    // command chains/follow ups
-    if (tag == DBB_RESPONSE_TYPE_VERSION)
+void DBBDaemonGui::checkDevice()
+{
+    this->ui->verticalLayoutWidget->setVisible(deviceConnected);
+    this->ui->noDeviceConnectedLabel->setVisible(!deviceConnected);
+
+    if (!deviceConnected)
     {
-        emit getInfo(DBB_RESPONSE_TYPE_NAME);
+        resetInfos();
+    }
+    else
+    {
+        getInfo();
     }
 }
 
-void DBBDaemonGui::getInfo(dbb_response_type_t step)
+void DBBDaemonGui::setLoading(bool status)
 {
-    std::string command = "{\"device\":\"version\"}";
-    if (step == DBB_RESPONSE_TYPE_NAME)
-        command = "{\"name\":\"\"}";
-    
-    dbb_response_type_t stepTrans = step;
-    executeCommand(command, sessionPassword, [this, stepTrans](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    this->statusBarLabelRight->setText((status) ? "processing..." : "");
+    //TODO, subclass label and make it animated
+}
+
+void DBBDaemonGui::resetInfos()
+{
+    this->ui->versionLabel->setText("loading info...");
+    this->ui->nameLabel->setText("loading info...");
+
+    updateOverviewFlags(false,false,true);
+}
+
+void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
+{
+    this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
+    this->ui->walletLabel->setText(walletAvailable ? "Wallet available" : "No wallet seeded yet");
+
+    this->ui->lockCheckmark->setIcon(QIcon(lockAvailable ? ":/icons/okay" : ":/icons/warning"));
+    this->ui->lockLabel->setText(lockAvailable ? "Device 2FA Lock" : "No 2FA set");
+
+    if (loading)
+    {
+        this->ui->lockLabel->setText("loading info...");
+        this->ui->walletLabel->setText("loading info...");
+
+        this->ui->walletCheckmark->setIcon(QIcon(":/icons/warning")); //TODO change to loading...
+        this->ui->lockCheckmark->setIcon(QIcon(":/icons/warning")); //TODO change to loading...
+    }
+
+}
+
+void DBBDaemonGui::getInfo()
+{
+    std::string command = "{\"device\":\"info\"}";
+
+    setLoading(true);
+    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, stepTrans);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
     });
 }
 
