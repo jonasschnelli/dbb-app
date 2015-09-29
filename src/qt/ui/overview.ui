@@ -214,6 +214,13 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="createWallet">
+           <property name="text">
+            <string>Create Wallet</string>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>
@@ -328,6 +335,8 @@
        </property>
       </widget>
      </widget>
+     <zorder>noDeviceWidget</zorder>
+     <zorder>verticalLayoutWidget</zorder>
     </widget>
     <widget class="QWidget" name="copay">
      <property name="sizePolicy">

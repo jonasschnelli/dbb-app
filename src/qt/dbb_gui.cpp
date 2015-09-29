@@ -41,6 +41,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
+    connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
 
@@ -75,12 +76,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     this->statusBarLabelRight = new QLabel("");
     statusBar()->addPermanentWidget(this->statusBarLabelRight);
-
-    //set status bar connection status
-    changeConnectedState(DBB::isConnectionOpen());
-
-    deviceConnected = false;
-    processComnand = false;
 
     // tabbar
     QActionGroup *tabGroup = new QActionGroup(this);
@@ -121,7 +116,12 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     vMultisigWallets.push_back(copayWallet);
     
     resetInfos();
-    getInfo();
+    //set status bar connection status
+    checkDevice();
+    changeConnectedState(DBB::isConnectionOpen());
+
+    deviceConnected = false;
+    processComnand = false;
 }
 
 DBBDaemonGui::~DBBDaemonGui()
@@ -306,33 +306,45 @@ void DBBDaemonGui::setResultText(const QString& result)
 void DBBDaemonGui::changeConnectedState(bool state)
 {
     bool stateChanged = deviceConnected != state;
-    if (state) {
-        deviceConnected = true;
-        this->statusBarLabelLeft->setText("Device Connected");
-        this->statusBarButton->setVisible(true);
-    } else {
-        deviceConnected = false;
-        this->statusBarLabelLeft->setText("No Device Found");
-        this->statusBarButton->setVisible(false);
-    }
-
     if (stateChanged)
     {
+        if (state) {
+            deviceConnected = true;
+            this->statusBarLabelLeft->setText("Device Connected");
+            this->statusBarButton->setVisible(true);
+        } else {
+            deviceConnected = false;
+            this->statusBarLabelLeft->setText("No Device Found");
+            this->statusBarButton->setVisible(false);
+        }
+
         checkDevice();
     }
 }
 
 void DBBDaemonGui::eraseClicked()
 {
-    std::string password;
-    sendCommand("{\"reset\" : \"__ERASE__\"}", password); //no password required
+    std::string command = "{\"reset\":\"__ERASE__\"}";
+
+    setLoading(true);
+    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
+    });
     vMultisigWallets[0].client.RemoveLocalData();
     sessionPassword.clear();
 }
 
 void DBBDaemonGui::ledClicked()
 {
-    sendCommand("{\"led\" : \"toggle\"}", sessionPassword);
+    setLoading(true);
+    executeCommand("{\"led\" : \"toggle\"}", sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_LED_BLINK);
+    });
 }
 
 
@@ -343,7 +355,41 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
     setLoading(false);
     if (response.isObject())
     {
-        if (tag == DBB_RESPONSE_TYPE_INFO)
+        UniValue errorObj = find_value(response, "error");
+        if (errorObj.isObject())
+        {
+            //error found
+            UniValue errorCodeObj = find_value(errorObj, "code");
+            UniValue errorMessageObj = find_value(errorObj, "message");
+            if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108)
+            {
+                //password wrong
+                QMessageBox::warning(this, tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
+
+                //try again
+                askForSessionPassword();
+                getInfo();
+            }
+            else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110)
+            {
+                //password wrong
+                QMessageBox::critical(this, tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
+            }
+            else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101)
+            {
+                //password wrong
+                QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
+
+                sessionPassword.clear();
+                setPasswordClicked();
+            }
+            else
+            {
+                //password wrong
+                QMessageBox::warning(this, tr("Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
+            }
+        }
+        else if (tag == DBB_RESPONSE_TYPE_INFO)
         {
             UniValue deviceObj = find_value(response, "device");
             if (deviceObj.isObject())
@@ -385,6 +431,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success")
             {
                 QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
+                getInfo();
             }
             else
             {
@@ -393,14 +440,15 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
         }
         else if (tag == DBB_RESPONSE_TYPE_PASSWORD)
         {
-            if (status != DBB_CMD_EXECUTION_STATUS_OK)
+            UniValue passwordObj = find_value(response, "password");
+            if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success"))
             {
                 //could not decrypt, password was changed successfully
                 QMessageBox::information(this, tr("Password Set"), tr("Password has been set successfully!"), QMessageBox::Ok);
+                getInfo();
             }
             else {
                 QString errorString;
-                UniValue passwordObj = find_value(response, "password");
                 UniValue touchbuttonObj = find_value(response, "touchbutton");
                 if (!touchbuttonObj.isNull() && touchbuttonObj.isObject())
                 {
@@ -522,7 +570,8 @@ void DBBDaemonGui::resetInfos()
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
     this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
-    this->ui->walletLabel->setText(walletAvailable ? "Wallet available" : "No wallet seeded yet");
+    this->ui->walletLabel->setText(tr(walletAvailable ? "Wallet available" : "No Wallet"));
+    this->ui->createWallet->setVisible(!walletAvailable);
 
     this->ui->lockCheckmark->setIcon(QIcon(lockAvailable ? ":/icons/okay" : ":/icons/warning"));
     this->ui->lockLabel->setText(lockAvailable ? "Device 2FA Lock" : "No 2FA set");
@@ -557,6 +606,7 @@ void DBBDaemonGui::setPasswordClicked()
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
+        setLoading(true);
         executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
@@ -577,7 +627,8 @@ void DBBDaemonGui::seed()
     std::string command = "{\"seed\" : {\"source\" :\"create\","
                         "\"decrypt\": \"no\","
                         "\"salt\" : \"\"} }";
-    
+
+    setLoading(true);
     executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
