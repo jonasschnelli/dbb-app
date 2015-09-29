@@ -67,7 +67,8 @@ private:
     void _JoinCopayWallet();
         
 public slots:
-    /** Set number of connections shown in the UI */
+    void askForSessionPassword();
+
     void eraseClicked();
     void ledClicked();
     void setResultText(const QString& result);

@@ -79,13 +79,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //set status bar connection status
     changeConnectedState(DBB::isConnectionOpen());
 
-    //ask for session password
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
-    if (ok && !text.isEmpty()) {
-        sessionPassword = text.toStdString();
-    }
-
+    deviceConnected = false;
     processComnand = false;
 
     // tabbar
@@ -120,7 +114,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(copayAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
-    
+
     //load local pubkeys
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
@@ -132,6 +126,16 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
 DBBDaemonGui::~DBBDaemonGui()
 {
+}
+
+void DBBDaemonGui::askForSessionPassword()
+{
+    //ask for session password
+    bool ok;
+    QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
+    if (ok && !text.isEmpty()) {
+        sessionPassword = text.toStdString();
+    }
 }
 
 // page switching
@@ -313,7 +317,9 @@ void DBBDaemonGui::changeConnectedState(bool state)
     }
 
     if (stateChanged)
+    {
         checkDevice();
+    }
 }
 
 void DBBDaemonGui::eraseClicked()
@@ -486,7 +492,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 void DBBDaemonGui::checkDevice()
 {
     this->ui->verticalLayoutWidget->setVisible(deviceConnected);
-    this->ui->noDeviceConnectedLabel->setVisible(!deviceConnected);
+    this->ui->noDeviceWidget->setVisible(!deviceConnected);
 
     if (!deviceConnected)
     {
@@ -494,6 +500,7 @@ void DBBDaemonGui::checkDevice()
     }
     else
     {
+        askForSessionPassword();
         getInfo();
     }
 }

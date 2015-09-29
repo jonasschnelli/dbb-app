@@ -8,5 +8,7 @@
         <file alias="settings">res/cog-outline.png</file>
         <file alias="warning">res/warning.png</file>
         <file alias="okay">res/check_green.png</file>
+        <file alias="dbb_gray">res/dbb_gray.png</file>
+        <file alias="dbb_gray_questionmark">res/dbb_gray_questionmark.png</file>
     </qresource>
 </RCC>

@@ -77,7 +77,7 @@
         <number>10</number>
        </property>
        <item>
-        <widget class="QPushButton" name="pushButton">
+        <widget class="QPushButton" name="dbbIcon">
          <property name="enabled">
           <bool>false</bool>
          </property>
@@ -275,18 +275,58 @@
        </item>
       </layout>
      </widget>
-     <widget class="QLabel" name="noDeviceConnectedLabel">
+     <widget class="QWidget" name="noDeviceWidget" native="true">
       <property name="geometry">
        <rect>
-        <x>10</x>
-        <y>50</y>
-        <width>300</width>
-        <height>20</height>
+        <x>0</x>
+        <y>0</y>
+        <width>321</width>
+        <height>371</height>
        </rect>
       </property>
-      <property name="text">
-       <string>No Device Connected</string>
-      </property>
+      <widget class="QLabel" name="noDeviceConnectedLabel">
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>40</y>
+         <width>300</width>
+         <height>20</height>
+        </rect>
+       </property>
+       <property name="text">
+        <string>No Device Connected.</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
+       </property>
+      </widget>
+      <widget class="QPushButton" name="noDeviceIcon">
+       <property name="enabled">
+        <bool>false</bool>
+       </property>
+       <property name="geometry">
+        <rect>
+         <x>10</x>
+         <y>50</y>
+         <width>301</width>
+         <height>291</height>
+        </rect>
+       </property>
+       <property name="icon">
+        <iconset>
+         <normaloff>:/icons/dbb_gray_questionmark</normaloff>
+         <disabledoff>:/icons/dbb_gray_questionmark</disabledoff>:/icons/dbb_gray_questionmark</iconset>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>145</width>
+         <height>200</height>
+        </size>
+       </property>
+       <property name="flat">
+        <bool>true</bool>
+       </property>
+      </widget>
      </widget>
     </widget>
     <widget class="QWidget" name="copay">
@@ -301,7 +341,7 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>320</width>
+        <width>323</width>
         <height>331</height>
        </rect>
       </property>
