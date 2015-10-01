@@ -25,14 +25,21 @@
 
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
-void DBBDaemonGui::QTexecuteCommandWrapper(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished) {
+bool DBBDaemonGui::QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished) {
 
     if (processComnand)
-        return;
+        return false;
+
+    if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON)
+    {
+            ui->touchbuttonInfo->setVisible(true);
+    }
 
     setLoading(true);
     processComnand = true;
-    executeCommand(cmd, password, cmdFinished);
+    executeCommand(cmd, sessionPassword, cmdFinished);
+
+    return true;
 }
 
 
@@ -242,7 +249,7 @@ bool DBBDaemonGui::checkPaymentProposals()
                 command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
-                QTexecuteCommandWrapper(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                         //send a signal to the main thread
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
@@ -300,7 +307,7 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
     }
     this->ui->textEdit->setText("processing...");
     processComnand = true;
-    QTexecuteCommandWrapper(cmd, password, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             //send a signal to the main thread
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -338,24 +345,21 @@ void DBBDaemonGui::changeConnectedState(bool state)
 
 void DBBDaemonGui::eraseClicked()
 {
-    std::string command = "{\"reset\":\"__ERASE__\"}";
-
-    setLoading(true, true);
-    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-        UniValue jsonOut;
-        jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
-    });
-    
-    vMultisigWallets[0].client.RemoveLocalData();
-    sessionPasswordDuringChangeProcess = sessionPassword;
-    sessionPassword.clear();
+    if (QTexecuteCommandWrapper("{\"reset\":\"__ERASE__\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+            UniValue jsonOut;
+            jsonOut.read(cmdOut);
+            emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
+        }))
+    {
+        vMultisigWallets[0].client.RemoveLocalData();
+        sessionPasswordDuringChangeProcess = sessionPassword;
+        sessionPassword.clear();
+    }
 }
 
 void DBBDaemonGui::ledClicked()
 {
-    setLoading(true);
-    QTexecuteCommandWrapper("{\"led\" : \"toggle\"}", sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper("{\"led\" : \"toggle\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
 
@@ -598,11 +602,8 @@ void DBBDaemonGui::checkDevice()
     }
 }
 
-void DBBDaemonGui::setLoading(bool status, bool showTouchbuttonInfo)
+void DBBDaemonGui::setLoading(bool status)
 {
-    if (showTouchbuttonInfo && status)
-        ui->touchbuttonInfo->setVisible(true);
-
     if (!status)
         ui->touchbuttonInfo->setVisible(false);
 
@@ -640,10 +641,7 @@ void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable,
 
 void DBBDaemonGui::getInfo()
 {
-    std::string command = "{\"device\":\"info\"}";
-
-    setLoading(true);
-    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper("{\"device\":\"info\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
@@ -657,15 +655,15 @@ void DBBDaemonGui::setPasswordClicked()
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
-        setLoading(true);
-        QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-            UniValue jsonOut;
-            jsonOut.read(cmdOut);
-            emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
-        });
-
-        sessionPasswordDuringChangeProcess = sessionPassword;
-        sessionPassword = text.toStdString();
+        if (QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                UniValue jsonOut;
+                jsonOut.read(cmdOut);
+                emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
+            }))
+        {
+            sessionPasswordDuringChangeProcess = sessionPassword;
+            sessionPassword = text.toStdString();
+        }
     }
 
 }
@@ -676,8 +674,7 @@ void DBBDaemonGui::seed()
                         "\"decrypt\": \"no\","
                         "\"salt\" : \"\"} }";
 
-    setLoading(true);
-    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);

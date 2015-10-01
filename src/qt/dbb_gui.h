@@ -29,7 +29,6 @@ public:
     }
 };
 
-
 typedef enum DBB_RESPONSE_TYPE
 {
     DBB_RESPONSE_TYPE_UNKNOWN,
@@ -41,6 +40,12 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_ERASE,
     DBB_RESPONSE_TYPE_LED_BLINK,
 } dbb_response_type_t;
+
+typedef enum DBB_PROCESS_INFOLAYER_STYLE
+{
+    DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
+    DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON
+} dbb_process_infolayer_style_t;
 
 class DBBDaemonGui : public QMainWindow
 {
@@ -67,7 +72,7 @@ private:
 
     bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
     void _JoinCopayWallet();
-    void QTexecuteCommandWrapper(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+    bool QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
 public slots:
     void askForSessionPassword();
@@ -80,7 +85,7 @@ public slots:
     void changeConnectedState(bool state);
 
     //!enable or disable loading indication in the UI
-    void setLoading(bool status, bool showTouchbuttonInfo = false);
+    void setLoading(bool status);
     //!check device state and do a UI update
     void checkDevice();
     //!resets device infos (in case of a disconnect)
