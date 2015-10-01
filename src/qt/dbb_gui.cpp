@@ -25,6 +25,17 @@
 
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
+void DBBDaemonGui::QTexecuteCommandWrapper(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished) {
+
+    if (processComnand)
+        return;
+
+    setLoading(true);
+    processComnand = true;
+    executeCommand(cmd, password, cmdFinished);
+}
+
+
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               ui(new Ui::MainWindow)
 {
@@ -114,13 +125,14 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
-    
+
+    deviceConnected = false;
     resetInfos();
     //set status bar connection status
     checkDevice();
     changeConnectedState(DBB::isConnectionOpen());
 
-    deviceConnected = false;
+
     processComnand = false;
 }
 
@@ -228,7 +240,7 @@ bool DBBDaemonGui::checkPaymentProposals()
                 command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
-                executeCommand(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                QTexecuteCommandWrapper(command, sessionPassword, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                         //send a signal to the main thread
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
@@ -286,7 +298,7 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
     }
     this->ui->textEdit->setText("processing...");
     processComnand = true;
-    executeCommand(cmd, password, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(cmd, password, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             //send a signal to the main thread
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -326,20 +338,22 @@ void DBBDaemonGui::eraseClicked()
 {
     std::string command = "{\"reset\":\"__ERASE__\"}";
 
-    setLoading(true);
-    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    setLoading(true, true);
+    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
     });
+    
     vMultisigWallets[0].client.RemoveLocalData();
+    sessionPasswordDuringChangeProcess = sessionPassword;
     sessionPassword.clear();
 }
 
 void DBBDaemonGui::ledClicked()
 {
     setLoading(true);
-    executeCommand("{\"led\" : \"toggle\"}", sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper("{\"led\" : \"toggle\"}", sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
 
@@ -353,9 +367,19 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 {
     processComnand = false;
     setLoading(false);
+
     if (response.isObject())
     {
         UniValue errorObj = find_value(response, "error");
+        UniValue touchbuttonObj = find_value(response, "touchbutton");
+        bool touchErrorShowed = false;
+
+        if (touchbuttonObj.isStr())
+        {
+            QMessageBox::information(this, tr("Touchbutton"), QString::fromStdString(touchbuttonObj.get_str()), QMessageBox::Ok);
+            touchErrorShowed = true;
+        }
+
         if (errorObj.isObject())
         {
             //error found
@@ -435,7 +459,8 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             }
             else
             {
-                QMessageBox::warning(this, tr("Wallet Error"), errorString, QMessageBox::Ok);
+                if (!touchErrorShowed)
+                    QMessageBox::warning(this, tr("Wallet Error"), errorString, QMessageBox::Ok);
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_PASSWORD)
@@ -443,6 +468,8 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             UniValue passwordObj = find_value(response, "password");
             if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success"))
             {
+                sessionPasswordDuringChangeProcess.clear();
+
                 //could not decrypt, password was changed successfully
                 QMessageBox::information(this, tr("Password Set"), tr("Password has been set successfully!"), QMessageBox::Ok);
                 getInfo();
@@ -493,7 +520,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                         errorString = QString::fromStdString(errorObj.get_str());
                 }
 
-                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Cancel);
+                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Ok);
             }
         }
         else if(tag == DBB_RESPONSE_TYPE_XPUB_MS_REQUEST)
@@ -524,15 +551,30 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                         errorString = QString::fromStdString(errorObj.get_str());
                 }
 
-                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Cancel);
+                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Ok);
+            }
+        }
+        else if(tag == DBB_RESPONSE_TYPE_ERASE)
+        {
+            UniValue resetObj = find_value(response, "reset");
+            if (resetObj.isStr() && resetObj.get_str() == "success")
+            {
+                QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
+                sessionPasswordDuringChangeProcess.clear();
+            }
+            else
+            {
+                //reset password in case of an error
+                sessionPassword = sessionPasswordDuringChangeProcess;
+                sessionPasswordDuringChangeProcess.clear();
+
+                if (!touchErrorShowed)
+                    QMessageBox::warning(this, tr("Erase error"), tr("Could not reset device"), QMessageBox::Ok);
             }
         }
         else
         {
-            //general non specific response
-            qDebug() << "SetResultText Called\n";
-            this->ui->textEdit->setText(QString::fromStdString(response.write()));
-            this->statusBarLabelRight->setText("");
+
         }
     }
 }
@@ -545,6 +587,7 @@ void DBBDaemonGui::checkDevice()
     if (!deviceConnected)
     {
         resetInfos();
+        sessionPassword.clear();
     }
     else
     {
@@ -592,7 +635,7 @@ void DBBDaemonGui::getInfo()
     std::string command = "{\"device\":\"info\"}";
 
     setLoading(true);
-    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
@@ -607,15 +650,12 @@ void DBBDaemonGui::setPasswordClicked()
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
         setLoading(true);
-        executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
         });
 
-        // change the password, assuming the new password could be set
-        // possible chance of error
-        // TODO: need to store old password in case of an unsuccessfull password change
         sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword = text.toStdString();
     }
@@ -629,7 +669,7 @@ void DBBDaemonGui::seed()
                         "\"salt\" : \"\"} }";
 
     setLoading(true);
-    executeCommand(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(command, sessionPassword, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);

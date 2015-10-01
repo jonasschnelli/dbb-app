@@ -67,7 +67,8 @@ private:
 
     bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
     void _JoinCopayWallet();
-        
+    void QTexecuteCommandWrapper(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+
 public slots:
     void askForSessionPassword();
 
