@@ -80,7 +80,7 @@ public slots:
     void changeConnectedState(bool state);
 
     //!enable or disable loading indication in the UI
-    void setLoading(bool status);
+    void setLoading(bool status, bool showTouchbuttonInfo = false);
     //!check device state and do a UI update
     void checkDevice();
     //!resets device infos (in case of a disconnect)

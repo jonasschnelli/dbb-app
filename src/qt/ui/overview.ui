@@ -521,6 +521,48 @@
      </widget>
     </widget>
    </widget>
+   <widget class="QWidget" name="touchbuttonInfo" native="true">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>320</width>
+      <height>400</height>
+     </rect>
+    </property>
+    <widget class="QLabel" name="label">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>150</y>
+       <width>300</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Short press, accept</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+    <widget class="QLabel" name="label_2">
+     <property name="geometry">
+      <rect>
+       <x>10</x>
+       <y>200</y>
+       <width>300</width>
+       <height>16</height>
+      </rect>
+     </property>
+     <property name="text">
+      <string>Long press: abort</string>
+     </property>
+     <property name="alignment">
+      <set>Qt::AlignCenter</set>
+     </property>
+    </widget>
+   </widget>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
  </widget>

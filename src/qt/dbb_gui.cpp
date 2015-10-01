@@ -42,6 +42,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
     ui->setupUi(this);
+    ui->touchbuttonInfo->setVisible(false);
+    this->ui->touchbuttonInfo->setStyleSheet("background-color: rgba(255, 255, 255, 240);");
 
     qRegisterMetaType<UniValue>("UniValue");
     qRegisterMetaType<dbb_cmd_execution_status_t>("dbb_cmd_execution_status_t");
@@ -596,8 +598,14 @@ void DBBDaemonGui::checkDevice()
     }
 }
 
-void DBBDaemonGui::setLoading(bool status)
+void DBBDaemonGui::setLoading(bool status, bool showTouchbuttonInfo)
 {
+    if (showTouchbuttonInfo && status)
+        ui->touchbuttonInfo->setVisible(true);
+
+    if (!status)
+        ui->touchbuttonInfo->setVisible(false);
+
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
     //TODO, subclass label and make it animated
 }
