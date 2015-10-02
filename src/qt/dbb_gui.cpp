@@ -99,19 +99,19 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     // tabbar
     QActionGroup *tabGroup = new QActionGroup(this);
-    QAction *overviewAction = new QAction(QIcon(":/icons/home").pixmap(64), tr("&Overview"), this);
+    QAction *overviewAction = new QAction(QIcon(":/icons/home").pixmap(32), tr("&Overview"), this);
         overviewAction->setToolTip(tr("Show general overview of wallet"));
         overviewAction->setCheckable(true);
         overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
     tabGroup->addAction(overviewAction);
     
-    QAction *copayAction = new QAction(QIcon(":/icons/copay"), tr("&Copay"), this);
+    QAction *copayAction = new QAction(QIcon(":/icons/copay"), tr("&Wallets"), this);
         copayAction->setToolTip(tr("Show Copay wallet screen"));
         copayAction->setCheckable(true);
         copayAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
     tabGroup->addAction(copayAction);
     
-    QAction *settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Settings"), this);
+    QAction *settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Experts"), this);
         settingsAction->setToolTip(tr("Show Settings wallet screen"));
         settingsAction->setCheckable(true);
         settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
@@ -124,7 +124,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
             toolbar->addAction(copayAction);
             toolbar->addAction(settingsAction);
             overviewAction->setChecked(true);
-    toolbar->setStyleSheet("QToolButton{padding: 5px; font-size:11pt;}");
+    toolbar->setStyleSheet("QToolButton{padding: 3px; font-size:11pt;}");
+    toolbar->setIconSize(QSize(24,24));
     
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(copayAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
@@ -305,7 +306,6 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
         qDebug() << "Already processing a command\n";
         return false;
     }
-    this->ui->textEdit->setText("processing...");
     processComnand = true;
     QTexecuteCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             //send a signal to the main thread
@@ -320,7 +320,6 @@ void DBBDaemonGui::setResultText(const QString& result)
 {
     processComnand = false;
     qDebug() << "SetResultText Called\n";
-    this->ui->textEdit->setText(result);
     this->statusBarLabelRight->setText("");
 }
 
