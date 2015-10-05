@@ -12,6 +12,7 @@
 
 #include "libbitpay-wallet-client/bpwalletclient.h"
 #include "dbb_app.h"
+#include "backupdialog.h"
 
 namespace Ui
 {
@@ -39,6 +40,8 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_INFO,
     DBB_RESPONSE_TYPE_ERASE,
     DBB_RESPONSE_TYPE_LED_BLINK,
+    DBB_RESPONSE_TYPE_ADD_BACKUP,
+    DBB_RESPONSE_TYPE_LIST_BACKUP,
 } dbb_response_type_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE
@@ -59,6 +62,7 @@ public:
 
 private:
     Ui::MainWindow* ui;
+    BackupDialog *backupDialog;
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
@@ -82,6 +86,9 @@ public slots:
     void setResultText(const QString& result);
     void setPasswordClicked();
     void seed();
+    void showBackupDialog();
+    void addBackup();
+    void listBackup();
     void changeConnectedState(bool state);
 
     //!enable or disable loading indication in the UI
