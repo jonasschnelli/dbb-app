@@ -10,5 +10,8 @@
         <file alias="okay">res/check_green.png</file>
         <file alias="dbb_gray">res/dbb_gray.png</file>
         <file alias="dbb_gray_questionmark">res/dbb_gray_questionmark.png</file>
+        <file alias="abort">res/abort.png</file>
+        <file alias="accept">res/accept.png</file>
+        <file alias="finger">res/finger.png</file>
     </qresource>
 </RCC>
