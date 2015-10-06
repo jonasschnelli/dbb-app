@@ -1,0 +1,23 @@
+language: c
+sudo: false
+os:
+    - osx
+    - linux
+    
+compiler:
+    - clang
+    - gcc
+
+matrix:
+    fast_finish:
+        - true
+
+
+before_script:
+    - cd $TRAVIS_BUILD_DIR
+    - git submodule init
+    - git submodule update
+
+script: 
+    - ./autogen.sh
+    - make
