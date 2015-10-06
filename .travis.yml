@@ -1,0 +1,65 @@
+language: c
+sudo: required
+services:
+    - docker
+os:
+    - osx
+    - linux
+    
+compiler:
+    - clang
+    - gcc
+
+before_install:
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+        sudo apt-get update -qq
+        && sudo apt-get install -qq g++-4.8 libboost-all-dev libevent-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
+        ;
+      fi
+ 
+install:
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+        export CXX="g++-4.8"
+        && export CC="gcc-4.8"
+        ;
+      else
+        brew install hidapi libevent qt5
+        ;
+      fi
+
+addons:
+  apt:
+    sources:
+    - ubuntu-toolchain-r-test
+
+    packages:
+    - gcc-4.8
+    - g++-4.8
+    - clang
+    - libudev-dev
+    - libusb-1.0-0-dev
+    - libevent-dev
+
+matrix:
+    fast_finish:
+        - true
+
+
+before_script:
+    - cd $TRAVIS_BUILD_DIR
+    - git clone git://github.com/signal11/hidapi.git
+    - cd hidapi && ./bootstrap && ./configure --prefix=$TRAVIS_BUILD_DIR && make install && cd ..
+    - git submodule init
+    - git submodule update
+
+script: 
+    - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
+        ./autogen.sh
+        && ./configure CXX=g++-4.8 --with-hid-libdir=/home/travis/build/jonasschnelli/dbb-app/lib --with-hid-includedir=/home/travis/build/jonasschnelli/dbb-app/include --enable-daemon --with-gui=qt5 --enable-debug
+        ;
+     else
+        ./autogen.sh
+        && ./configure --enable-daemon --with-gui=qt5 --enable-debug
+        ;
+     fi
+    - make
