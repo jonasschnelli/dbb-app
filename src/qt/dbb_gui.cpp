@@ -26,7 +26,7 @@
 #include <functional>
 
 
-//move to util:
+//TODO: move to util:
 std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
     std::stringstream ss(s);
     std::string item;
@@ -87,6 +87,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
     connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
+    connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
@@ -439,7 +440,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
 
                 sessionPassword.clear();
-                setPasswordClicked();
+                setPasswordClicked(false);
             }
             else
             {
@@ -457,7 +458,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 UniValue xpub = find_value(deviceObj, "xpub");
                 UniValue lock = find_value(deviceObj, "lock");
                 bool walletAvailable = (xpub.isStr() && xpub.get_str().size() > 0);
-                bool lockAvailable = (lock.isStr() && lock.get_str().size() > 0);
+                bool lockAvailable = (lock.isBool() && lock.isTrue());
 
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
@@ -595,6 +596,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             {
                 QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
                 sessionPasswordDuringChangeProcess.clear();
+
+                resetInfos();
+                getInfo();
             }
             else
             {
@@ -630,6 +634,28 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             {
                 QMessageBox::information(this, tr("Random Number"), QString::fromStdString(randomNumObj.get_str()), QMessageBox::Ok);
             }
+        }
+        else if(tag == DBB_RESPONSE_TYPE_DEVICE_LOCK)
+        {
+            bool suc = false;
+
+            //check device:lock response and give appropriate user response
+            UniValue deviceObj = find_value(response, "device");
+            if (deviceObj.isObject())
+            {
+                UniValue lockObj = find_value(deviceObj, "lock");
+                if (lockObj.isBool() && lockObj.isTrue())
+                    suc = true;
+
+            }
+            if (suc)
+                QMessageBox::information(this, tr("Success"), tr("Your device is now locked"), QMessageBox::Ok);
+            else
+                QMessageBox::warning(this, tr("Error"), tr("Could not lock your device"), QMessageBox::Ok);
+
+            //reload device infos
+            resetInfos();
+            getInfo();
         }
         else
         {
@@ -701,14 +727,14 @@ void DBBDaemonGui::getInfo()
     });
 }
 
-void DBBDaemonGui::setPasswordClicked()
+void DBBDaemonGui::setPasswordClicked(bool showInfo)
 {
     bool ok;
     QString text = QInputDialog::getText(this, tr("Set New Password"), tr("Password"), QLineEdit::Normal, "0000", &ok);
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
-        if (QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        if (QTexecuteCommandWrapper(command, (showInfo) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                 UniValue jsonOut;
                 jsonOut.read(cmdOut);
                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
@@ -749,6 +775,18 @@ void DBBDaemonGui::getRandomNumber()
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
+    });
+}
+
+void DBBDaemonGui::lockDevice()
+{
+
+    std::string command = "{\"device\" : \"lock\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
     });
 }
 

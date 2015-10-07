@@ -43,7 +43,8 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_ADD_BACKUP,
     DBB_RESPONSE_TYPE_LIST_BACKUP,
     DBB_RESPONSE_TYPE_ERASE_BACKUP,
-    DBB_RESPONSE_TYPE_RANDOM_NUM
+    DBB_RESPONSE_TYPE_RANDOM_NUM,
+    DBB_RESPONSE_TYPE_DEVICE_LOCK
 } dbb_response_type_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE
@@ -86,7 +87,7 @@ public slots:
     void eraseClicked();
     void ledClicked();
     void setResultText(const QString& result);
-    void setPasswordClicked();
+    void setPasswordClicked(bool showInfo=true);
     void seed();
 
     //backup calls
@@ -97,6 +98,8 @@ public slots:
     void restoreBackup(const QString& backupFilename);
 
     void getRandomNumber();
+    //!lock the device, disabled "backup", "verifypass" and "seed" command
+    void lockDevice();
 
     //main callback when the device gets connected/disconnected
     void changeConnectedState(bool state);
