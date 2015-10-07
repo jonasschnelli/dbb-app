@@ -1,5 +1,5 @@
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
-
+[![Build Status](https://travis-ci.org/digitalbitbox/dbb-app.svg?branch=master)](https://travis-ci.org/digitalbitbox/dbb-app)
 
 ## DBB-APP
 A QT based application for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet. The application support managing your dbb device (create new wallet, backup, set 2FA key, etc.). It also supports co-signing together with a [Bitpay Copay Wallet](http://copay.io).
