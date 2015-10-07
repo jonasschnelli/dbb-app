@@ -55,7 +55,7 @@ before_script:
 script: 
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         ./autogen.sh
-        && ./configure CXX=g++-4.8 --with-hid-libdir=/home/travis/build/jonasschnelli/dbb-app/lib --with-hid-includedir=/home/travis/build/jonasschnelli/dbb-app/include --enable-daemon --with-gui=qt5 --enable-debug
+        && ./configure CXX=g++-4.8 --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
         ;
      else
         ./autogen.sh
