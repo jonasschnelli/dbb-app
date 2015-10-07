@@ -97,6 +97,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     backupDialog = new BackupDialog(0);
     connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
+    connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
+    connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
+
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
@@ -602,24 +605,22 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                     QMessageBox::warning(this, tr("Erase error"), tr("Could not reset device"), QMessageBox::Ok);
             }
         }
-        else if(tag == DBB_RESPONSE_TYPE_LIST_BACKUP)
+        else if(tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog)
         {
-            if (backupDialog)
+            UniValue backupObj = find_value(response, "backup");
+            if (backupObj.isStr())
             {
-                UniValue backupObj = find_value(response, "backup");
-                if (backupObj.isStr())
-                {
-                    std::vector<std::string> data = split(backupObj.get_str(), ',');
-                    backupDialog->showList(data);
-                }
+                std::vector<std::string> data = split(backupObj.get_str(), ',');
+                backupDialog->showList(data);
             }
         }
-        else if(tag == DBB_RESPONSE_TYPE_ADD_BACKUP)
+        else if(tag == DBB_RESPONSE_TYPE_ADD_BACKUP && backupDialog)
         {
-            if (backupDialog)
-            {
-                listBackup();
-            }
+            listBackup();
+        }
+        else if(tag == DBB_RESPONSE_TYPE_ERASE_BACKUP && backupDialog)
+        {
+            listBackup();
         }
         else
         {
@@ -764,6 +765,38 @@ void DBBDaemonGui::listBackup()
     });
 
     backupDialog->showLoading();
+}
+
+void DBBDaemonGui::eraseAllBackups()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Erase All Backups?"), tr("Are your sure you want to erase all backups"), QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
+    std::string command = "{\"backup\" : \"erase\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP);
+    });
+
+    backupDialog->showLoading();
+}
+
+void DBBDaemonGui::restoreBackup(const QString& backupFilename)
+{
+    std::string command = "{\"seed\" : {\"source\" :\""+backupFilename.toStdString()+"\","
+    "\"decrypt\": \"no\","
+    "\"salt\" : \"\"} }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
+    });
+
+    backupDialog->close();
 }
 
 /*

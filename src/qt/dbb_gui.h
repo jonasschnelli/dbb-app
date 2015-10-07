@@ -42,6 +42,7 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_LED_BLINK,
     DBB_RESPONSE_TYPE_ADD_BACKUP,
     DBB_RESPONSE_TYPE_LIST_BACKUP,
+    DBB_RESPONSE_TYPE_ERASE_BACKUP
 } dbb_response_type_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE
@@ -86,9 +87,15 @@ public slots:
     void setResultText(const QString& result);
     void setPasswordClicked();
     void seed();
+
+    //backup calls
     void showBackupDialog();
     void addBackup();
     void listBackup();
+    void eraseAllBackups();
+    void restoreBackup(const QString& backupFilename);
+
+    //main callback when the device gets connected/disconnected
     void changeConnectedState(bool state);
 
     //!enable or disable loading indication in the UI

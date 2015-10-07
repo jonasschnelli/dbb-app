@@ -33,6 +33,7 @@ public slots:
 
 private:
     Ui::BackupDialog *ui;
+    bool loadingState;
 };
 
 #endif // DBB_BACKUPDIALOG_H
