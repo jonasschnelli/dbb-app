@@ -21,7 +21,28 @@
 
 #include "univalue/univalue.h"
 
+#include <cstdio>
+#include <ctime>
 #include <functional>
+
+
+//TODO: move to util:
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
+    std::stringstream ss(s);
+    std::string item;
+    while (std::getline(ss, item, delim)) {
+        elems.push_back(item);
+    }
+    return elems;
+}
+
+
+std::vector<std::string> split(const std::string &s, char delim) {
+    std::vector<std::string> elems;
+    split(s, delim, elems);
+    return elems;
+}
+/////////////////
 
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
@@ -64,6 +85,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
+    connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
+    connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
+    connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
@@ -72,6 +96,12 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)));
     connect(this, SIGNAL(shouldVerifySigning(const QString&)), this, SLOT(showEchoVerification(const QString&)));
     connect(this, SIGNAL(signedProposalAvailable(const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignedPaymentProposal(const UniValue&, const std::vector<std::string> &)));
+
+    backupDialog = new BackupDialog(0);
+    connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
+    connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
+    connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
+
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
@@ -99,19 +129,19 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     // tabbar
     QActionGroup *tabGroup = new QActionGroup(this);
-    QAction *overviewAction = new QAction(QIcon(":/icons/home").pixmap(64), tr("&Overview"), this);
+    QAction *overviewAction = new QAction(QIcon(":/icons/home").pixmap(32), tr("&Overview"), this);
         overviewAction->setToolTip(tr("Show general overview of wallet"));
         overviewAction->setCheckable(true);
         overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
     tabGroup->addAction(overviewAction);
     
-    QAction *copayAction = new QAction(QIcon(":/icons/copay"), tr("&Copay"), this);
+    QAction *copayAction = new QAction(QIcon(":/icons/copay"), tr("&Wallets"), this);
         copayAction->setToolTip(tr("Show Copay wallet screen"));
         copayAction->setCheckable(true);
         copayAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
     tabGroup->addAction(copayAction);
     
-    QAction *settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Settings"), this);
+    QAction *settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Experts"), this);
         settingsAction->setToolTip(tr("Show Settings wallet screen"));
         settingsAction->setCheckable(true);
         settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
@@ -124,7 +154,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
             toolbar->addAction(copayAction);
             toolbar->addAction(settingsAction);
             overviewAction->setChecked(true);
-    toolbar->setStyleSheet("QToolButton{padding: 5px; font-size:11pt;}");
+    toolbar->setStyleSheet("QToolButton{padding: 3px; font-size:11pt;}");
+    toolbar->setIconSize(QSize(24,24));
     
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(copayAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
@@ -305,7 +336,6 @@ bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& passwo
         qDebug() << "Already processing a command\n";
         return false;
     }
-    this->ui->textEdit->setText("processing...");
     processComnand = true;
     QTexecuteCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             //send a signal to the main thread
@@ -320,7 +350,6 @@ void DBBDaemonGui::setResultText(const QString& result)
 {
     processComnand = false;
     qDebug() << "SetResultText Called\n";
-    this->ui->textEdit->setText(result);
     this->statusBarLabelRight->setText("");
 }
 
@@ -411,7 +440,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
 
                 sessionPassword.clear();
-                setPasswordClicked();
+                setPasswordClicked(false);
             }
             else
             {
@@ -429,7 +458,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 UniValue xpub = find_value(deviceObj, "xpub");
                 UniValue lock = find_value(deviceObj, "lock");
                 bool walletAvailable = (xpub.isStr() && xpub.get_str().size() > 0);
-                bool lockAvailable = (lock.isStr() && lock.get_str().size() > 0);
+                bool lockAvailable = (lock.isBool() && lock.isTrue());
 
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
@@ -567,6 +596,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             {
                 QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
                 sessionPasswordDuringChangeProcess.clear();
+
+                resetInfos();
+                getInfo();
             }
             else
             {
@@ -577,6 +609,53 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 if (!touchErrorShowed)
                     QMessageBox::warning(this, tr("Erase error"), tr("Could not reset device"), QMessageBox::Ok);
             }
+        }
+        else if(tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog)
+        {
+            UniValue backupObj = find_value(response, "backup");
+            if (backupObj.isStr())
+            {
+                std::vector<std::string> data = split(backupObj.get_str(), ',');
+                backupDialog->showList(data);
+            }
+        }
+        else if(tag == DBB_RESPONSE_TYPE_ADD_BACKUP && backupDialog)
+        {
+            listBackup();
+        }
+        else if(tag == DBB_RESPONSE_TYPE_ERASE_BACKUP && backupDialog)
+        {
+            listBackup();
+        }
+        else if(tag == DBB_RESPONSE_TYPE_RANDOM_NUM)
+        {
+            UniValue randomNumObj = find_value(response, "random");
+            if (randomNumObj.isStr())
+            {
+                QMessageBox::information(this, tr("Random Number"), QString::fromStdString(randomNumObj.get_str()), QMessageBox::Ok);
+            }
+        }
+        else if(tag == DBB_RESPONSE_TYPE_DEVICE_LOCK)
+        {
+            bool suc = false;
+
+            //check device:lock response and give appropriate user response
+            UniValue deviceObj = find_value(response, "device");
+            if (deviceObj.isObject())
+            {
+                UniValue lockObj = find_value(deviceObj, "lock");
+                if (lockObj.isBool() && lockObj.isTrue())
+                    suc = true;
+
+            }
+            if (suc)
+                QMessageBox::information(this, tr("Success"), tr("Your device is now locked"), QMessageBox::Ok);
+            else
+                QMessageBox::warning(this, tr("Error"), tr("Could not lock your device"), QMessageBox::Ok);
+
+            //reload device infos
+            resetInfos();
+            getInfo();
         }
         else
         {
@@ -648,14 +727,14 @@ void DBBDaemonGui::getInfo()
     });
 }
 
-void DBBDaemonGui::setPasswordClicked()
+void DBBDaemonGui::setPasswordClicked(bool showInfo)
 {
     bool ok;
     QString text = QInputDialog::getText(this, tr("Set New Password"), tr("Password"), QLineEdit::Normal, "0000", &ok);
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
-        if (QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        if (QTexecuteCommandWrapper(command, (showInfo) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                 UniValue jsonOut;
                 jsonOut.read(cmdOut);
                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
@@ -680,6 +759,122 @@ void DBBDaemonGui::seed()
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
     });
 }
+
+/*
+ /////////////////
+ Utils
+ /////////////////
+ */
+
+void DBBDaemonGui::getRandomNumber()
+{
+
+    std::string command = "{\"random\" : \"true\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
+    });
+}
+
+void DBBDaemonGui::lockDevice()
+{
+
+    std::string command = "{\"device\" : \"lock\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
+    });
+}
+
+/*
+ /////////////////
+ Backup Stack
+ /////////////////
+ */
+
+void DBBDaemonGui::showBackupDialog()
+{
+    backupDialog->show();
+    listBackup();
+}
+
+void DBBDaemonGui::addBackup()
+{
+
+    std::time_t rawtime;
+    std::tm* timeinfo;
+    char buffer [80];
+
+    std::time(&rawtime);
+    timeinfo = std::localtime(&rawtime);
+
+    std::strftime(buffer,80,"%Y-%m-%d-%H-%M-%S",timeinfo);
+    std::string timeStr(buffer);
+
+    std::string command = "{\"backup\" : {\"encrypt\" :\"no\","
+    "\"filename\": \"backup-"+timeStr+".bak\"} }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ADD_BACKUP);
+    });
+}
+
+void DBBDaemonGui::listBackup()
+{
+    std::string command = "{\"backup\" : \"list\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_LIST_BACKUP);
+    });
+
+    backupDialog->showLoading();
+}
+
+void DBBDaemonGui::eraseAllBackups()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Erase All Backups?"), tr("Are your sure you want to erase all backups"), QMessageBox::Yes|QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
+    std::string command = "{\"backup\" : \"erase\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP);
+    });
+
+    backupDialog->showLoading();
+}
+
+void DBBDaemonGui::restoreBackup(const QString& backupFilename)
+{
+    std::string command = "{\"seed\" : {\"source\" :\""+backupFilename.toStdString()+"\","
+    "\"decrypt\": \"no\","
+    "\"salt\" : \"\"} }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
+    });
+
+    backupDialog->close();
+}
+
+/*
+/////////////////
+copay stack
+/////////////////
+*/
 
 void DBBDaemonGui::JoinCopayWallet()
 {
@@ -733,7 +928,6 @@ void DBBDaemonGui::GetRequestXPubKey()
     //we cannot export private keys from a hardware wallet
     sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST);
 }
-
 
 void DBBDaemonGui::JoinCopayWalletWithXPubKey()
 {
