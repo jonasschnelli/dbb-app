@@ -42,7 +42,8 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_LED_BLINK,
     DBB_RESPONSE_TYPE_ADD_BACKUP,
     DBB_RESPONSE_TYPE_LIST_BACKUP,
-    DBB_RESPONSE_TYPE_ERASE_BACKUP
+    DBB_RESPONSE_TYPE_ERASE_BACKUP,
+    DBB_RESPONSE_TYPE_RANDOM_NUM
 } dbb_response_type_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE
@@ -94,6 +95,8 @@ public slots:
     void listBackup();
     void eraseAllBackups();
     void restoreBackup(const QString& backupFilename);
+
+    void getRandomNumber();
 
     //main callback when the device gets connected/disconnected
     void changeConnectedState(bool state);

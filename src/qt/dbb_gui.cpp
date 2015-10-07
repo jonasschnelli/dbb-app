@@ -86,6 +86,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
+    connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
 
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
@@ -622,6 +623,14 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
         {
             listBackup();
         }
+        else if(tag == DBB_RESPONSE_TYPE_RANDOM_NUM)
+        {
+            UniValue randomNumObj = find_value(response, "random");
+            if (randomNumObj.isStr())
+            {
+                QMessageBox::information(this, tr("Random Number"), QString::fromStdString(randomNumObj.get_str()), QMessageBox::Ok);
+            }
+        }
         else
         {
 
@@ -724,6 +733,30 @@ void DBBDaemonGui::seed()
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
     });
 }
+
+/*
+ /////////////////
+ Utils
+ /////////////////
+ */
+
+void DBBDaemonGui::getRandomNumber()
+{
+
+    std::string command = "{\"random\" : \"true\" }";
+
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
+    });
+}
+
+/*
+ /////////////////
+ Backup Stack
+ /////////////////
+ */
 
 void DBBDaemonGui::showBackupDialog()
 {
