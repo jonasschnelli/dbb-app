@@ -30,6 +30,7 @@ public:
     }
 };
 
+//DBB USB response types
 typedef enum DBB_RESPONSE_TYPE
 {
     DBB_RESPONSE_TYPE_UNKNOWN,
@@ -60,28 +61,12 @@ class DBBDaemonGui : public QMainWindow
 public:
     explicit DBBDaemonGui(QWidget* parent = 0);
     ~DBBDaemonGui();
-
     void GetXPubKey();
 
-private:
-    Ui::MainWindow* ui;
-    BackupDialog *backupDialog;
-    QLabel* statusBarLabelLeft;
-    QLabel* statusBarLabelRight;
-    QPushButton* statusBarButton;
-    bool processComnand;
-    bool deviceConnected;
-    std::string sessionPassword; //TODO: needs secure space / mem locking
-    std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
-    QString versionString;
-    bool versionStringLoaded;
-    std::vector<DBBMultisigWallet> vMultisigWallets;
-
-    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
-    void _JoinCopayWallet();
-    bool QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
-
 public slots:
+    //!main callback when the device gets connected/disconnected
+    void changeConnectedState(bool state);
+    //!slot to ask for the current session password
     void askForSessionPassword();
 
     void eraseClicked();
@@ -101,13 +86,8 @@ public slots:
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
 
-    //main callback when the device gets connected/disconnected
-    void changeConnectedState(bool state);
-
     //!enable or disable loading indication in the UI
     void setLoading(bool status);
-    //!check device state and do a UI update
-    void checkDevice();
     //!resets device infos (in case of a disconnect)
     void resetInfos();
     //!update overview flags (wallet / lock, etc)
@@ -134,6 +114,30 @@ signals:
 
     void shouldVerifySigning(const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
+
+private:
+    Ui::MainWindow* ui;
+    BackupDialog *backupDialog;
+    QLabel* statusBarLabelLeft;
+    QLabel* statusBarLabelRight;
+    QPushButton* statusBarButton;
+    bool processComnand;
+    bool deviceConnected;
+    bool cachedWalletAvailableState;
+    std::string sessionPassword; //TODO: needs secure space / mem locking
+    std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
+    std::vector<DBBMultisigWallet> vMultisigWallets;
+
+    //!check device state and do a UI update
+    void checkDevice();
+
+    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
+    void _JoinCopayWallet();
+    bool QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+
+    QAction *overviewAction;
+    QAction *walletsAction;
+    QAction *settingsAction;
 };
 
 #endif
