@@ -1,0 +1,31 @@
+language: c
+os:
+    - osx
+    - linux
+
+compiler:
+    - clang
+    - gcc
+
+addons:
+  apt:
+    packages:
+    - valgrind
+
+before_install:
+  - pip install --user cpp-coveralls
+  - if [ "${TRAVIS_OS_NAME}" = "osx" ]; then brew install valgrind; fi
+  
+matrix:
+    fast_finish:
+        - true
+
+script: 
+    - ./autogen.sh
+    - ./configure CFLAGS='-fprofile-arcs -ftest-coverage'
+    - make
+    - if [ ${CC} = gcc ] || [ "${TRAVIS_OS_NAME}" = "osx" ]; then valgrind --leak-check=full --error-exitcode=1 ./tests; fi;
+    - make check
+    
+after_success:
+  - coveralls --verbose -i src -x c -e src/secp256k1 -r $TRAVIS_BUILD_DIR -b $TRAVIS_BUILD_DIR --gcov-options '\-lp'
