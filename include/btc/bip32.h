@@ -1,0 +1,69 @@
+/**
+ * Copyright (c) 2013-2014 Tomas Dzetkulic
+ * Copyright (c) 2013-2014 Pavol Rusnak
+ * Copyright (c) 2015 Douglas J. Bakkumk
+ * Copyright (c) 2015 Jonas Schnelli
+ *
+ * Permission is hereby granted, free of charge, to any person obtaining
+ * a copy of this software and associated documentation files (the "Software"),
+ * to deal in the Software without restriction, including without limitation
+ * the rights to use, copy, modify, merge, publish, distribute, sublicense,
+ * and/or sell copies of the Software, and to permit persons to whom the
+ * Software is furnished to do so, subject to the following conditions:
+ *
+ * The above copyright notice and this permission notice shall be included
+ * in all copies or substantial portions of the Software.
+ *
+ * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS
+ * OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
+ * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES
+ * OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,
+ * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR
+ * OTHER DEALINGS IN THE SOFTWARE.
+ */
+
+
+#ifndef __LIBBTC_BIP32_H__
+#define __LIBBTC_BIP32_H__
+
+#include "btc.h"
+#include "chain.h"
+
+#ifdef  __cplusplus
+extern "C" {
+#endif
+
+#include <stdint.h>
+
+
+typedef struct {
+    uint32_t depth;
+    uint32_t fingerprint;
+    uint32_t child_num;
+    uint8_t chain_code[32];
+    uint8_t private_key[32];
+    uint8_t public_key[33];
+} btc_hdnode;
+
+
+#define btc_hdnode_private_ckd_prime(X, I) btc_hdnode_private_ckd((X), ((I) | 0x80000000))
+
+
+LIBBTC_API btc_bool btc_hdnode_public_ckd(btc_hdnode *inout, uint32_t i);
+LIBBTC_API btc_bool btc_hdnode_from_seed(const uint8_t *seed, int seed_len, btc_hdnode *out);
+LIBBTC_API btc_bool btc_hdnode_private_ckd(btc_hdnode *inout, uint32_t i);
+LIBBTC_API void btc_hdnode_fill_public_key(btc_hdnode *node);
+LIBBTC_API void btc_hdnode_serialize_public(const btc_hdnode *node, const btc_chain *chain, char *str, int strsize);
+LIBBTC_API void btc_hdnode_serialize_private(const btc_hdnode *node, const btc_chain *chain, char *str, int strsize);
+LIBBTC_API btc_bool btc_hdnode_deserialize(const char *str, const btc_chain *chain, btc_hdnode *node);
+
+//!derive btc_hdnode including private key from master private key
+LIBBTC_API btc_bool btc_hd_generate_key(btc_hdnode *node, const char *keypath, const uint8_t *privkeymaster,
+                    const uint8_t *chaincode);
+
+#ifdef  __cplusplus
+}
+#endif
+
+#endif // __LIBBTC_BIP32_H__
