@@ -46,6 +46,7 @@
 
 #include <univalue.h>
 
+#include <btc/ecc_key.h>
 
 class BitpayWalletInvitation
 {
@@ -135,7 +136,7 @@ public:
 private:
     std::string masterPrivKey;   // "m/45'"
     std::string masterPubKey; // "m/45'"
-    uint8_t requestKey[33];         //"m/1'/0"
+    btc_key requestKey;  //"m/1'/0"
 
     std::string baseURL; //!< base URL for the wallet server
 

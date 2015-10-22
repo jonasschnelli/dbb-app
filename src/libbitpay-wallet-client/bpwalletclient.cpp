@@ -42,6 +42,8 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
 
 BitPayWalletClient::BitPayWalletClient()
 {
+//    requestKey = NULL;
+
     baseURL = "https://bws.bitpay.com/bws/api";
 }
 
@@ -92,10 +94,12 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
     uint8_t hash[32];
     Hash(stringToHash, hash);
 
-    btc_key* key = btc_privkey_new();
-    memcpy(key->privkey, privKey, 32);
-    btc_pubkey *pubkey1 = btc_pubkey_new();
-    btc_pubkey_from_key(key, pubkey1);
+    btc_key key;
+    btc_privkey_init(&key);
+    memcpy(&key.privkey, privKey, 32);
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    btc_pubkey_from_key(&key, &pubkey);
 
     unsigned char sig[74];
     size_t outlen = 74;
@@ -103,12 +107,12 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
     uint8_t hash2[32];
     memcpy(hash2, hash, 32);
 
-    btc_key_sign_hash(key, hash, sig, &outlen);
+    btc_key_sign_hash(&key, hash, sig, &outlen);
 
-    assert(btc_pubkey_verify_sig(pubkey1, hash2, sig, outlen) == 1);
+    assert(btc_pubkey_verify_sig(&pubkey, hash2, sig, outlen) == 1);
 
-    btc_privkey_free(key);
-    btc_pubkey_free(pubkey1);
+    btc_privkey_cleanse(&key);
+    btc_pubkey_cleanse(&pubkey);
 
     std::vector<unsigned char> signature;
     signature.assign(sig, sig + outlen);
@@ -161,30 +165,29 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
 //        }
 //    } while (!eccrypto::Check(&vSeed[0]));
 
-    btc_key *pkey = btc_privkey_new();
-    btc_privkey_gen(pkey);
+    btc_privkey_gen(&requestKey);
     std::vector<unsigned char> hash = DBB::ParseHex("26db47a48a10b9b0b697b793f5c0231aa35fe192c9d063d7b03a55e3c302850a");
 
     unsigned char sig[74];
     size_t outlen = 74;
-    assert(btc_key_sign_hash(pkey, &hash.front(), sig, &outlen) == 1);
+    assert(btc_key_sign_hash(&requestKey, &hash.front(), sig, &outlen) == 1);
 
-    memcpy(requestKey, pkey->privkey, 32);
 
-    btc_pubkey *pubkey1 = btc_pubkey_new();
-    btc_pubkey_from_key(pkey, pubkey1);
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    btc_pubkey_from_key(&requestKey, &pubkey);
 
     unsigned int i;
     for(i = 33; i < BTC_ECKEY_UNCOMPRESSED_LENGTH; i++)
-        assert(pubkey1->pubkey[i] == 0);
+        assert(pubkey.pubkey[i] == 0);
 
 
 
-    assert(btc_pubkey_verify_sig(pubkey1, &hash.front(), sig, outlen) == 1);
+    assert(btc_pubkey_verify_sig(&pubkey, &hash.front(), sig, outlen) == 1);
 
-    btc_pubkey_free(pubkey1);
+    btc_pubkey_cleanse(&pubkey);
 
-    btc_privkey_free(pkey);
+
 
     SaveLocalData();
 }
@@ -216,14 +219,14 @@ void BitPayWalletClient::seed()
 
 bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
 {
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    btc_pubkey_from_key(&requestKey, &pubkey);
 
-    btc_key* key = btc_privkey_new();
-    memcpy(&key->privkey, requestKey, 32); //<--- TODO, no copy!
+    pubKeyOut = DBB::HexStr(pubkey.pubkey, pubkey.pubkey+33);
 
-    btc_pubkey *pubkey = btc_pubkey_new();
-    btc_pubkey_from_key(key, pubkey);
+    btc_pubkey_cleanse(&pubkey);
 
-    pubKeyOut = DBB::HexStr(pubkey->pubkey, pubkey->pubkey+33);
     return true;
 }
 
@@ -581,20 +584,17 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
 
     printf("signing message: %s, hash: %s\n", message.c_str(), DBB::HexStr(hash, hash+32).c_str());
 
-    btc_key* key = btc_privkey_new();
-    memcpy(key->privkey, requestKey, 32); //TODO, avoid copy
-
     unsigned char sig[74];
     size_t outlen = 74;
-    btc_key_sign_hash(key, hash, sig, &outlen);
+    btc_key_sign_hash(&requestKey, hash, sig, &outlen);
 
-    btc_pubkey *pubkey1 = btc_pubkey_new();
-    btc_pubkey_from_key(key, pubkey1);
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    btc_pubkey_from_key(&requestKey, &pubkey);
 
-    assert(btc_pubkey_verify_sig(pubkey1, hash, sig, outlen) == 1);
+    assert(btc_pubkey_verify_sig(&pubkey, hash, sig, outlen) == 1);
 
-    btc_privkey_free(key);
-    btc_pubkey_free(pubkey1);
+    btc_pubkey_cleanse(&pubkey);
 
     hashOut = DBB::HexStr(hash, hash+32);
     return DBB::HexStr(sig, sig+outlen);
@@ -621,21 +621,8 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     curl = curl_easy_init();
     if (curl) {
         struct curl_slist* chunk = NULL;
-        std::string requestPubKey;
-        GetRequestPubKey(requestPubKey);
         std::string hashOut;
         std::string signature = SignRequest(method, url, args, hashOut);
-
-        std::vector<unsigned char> requestPubKeyV = DBB::ParseHex(requestPubKey);
-        std::vector<unsigned char> hashV = DBB::ParseHex(hashOut);
-        std::vector<unsigned char> sigV = DBB::ParseHex(signature);
-
-        btc_pubkey *pubkey = btc_pubkey_new();
-        pubkey->compressed = 1;
-        memcpy(&pubkey->pubkey, &requestPubKeyV.front(), 33);
-
-        assert(btc_pubkey_verify_sig(pubkey, &hashV.front(), &sigV.front(), sigV.size()) == 1);
-
         chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
         chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
         chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
