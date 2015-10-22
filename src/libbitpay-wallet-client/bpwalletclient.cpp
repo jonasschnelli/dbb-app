@@ -20,6 +20,7 @@
 #include <btc/ecc_key.h>
 #include <btc/ecc.h>
 #include <btc/hash.h>
+#include <btc/bip32.h>
 
 
 //ignore osx depracation warning
@@ -130,9 +131,6 @@ void BitPayWalletClient::setMasterPubKey(const std::string& xPubKey)
 
 void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEntropy)
 {
-//    CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
-//    printf("Set Master XPubKey: %s\n", b58PubkeyDecodeCheck.ToString().c_str());
-//
 //    //now this is a ugly workaround because we need a request keypair (pub/priv)
 //    //for signing the requests after BitAuth
 //    //Signing over the hardware wallet would be a very bad UX (press button on
@@ -141,31 +139,11 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
 //    //
 //    //we now generate a private key by (miss)using the xpub at m/1'/0' as entropy
 //    //for a new private key
-//    CBitcoinExtPubKey requestXPub(xPubKeyRequestKeyEntropy);
-//    CExtPubKey requestEntropyKey = requestXPub.GetKey();
-//    std::vector<unsigned char> data;
-//    data.resize(74);
-//    requestEntropyKey.Encode(&data[0]);
-//
-//    CKeyingMaterial vSeed;
-//    vSeed.resize(32);
-//    int shift = 0;
-//    int cnt = 0;
-//    do {
-//        memcpy(&vSeed[0], (void*)(&data[0] + shift), 32);
-//        printf("current hex: %s\n", HexStr(vSeed, false).c_str());
-//        printf("seed round: %d shift: %d \n", cnt, shift);
-//        shift++;
-//
-//        if (shift + 32 >= data.size()) {
-//            printf("reverse\n");
-//            shift = 0;
-//            //might turn into a endless loop
-//            std::reverse(data.begin(), data.end()); //do some more deterministic byte shuffeling
-//        }
-//    } while (!eccrypto::Check(&vSeed[0]));
 
-    btc_privkey_gen(&requestKey);
+    btc_hdnode node;
+    bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), &btc_chain_test, &node);
+
+    memcpy(requestKey.privkey, node.public_key+1, 32);
     std::vector<unsigned char> hash = DBB::ParseHex("26db47a48a10b9b0b697b793f5c0231aa35fe192c9d063d7b03a55e3c302850a");
 
     unsigned char sig[74];
@@ -182,12 +160,8 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
         assert(pubkey.pubkey[i] == 0);
 
 
-
     assert(btc_pubkey_verify_sig(&pubkey, &hash.front(), sig, outlen) == 1);
-
     btc_pubkey_cleanse(&pubkey);
-
-
 
     SaveLocalData();
 }
@@ -722,32 +696,28 @@ boost::filesystem::path GetDefaultDBBDataDir()
 
 bool BitPayWalletClient::IsSeeded()
 {
-    //needs check
-    
+    if (masterPubKey.size() > 100)
+        return true;
+    //TODO check request key
+    //TODO check base58 check of masterPubKey (tpub/xpub)
+
     return false;
 }
 
 void BitPayWalletClient::SaveLocalData()
 {
-//    if (!requestKey.IsValid())
-//        return;
-
+    //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
     boost::filesystem::path dataDir = GetDefaultDBBDataDir();
     boost::filesystem::create_directories(dataDir);
     FILE* writeFile = fopen((dataDir / "copay.dat").string().c_str(), "wb");
     if (writeFile) {
-//        CAutoFile copayDatFile(writeFile, SER_DISK, 1);
-//        copayDatFile << requestKey.GetPrivKey();
-//
-//
-//        CKeyingMaterial encoded;
-//        encoded.resize(76);
-//
-//        CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
-//        printf("Save Master XPubKey: %s\n ", b58PubkeyDecodeCheck.ToString().c_str());
-//
-//        masterPubKey.Encode(&encoded[0]);
-//        copayDatFile << encoded;
+
+        unsigned char header[2] = {0xAA, 0xF0};
+        fwrite(header, 1, 2, writeFile);
+        fwrite(requestKey.privkey, 1, 32, writeFile);
+        uint32_t masterPubKeylen = masterPubKey.size();
+        fwrite(&masterPubKeylen, 1, sizeof(masterPubKeylen), writeFile);
+        fwrite(&masterPubKey.front(), 1, masterPubKeylen, writeFile);
     }
     fclose(writeFile);
 }
@@ -758,21 +728,25 @@ void BitPayWalletClient::LoadLocalData()
     boost::filesystem::create_directories(dataDir);
     FILE* fh = fopen((dataDir / "copay.dat").string().c_str(), "rb");
     if (fh) {
-//        CAutoFile copayDatFile(fh, SER_DISK, 1);
-//        if (!copayDatFile.IsNull()) {
-//            CPrivKey pkey;
-//            copayDatFile >> pkey;
-//            requestKey.SetPrivKey(pkey, true);
-//
-//            CKeyingMaterial encoded;
-//            encoded.resize(74);
-//            copayDatFile >> encoded;
-//
-//            masterPubKey.Decode(&encoded[0]);
-//
-//            CBitcoinExtPubKey b58PubkeyDecodeCheck(masterPubKey);
-//            printf("Load Master XPubKey: %s\n", b58PubkeyDecodeCheck.ToString().c_str());
-//        }
+        unsigned char header[2];
+        if (fread(&header, 1, 2, fh) != 2)
+            return;
+        if (header[0] != 0xAA || header[1] != 0xF0)
+            return;
+
+        if (fread(&requestKey.privkey, 1, 32, fh) != 32)
+            return;
+
+        uint32_t masterPubKeylen = 0;
+        if (fread(&masterPubKeylen, 1, sizeof(masterPubKeylen), fh) != sizeof(masterPubKeylen))
+            return;
+
+        assert(masterPubKeylen < 1024);
+        masterPubKey.resize(masterPubKeylen);
+        
+        if (fread(&masterPubKey[0], 1, masterPubKeylen, fh) != masterPubKeylen)
+            return;
+
         fclose(fh);
     }
 }
