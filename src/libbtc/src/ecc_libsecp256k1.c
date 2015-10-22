@@ -105,7 +105,7 @@ btc_bool ecc_sign(const uint8_t *private_key, const uint8_t *hash, unsigned char
     assert(secp256k1_ctx);
 
     secp256k1_ecdsa_signature sig;
-    if (!secp256k1_ecdsa_sign(secp256k1_ctx, &sig, hash, private_key, secp256k1_nonce_function_rfc6979, NULL))
+    if (!secp256k1_ecdsa_sign(secp256k1_ctx, &sig, hash, private_key, NULL, NULL))
         return 0;
 
     if (!secp256k1_ecdsa_signature_serialize_der(secp256k1_ctx, sigder, outlen, &sig))

@@ -952,3 +952,8 @@ void btc_hash(const unsigned char *datain, size_t length, uint256 hashout)
     sha256_Raw((const uint8_t *)datain, length, hashout);
     sha256_Raw(hashout, 32, hashout);
 }
+
+void btc_hash_sngl_sha256(const unsigned char *datain, size_t length, uint256 hashout)
+{
+    sha256_Raw((const uint8_t *)datain, length, hashout);
+}
