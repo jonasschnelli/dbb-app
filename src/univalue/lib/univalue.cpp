@@ -5,24 +5,18 @@
 
 #include <stdint.h>
 #include <ctype.h>
+#include <errno.h>
 #include <iomanip>
 #include <limits>
 #include <sstream>
-#include <stdexcept>      // std::runtime_error
-#include <string>
+#include <stdexcept>
+#include <stdlib.h>
 #include <string.h>
-#include <cstdlib>
-#include <cerrno>
-#include <memory.h>
 
+#include "univalue.h"
 
-#include "../include/univalue.h"
-
-
-using namespace std;
-
-const UniValue NullUniValue;
-
+namespace 
+{
 static bool ParsePrechecks(const std::string& str)
 {
     if (str.empty()) // No empty string allowed
@@ -71,12 +65,18 @@ bool ParseDouble(const std::string& str, double *out)
         return false;
     if (str.size() >= 2 && str[0] == '0' && str[1] == 'x') // No hexadecimal floats allowed
         return false;
-    char *endp = NULL;
-    errno = 0; // strtod will not set errno if valid
-    double n = strtod(str.c_str(), &endp);
-    if(out) *out = n;
-    return endp && *endp == 0 && !errno;
+    std::istringstream text(str);
+    text.imbue(std::locale::classic());
+    double result;
+    text >> result;
+    if(out) *out = result;
+    return text.eof() && !text.fail();
 }
+}
+
+using namespace std;
+
+const UniValue NullUniValue;
 
 void UniValue::clear()
 {
@@ -148,7 +148,7 @@ bool UniValue::setFloat(double val)
     oss << std::setprecision(16) << val;
 
     bool ret = setNumStr(oss.str());
-    typ = VREAL;
+    typ = VNUM;
     return ret;
 }
 
@@ -272,7 +272,6 @@ const char *uvTypeName(UniValue::VType t)
     case UniValue::VARR: return "array";
     case UniValue::VSTR: return "string";
     case UniValue::VNUM: return "number";
-    case UniValue::VREAL: return "number";
     }
 
     // not reached
@@ -342,7 +341,7 @@ int64_t UniValue::get_int64() const
 
 double UniValue::get_real() const
 {
-    if (typ != VREAL && typ != VNUM)
+    if (typ != VNUM)
         throw std::runtime_error("JSON value is not a number as expected");
     double retval;
     if (!ParseDouble(getValStr(), &retval))

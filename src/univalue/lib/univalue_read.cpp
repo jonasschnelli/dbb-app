@@ -1,12 +1,11 @@
 // Copyright 2014 BitPay Inc.
-// Copyright 2015 Bitcoin Core Developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #include <string.h>
 #include <vector>
 #include <stdio.h>
-#include "../include/univalue.h"
+#include "univalue.h"
 
 using namespace std;
 
@@ -245,16 +244,16 @@ bool UniValue::read(const char *raw)
     bool expectColon = false;
     vector<UniValue*> stack;
 
+    string tokenVal;
+    unsigned int consumed;
     enum jtokentype tok = JTOK_NONE;
     enum jtokentype last_tok = JTOK_NONE;
-    while (1) {
+    do {
         last_tok = tok;
 
-        string tokenVal;
-        unsigned int consumed;
         tok = getJsonToken(tokenVal, consumed, raw);
         if (tok == JTOK_NONE || tok == JTOK_ERR)
-            break;
+            return false;
         raw += consumed;
 
         switch (tok) {
@@ -378,9 +377,11 @@ bool UniValue::read(const char *raw)
         default:
             return false;
         }
-    }
+    } while (!stack.empty ());
 
-    if (stack.size() != 0)
+    /* Check that nothing follows the initial construct (parsed above).  */
+    tok = getJsonToken(tokenVal, consumed, raw);
+    if (tok != JTOK_NONE)
         return false;
 
     return true;

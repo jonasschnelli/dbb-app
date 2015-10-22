@@ -1,18 +1,33 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include -I../vendor/bitcoin/src -I../vendor/bitcoin/src/config
+DIST_SUBDIRS = libbtc univalue
+AM_CPPFLAGS = -I$(top_srcdir)/include
+AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) -static
 
-libunival_CONFIG_INCLUDES=-I$(builddir)/config
-libunival_INCLUDES=-I$(builddir) -I$(builddir)/obj univalue/univalue_escapes.h ../include/univalue.h
+DBB_INCLUDES = 
 
-noinst_LIBRARIES = libunival.a libdbb.a libbpwalletclient.a
+LIBBTC=libbtc/libbtc.la
+UNIVALUE=univalue/libunivalue.la
 
-libunival_a_SOURCES = univalue/univalue.cpp univalue/univalue_read.cpp univalue/univalue_write.cpp
+$(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+DBB_INCLUDES += -I$(srcdir)/libbtc/include -I$(srcdir)/libbtc/src
+
+$(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+DBB_INCLUDES += -I$(srcdir)/univalue/include
+
+
+noinst_LIBRARIES = libdbb.a libbpwalletclient.a
 
 libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
 libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
 libbpwalletclient_a_SOURCES = libbitpay-wallet-client/bpwalletclient.cpp
-
+libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
+libbpwalletclient_a_LIBADD = $(LIBBTC)
+ 
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
@@ -22,7 +37,7 @@ dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_cli_LDADD = libunival.a libdbb.a $(CRYPTO_LIBS)
+dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(CRYPTO_LIBS)
 
 
 #check if we should build the dbb app
@@ -34,7 +49,7 @@ dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
 dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) ../vendor/bitcoin/src/libbitcoin_common.a ../vendor/bitcoin/src/libbitcoin_util.a ../vendor/bitcoin/src/crypto/libbitcoin_crypto.a ../vendor/bitcoin/src/univalue/libbitcoin_univalue.a ../vendor/bitcoin/src/secp256k1/libsecp256k1.la $(BOOST_LIBS)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) $(UNIVALUE) $(BOOST_LIBS)
 
 if ENABLE_QT
 
@@ -66,7 +81,7 @@ $(QT_MOC): $(QT_FORMS_H)
 $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
-dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) $(DBB_INCLUDES)
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
 dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl
 
@@ -76,6 +91,9 @@ CLEANFILES = $(CLEAN_QT)
 
 dbb_app_clean: FORCE
 	rm -f $(CLEAN_QT) dbb-app$(EXEEXT)
+
+clean-local:
+	-$(MAKE) -C libbtc clean
 
 ui_%.h: %.ui
 	@test -f $(UIC)

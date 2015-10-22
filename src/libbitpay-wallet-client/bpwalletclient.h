@@ -44,19 +44,15 @@
 #include <string>
 #include <vector>
 
-#include "uint256.h"
-#include "hash.h"
-#include "pubkey.h"
-#include "key.h"
-#include "random.h"
-#include "univalue/univalue.h"
+#include <univalue.h>
 
+#include <btc/ecc_key.h>
 
 class BitpayWalletInvitation
 {
 public:
     std::string walletID;
-    CKey walletPrivKey;
+    uint8_t walletPrivKey[32];
     std::string network;
 };
 
@@ -75,11 +71,14 @@ public:
     //!get the copyer id as string
     std::string GetCopayerId();
 
+    //TODO: move to utils
+    bool Hash(const std::string &stringIn, uint8_t *hashout);
+
     //!generates the copayer hash (name, xpub, request key)
     bool GetCopayerHash(const std::string& name, std::string& hashOut);
 
     //!signs a given string with a given key
-    bool GetCopayerSignature(const std::string& stringToHash, const CKey& privKey, std::string& sigHexOut);
+    bool GetCopayerSignature(const std::string& stringToHash, const uint8_t *privKey, std::string& sigHexOut);
 
     //!seed a wallet, if you use a hardware wallet, use setPubKeys
     void seed();
@@ -91,7 +90,7 @@ public:
     bool GetWallets(std::string& response);
 
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
-    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, uint256> >& vInputTxHashes);
+    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, uint8_t[32]> >& vInputTxHashes);
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
@@ -105,7 +104,7 @@ public:
     //!sign a http request (generates x-signature header string)
     std::string SignRequest(const std::string& method,
                             const std::string& url,
-                            const std::string& args);
+                            const std::string& args, std::string& hashOut);
 
     //!send a request to the wallet server
     bool SendRequest(const std::string& method,
@@ -135,9 +134,9 @@ public:
     static std::string ReversePairs(const std::string& strIn);
 
 private:
-    CExtKey masterPrivKey;   // "m/45'"
-    CExtPubKey masterPubKey; // "m/45'"
-    CKey requestKey;         //"m/1'/0"
+    std::string masterPrivKey;   // "m/45'"
+    std::string masterPubKey; // "m/45'"
+    btc_key requestKey;  //"m/1'/0"
 
     std::string baseURL; //!< base URL for the wallet server
 

@@ -16,14 +16,16 @@
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
 #include <dbb.h>
-#include "pubkey.h"
-#include "base58.h"
 
-#include "univalue/univalue.h"
+#include "dbb_util.h"
 
 #include <cstdio>
 #include <ctime>
 #include <functional>
+
+#include <univalue.h>
+#include <btc/bip32.h>
+#include <btc/tx.h>
 
 
 //TODO: move to util:
@@ -667,14 +669,13 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             if (!xPubKeyUV.isNull() && xPubKeyUV.isStr())
             {
 
-                SelectParams(CBaseChainParams::MAIN);
-                CBitcoinExtPubKey b58PubkeyDecodeCheck(xPubKeyUV.get_str());
-                CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+                btc_hdnode node;
+                bool r = btc_hdnode_deserialize(xPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
 
-                SelectParams(CBaseChainParams::TESTNET);
-                CBitcoinExtPubKey newKey(pubKey);
-                std::string  xPubKeyNew = newKey.ToString();
+                char outbuf[112];
+                btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
 
+                std::string xPubKeyNew(outbuf);
 
                 vMultisigWallets[0].client.setMasterPubKey(xPubKeyNew);
                 emit XPubForCopayWalletIsAvailable();
@@ -698,13 +699,13 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             
             if (!requestXPubKeyUV.isNull() && requestXPubKeyUV.isStr())
             {
-                SelectParams(CBaseChainParams::MAIN);
-                CBitcoinExtPubKey b58PubkeyDecodeCheck(requestXPubKeyUV.get_str());
-                CExtPubKey pubKey = b58PubkeyDecodeCheck.GetKey();
+                btc_hdnode node;
+                bool r = btc_hdnode_deserialize(requestXPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
 
-                SelectParams(CBaseChainParams::TESTNET);
-                CBitcoinExtPubKey newKey(pubKey);
-                std::string  xRequestKeyNew = newKey.ToString();
+                char outbuf[112];
+                btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
+
+                std::string xRequestKeyNew(outbuf);
 
                 vMultisigWallets[0].client.setRequestPubKey(xRequestKeyNew);
 
@@ -845,14 +846,22 @@ void DBBDaemonGui::_JoinCopayWallet()
 
 void DBBDaemonGui::GetXPubKey()
 {
-    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", sessionPassword, DBB_RESPONSE_TYPE_XPUB_MS_MASTER);
+    QTexecuteCommandWrapper("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER);
+    });
 }
 
 void DBBDaemonGui::GetRequestXPubKey()
 {
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    sendCommand("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", sessionPassword, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST);
+    QTexecuteCommandWrapper("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST);
+    });
 }
 
 void DBBDaemonGui::JoinCopayWalletWithXPubKey()
@@ -923,10 +932,12 @@ bool DBBDaemonGui::checkPaymentProposals()
                 std::vector<std::pair<std::string, uint256> > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
 
-                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
+                std::string hexHash = DBB::HexStr(inputHashesAndPaths[0].second, inputHashesAndPaths[0].second+32);
+
+                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 //printf("Command: %s\n", command.c_str());
 
-                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(inputHashesAndPaths[0].second.GetHex()) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
+                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
                 QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {

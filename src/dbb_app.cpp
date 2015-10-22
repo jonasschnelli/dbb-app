@@ -67,6 +67,8 @@
 
 #include "qt/dbb_gui.h"
 
+#include <btc/ecc.h>
+
 extern void doubleSha256(char* string, unsigned char* hashOut);
 
 static DBBDaemonGui* widget;
@@ -210,14 +212,12 @@ int main(int argc, char** argv)
         }
     });
 
-    ECC_Start();
-
 #ifdef DBB_ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-
+    ecc_start();
     //create a thread for the http handling
     std::thread httpThread([&]() {
         event_base_dispatch(base);
@@ -231,8 +231,8 @@ int main(int argc, char** argv)
 #else
     //directly start libevents main run loop
     event_base_dispatch(base);
+    ecc_stop();
 #endif
 
-    ECC_Stop();
     exit(1);
 }

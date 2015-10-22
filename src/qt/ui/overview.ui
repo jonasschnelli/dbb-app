@@ -410,7 +410,7 @@
           <number>0</number>
          </property>
          <item>
-          <widget class="QPushButton" name="joinCopayWallet">
+          <widget class="QPushButton" name="joinCopayWalletIcon">
            <property name="text">
             <string/>
            </property>
