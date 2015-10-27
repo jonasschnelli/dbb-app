@@ -465,6 +465,7 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
             vInputTxHashes.push_back(std::make_pair(scriptAndPath.first, vHash));
             cnt++;
         }
+    }
 }
 
 int ecdsa_sig_to_der(const uint8_t* sig, uint8_t* der)
