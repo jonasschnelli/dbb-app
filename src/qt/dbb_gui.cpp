@@ -891,19 +891,19 @@ bool DBBDaemonGui::checkPaymentProposals()
         if (response.isObject()) {
             printf("Wallet: %s\n", response.write(true, 2).c_str());
 
-            std::string currentXPub = vMultisigWallets[0].client.GetXPubKey();
-            UniValue wallet = find_value(response, "wallet");
-            UniValue copayers = find_value(wallet, "copayers");
-            for (const UniValue& copayer : copayers.getValues()) {
-                UniValue copayerXPub = find_value(copayer, "xPubKey");
-                if (!copayerXPub.isNull()) {
-                    if (currentXPub == copayerXPub.get_str()) {
-                        UniValue addressManager = find_value(copayer, "addressManager");
-                        UniValue copayerIndexObject = find_value(addressManager, "copayerIndex");
-                        copayerIndex = copayerIndexObject.get_int();
-                    }
-                }
-            }
+//            std::string currentXPub = vMultisigWallets[0].client.GetXPubKey();
+//            UniValue wallet = find_value(response, "wallet");
+//            UniValue copayers = find_value(wallet, "copayers");
+//            for (const UniValue& copayer : copayers.getValues()) {
+//                UniValue copayerXPub = find_value(copayer, "xPubKey");
+//                if (!copayerXPub.isNull()) {
+//                    if (currentXPub == copayerXPub.get_str()) {
+//                        UniValue addressManager = find_value(copayer, "addressManager");
+//                        UniValue copayerIndexObject = find_value(addressManager, "copayerIndex");
+//                        copayerIndex = copayerIndexObject.get_int();
+//                    }
+//                }
+//            }
 
             UniValue pendingTxps;
             pendingTxps = find_value(response, "pendingTxps");
@@ -913,71 +913,107 @@ bool DBBDaemonGui::checkPaymentProposals()
                 if (values.size() == 0)
                     return false;
 
-                bool ok;
+                for (const UniValue &oneProposal : values)
+                {
 
-                QString amount;
-                QString toAddress;
+                    QString amount;
+                    QString toAddress;
 
-                UniValue toAddressUni = find_value(values[0], "toAddress");
-                UniValue amountUni = find_value(values[0], "amount");
-                if (toAddressUni.isStr())
-                    toAddress = QString::fromStdString(toAddressUni.get_str());
-                if (amountUni.isNum())
-                    amount = QString::number(((double)amountUni.get_int64()/100000000.0));
+                    UniValue toAddressUni = find_value(oneProposal, "toAddress");
+                    UniValue amountUni = find_value(oneProposal, "amount");
+                    UniValue actions = find_value(oneProposal, "actions");
 
-                QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
-                if (reply == QMessageBox::No)
-                    return false;
-
-                std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
-                vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
-
-                std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0]+32);
-
-                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
-                //printf("Command: %s\n", command.c_str());
-
-                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
-                printf("Command: %s\n", command.c_str());
-
-                QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-                    //send a signal to the main thread
-                    processComnand = false;
-                    
-                    printf("cmd back: %s\n", cmdOut.c_str());
-                    UniValue jsonOut(UniValue::VOBJ);
-                    jsonOut.read(cmdOut);
-
-                    UniValue echoStr = find_value(jsonOut, "echo");
-                    if (!echoStr.isNull() && echoStr.isStr())
+                    bool skipProposal = false;
+                    if (actions.isArray())
                     {
+                        for (const UniValue &oneAction : actions.getValues())
+                        {
+                            UniValue copayerId = find_value(oneAction, "copayerId");
+                            UniValue actionType = find_value(oneAction, "type");
 
-                        emit shouldVerifySigning(QString::fromStdString(echoStr.get_str()));
-                    }
-                    else
-                    {
-                        UniValue signObject = find_value(jsonOut, "sign");
-                        if (signObject.isArray()) {
-                            std::vector<UniValue> vSignatureObjects;
-                            vSignatureObjects = signObject.getValues();
-                            if (vSignatureObjects.size() > 0) {
-                                UniValue sigObject = find_value(vSignatureObjects[0], "sig");
-                                UniValue pubKey = find_value(vSignatureObjects[0], "pubkey");
-                                if (!sigObject.isNull() && sigObject.isStr())
-                                {
-                                    //TODO: verify signature
+                            if (!copayerId.isStr() || !actionType.isStr())
+                                continue;
 
-                                    std::vector<std::string> sigs;
-                                    sigs.push_back(sigObject.get_str());
-                                    emit signedProposalAvailable(values[0], sigs);
-                                    ret = true;
-                                    //client.BroadcastProposal(values[0]);
-                                }
+                            if (vMultisigWallets[0].client.GetCopayerId() == copayerId.get_str() && actionType.get_str() == "accept") {
+                                skipProposal = true;
+                                break;
                             }
                         }
-
                     }
-                });
+                    if (skipProposal)
+                        continue;
+
+                    if (toAddressUni.isStr())
+                        toAddress = QString::fromStdString(toAddressUni.get_str());
+                    if (amountUni.isNum())
+                        amount = QString::number(((double)amountUni.get_int64()/100000000.0));
+
+                    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
+                    if (reply == QMessageBox::No)
+                        return false;
+
+                    std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
+                    vMultisigWallets[0].client.ParseTxProposal(oneProposal, inputHashesAndPaths);
+
+                    //build sign command
+                    std::string hashCmd;
+                    for (const std::pair<std::string, std::vector<unsigned char> > &hashAndPathPair : inputHashesAndPaths)
+                    {
+                        std::string hexHash = DBB::HexStr((unsigned char *)&hashAndPathPair.second[0], (unsigned char *)&hashAndPathPair.second[0]+32);
+
+                        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
+                    }
+                    hashCmd.pop_back(); hashCmd.pop_back(); // remove ", "
+
+                    std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0]+32);
+
+
+                    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ " + hashCmd + " ] } }";
+                    printf("Command: %s\n", command.c_str());
+
+                    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, oneProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                        //send a signal to the main thread
+                        processComnand = false;
+                        setLoading(false);
+
+                        printf("cmd back: %s\n", cmdOut.c_str());
+                        UniValue jsonOut(UniValue::VOBJ);
+                        jsonOut.read(cmdOut);
+
+                        UniValue echoStr = find_value(jsonOut, "echo");
+                        if (!echoStr.isNull() && echoStr.isStr())
+                        {
+
+                            emit shouldVerifySigning(QString::fromStdString(echoStr.get_str()));
+                        }
+                        else
+                        {
+                            UniValue signObject = find_value(jsonOut, "sign");
+                            if (signObject.isArray()) {
+                                std::vector<UniValue> vSignatureObjects;
+                                vSignatureObjects = signObject.getValues();
+                                if (vSignatureObjects.size() > 0) {
+                                    std::vector<std::string> sigs;
+
+                                    for (const UniValue &oneSig : vSignatureObjects)
+                                    {
+                                        UniValue sigObject = find_value(oneSig, "sig");
+                                        UniValue pubKey = find_value(oneSig, "pubkey");
+                                        if (!sigObject.isNull() && sigObject.isStr())
+                                        {
+                                            sigs.push_back(sigObject.get_str());
+                                            //client.BroadcastProposal(values[0]);
+                                        }
+                                    }
+
+                                    emit signedProposalAvailable(oneProposal, sigs);
+                                    ret = true;
+                                }
+                            }
+
+                        }
+                    });
+                } //end proposal loop
             }
         }
     }
