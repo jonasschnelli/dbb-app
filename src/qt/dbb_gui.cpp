@@ -590,9 +590,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             {
                 UniValue version = find_value(deviceObj, "version");
                 UniValue name = find_value(deviceObj, "name");
-                UniValue xpub = find_value(deviceObj, "xpub");
+                UniValue seeded = find_value(deviceObj, "seeded");
                 UniValue lock = find_value(deviceObj, "lock");
-                bool walletAvailable = cachedWalletAvailableState = (xpub.isStr() && xpub.get_str().size() > 0);
+                bool walletAvailable = (seeded.isBool() && seeded.isTrue());
                 bool lockAvailable = (lock.isBool() && lock.isTrue());
 
                 if (version.isStr())
@@ -879,7 +879,7 @@ bool DBBDaemonGui::checkPaymentProposals()
     std::string walletsResponse;
     bool walletsAvailable = vMultisigWallets[0].client.GetWallets(walletsResponse);
 
-    if (walletsAvailable)
+    if (!walletsAvailable)
     {
         QMessageBox::warning(this, tr("No Wallet"),
                              tr("No Copay Wallet Available"),
