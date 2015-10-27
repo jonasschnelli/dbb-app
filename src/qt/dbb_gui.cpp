@@ -932,16 +932,18 @@ bool DBBDaemonGui::checkPaymentProposals()
                 std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
 
-                std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second.front(), &inputHashesAndPaths[0].second.back());
+                std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0]+32);
 
-                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
+                std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 //printf("Command: %s\n", command.c_str());
 
-                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
+                command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ { \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" } ] } }";
                 printf("Command: %s\n", command.c_str());
 
                 QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, values, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                     //send a signal to the main thread
+                    processComnand = false;
+                    
                     printf("cmd back: %s\n", cmdOut.c_str());
                     UniValue jsonOut(UniValue::VOBJ);
                     jsonOut.read(cmdOut);

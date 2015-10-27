@@ -56,6 +56,8 @@ public:
     std::string network;
 };
 
+
+
 class BitPayWalletClient
 {
 public:

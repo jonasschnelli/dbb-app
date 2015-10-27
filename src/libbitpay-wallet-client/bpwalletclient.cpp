@@ -348,7 +348,6 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
     std::vector<UniValue> inputs = inputsObj.getValues();
     int64_t inTotal = 0;
 
-//    CScript checkScript;
     std::vector<std::pair<std::string, std::vector<unsigned char> > > inputsScriptAndPath;
     for (i = 0; i < inputs.size(); i++) {
         UniValue aInput = inputs[i];
@@ -381,36 +380,42 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
                 for (k = 0; k < pubKeyValue.size(); k++) {
                     UniValue aPubKeyObj = pubKeyValue[k];
                     publicKeys.push_back(aPubKeyObj.get_str());
+                    printf("pubkey: %s\n", aPubKeyObj.get_str().c_str());
                 }
+
+                //sort keys
                 std::sort(keys.begin(), keys.end());
             }
         }
-//        uint256 aHash;
-//        aHash.SetHex(txId);
+
         script.insert(script.end(), 0x00);
         script.insert(script.end(), 0x4c);
         script.insert(script.end(), 0x69);
 
-
-        std::vector<unsigned char> msP2SHScript;
-        msP2SHScript.insert(msP2SHScript.end(), 0x50+requiredSignatures);
-
-
-        int i;
-        for (i = 0; i < publicKeys.size(); i++) {
+        vector *v_pubkeys = vector_new(3, NULL);
+        for (i = publicKeys.size()-1; i >= 0 ; i--) {
+            btc_pubkey *pubkey = (btc_pubkey *)malloc(sizeof(btc_pubkey));
+            btc_pubkey_init(pubkey);
             std::vector<unsigned char> data = DBB::ParseHex(publicKeys[i]);
-            msP2SHScript.insert(msP2SHScript.end(), data.begin(), data.end());
+
+            //TODO: allow uncompressed keys
+            pubkey->compressed = true;
+            memcpy(pubkey->pubkey, &data[0], 33);
+            vector_add(v_pubkeys, pubkey);
         }
 
+        cstring *msscript = cstr_new_sz(1024);
+        btc_script_build_multisig(msscript, requiredSignatures, v_pubkeys);
+        vector_free(v_pubkeys, true);
 
-        msP2SHScript.insert(msP2SHScript.end(), 0x50+publicKeys.size());
-        msP2SHScript.insert(msP2SHScript.end(), 0xae);
-        script.insert(script.end(), msP2SHScript.begin(), msP2SHScript.end());
+        script.insert(script.end(), msscript->str, msscript->str + msscript->len);
 
+        std::vector<unsigned char> msP2SHScript(msscript->len);
+        msP2SHScript.assign(msscript->str, msscript->str + msscript->len);
         path.erase(0, 2); //remove m/ from path
         inputsScriptAndPath.push_back(std::make_pair(path, msP2SHScript));
 
-        std::vector<unsigned char> aHash = DBB::ParseHex(txId);
+        std::vector<unsigned char> aHash = DBB::ParseHex(ReversePairs(txId));
 
         btc_tx_in *txin = btc_tx_in_new();
         memcpy(txin->prevout.hash, &aHash[0], 32);
@@ -420,23 +425,7 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
         vector_add(tx->vin, txin);
 
 
-        size_t bufsize = strlen(toAddress.c_str()) * 733 / 1000 + 1;
-        uint8_t buf[bufsize];
-        if (!btc_base58_decode_check(toAddress.c_str(), buf, bufsize))
-            int i0 = 0;
-
-        std::vector<unsigned char> toScript0;
-
-        toScript0.insert(toScript0.end(), 0xa9);
-        toScript0.insert(toScript0.end(), &buf[1], &buf[bufsize-1]);
-        toScript0.insert(toScript0.end(), 0x87);
-
-        btc_tx_out *txout0 = btc_tx_out_new();
-        txout0->script_pubkey = cstr_new_buf(&toScript0[0], toScript0.size());
-        txout0->value = toAmount;
-
-
-
+        // find out change address
         UniValue changeAddrObj = find_value(txProposal, "changeAddress");
         keys = changeAddrObj.getKeys();
         values = changeAddrObj.getValues();
@@ -447,25 +436,16 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
             if (keys[i] == "address")
                 changeAdr = val.get_str();
         }
-        
-
-        size_t bufsize2 = strlen(changeAdr.c_str()) * 733 / 1000 + 1;
-        uint8_t buf2[bufsize2];
-        if (!btc_base58_decode_check(changeAdr.c_str(), buf2, bufsize2))
-            int i0 = 0;
 
 
-        std::vector<unsigned char> toScript1;
-
-        toScript1.insert(toScript1.end(), 0xa9);
-        toScript1.insert(toScript1.end(), &buf2[1], &buf2[bufsize2-1]);
-        toScript1.insert(toScript1.end(), 0x87);
-
-        btc_tx_out *txout1 = btc_tx_out_new();
-        txout1->script_pubkey = cstr_new_buf(&toScript1[0], toScript1.size());
-        txout1->value = inTotal - toAmount - fee;
+        btc_tx_add_address_out(tx, &btc_chain_test, inTotal - toAmount - fee, changeAdr.c_str());
+        btc_tx_add_address_out(tx, &btc_chain_test, toAmount, toAddress.c_str());
 
 
+        cstring *txser = cstr_new_sz(1024);
+        btc_tx_serialize(txser, tx);
+        std::string sSigDER = DBB::HexStr((unsigned char *)txser->str, (unsigned char *)txser->str + txser->len);
+        printf("%s\n", sSigDER.c_str());
         int cnt = 0;
 
         for (cnt = 0; cnt < tx->vin->len; cnt++) {
@@ -475,98 +455,16 @@ std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std:
             cstring *new_script = cstr_new_buf(&aScript[0], aScript.size());
             uint8_t hash[32];
             btc_tx_sighash(tx, new_script, 0, 1, hash);
+
+            std::string sSigDER2 = DBB::HexStr((unsigned char *)hash, (unsigned char *)hash + 32);
+            printf("%s\n", sSigDER2.c_str());
+
             //uint256 hash = SignatureHash(aScript, t, 0, SIGHASH_ALL);
             std::vector<unsigned char> vHash(32);
             vHash.assign(hash, hash+32);
             vInputTxHashes.push_back(std::make_pair(scriptAndPath.first, vHash));
             cnt++;
         }
-
-
-//        *script << OP_HASH160 << ToByteVector(scriptID) << OP_EQUAL;
-//
-//        CTxOut txout(toAmount, scriptPubKey);
-//        btc_tx_out *txout0 = btc_tx_out_new();
-//        txin->script_pubkey = cstr_new_sz(script.size());
-//        txout0
-//
-//        vector_add(tx->vout, txout0);
-//
-//        t.vout.push_back(txout);
-//    
-//        CTxOut txoutC(inTotal - toAmount - fee, scriptPubKeyC);
-//        if (outputOrder[1] == 0)
-//            t.vout.insert(t.vout.begin(), txoutC);
-//        else
-//            t.vout.push_back(txoutC);
-
-//        script << OP_0 << OP_PUSHDATA1 << OP_VERIFY;
-//        script += GetScriptForMultisig(requiredSignatures, publicKeys);
-//
-//        path.erase(0, 2); //remove m/ from path
-//        inputsScriptAndPath.push_back(std::make_pair(path, GetScriptForMultisig(requiredSignatures, publicKeys)));
-//        t.vin.insert(t.vin.begin(), CTxIn(aHash, nInput, script));
-    }
-//                for (k = 0; k < pubKeyValue.size(); k++) {
-//                    UniValue aPubKeyObj = pubKeyValue[k];
-//                    keys.push_back(aPubKeyObj.get_str());
-//                }
-//                std::sort(keys.begin(), keys.end());
-//                for (k = 0; k < keys.size(); k++) {
-//                    CPubKey vchPubKey(ParseHex(keys[k]));
-//                    publicKeys.push_back(vchPubKey);
-//                }
-//            }
-//        }
-//        uint256 aHash;
-//        aHash.SetHex(txId);
-//        script << OP_0 << OP_PUSHDATA1 << OP_VERIFY;
-//        script += GetScriptForMultisig(requiredSignatures, publicKeys);
-//
-//        path.erase(0, 2); //remove m/ from path
-//        inputsScriptAndPath.push_back(std::make_pair(path, GetScriptForMultisig(requiredSignatures, publicKeys)));
-//        t.vin.insert(t.vin.begin(), CTxIn(aHash, nInput, script));
-//    }
-//
-//    UniValue changeAddrObj = find_value(txProposal, "changeAddress");
-//    keys = changeAddrObj.getKeys();
-//    values = changeAddrObj.getValues();
-//    std::string changeAdr = "";
-//    for (i = 0; i < keys.size(); i++) {
-//        UniValue val = values[i];
-//
-//        if (keys[i] == "address")
-//            changeAdr = val.get_str();
-//    }
-//
-//
-//    SelectParams(CBaseChainParams::TESTNET);
-//    CBitcoinAddress addr(toAddress);
-//    CBitcoinAddress addrC(changeAdr);
-//    CScript scriptPubKey = GetScriptForDestination(addr.Get());
-//    CScript scriptPubKeyC = GetScriptForDestination(addrC.Get());
-//
-//    CTxOut txout(toAmount, scriptPubKey);
-//    t.vout.push_back(txout);
-//
-//    CTxOut txoutC(inTotal - toAmount - fee, scriptPubKeyC);
-//    if (outputOrder[1] == 0)
-//        t.vout.insert(t.vout.begin(), txoutC);
-//    else
-//        t.vout.push_back(txoutC);
-//
-//    int cnt = 0;
-//    for (const CTxIn& txIn : t.vin) {
-//        std::pair<std::string, CScript> scriptAndPath = inputsScriptAndPath[cnt];
-//        CScript aScript = scriptAndPath.second;
-//        uint256 hash = SignatureHash(aScript, t, 0, SIGHASH_ALL);
-//        vInputTxHashes.push_back(std::make_pair(scriptAndPath.first, hash));
-//        cnt++;
-//    }
-//    std::string hex = EncodeHexTx(t);
-//    SelectParams(CBaseChainParams::TESTNET);
-
-//    return hex;
 }
 
 int ecdsa_sig_to_der(const uint8_t* sig, uint8_t* der)
