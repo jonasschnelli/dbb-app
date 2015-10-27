@@ -221,17 +221,19 @@ int btc_base58_decode_check(const char *str, uint8_t *data, size_t datalen)
     int ret;
     size_t strl = strlen(str);
 
-    if (strl > 128 || datalen < strl * 733 / 1000 + 1) {
+    /* buffer needs to be at least the strsize, will be used
+       for the whole decoding */
+    if (strl > 128 || datalen < strl) {
         return 0;
     }
 
-    size_t binsize = strlen(str);
+    size_t binsize = strl;
     if (btc_base58_decode(data, &binsize, str) != true) {
         ret = 0;
     }
 
-    memcpy(data, data+strlen(str)-binsize, binsize);
-    memset(data+binsize, 0, strlen(str)-binsize);
+    memmove(data, data+strl-binsize, binsize);
+    memset(data+binsize, 0, datalen-binsize);
 
     if (btc_b58check(data, binsize, str) < 0) {
         ret = 0;
