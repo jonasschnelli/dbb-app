@@ -929,10 +929,10 @@ bool DBBDaemonGui::checkPaymentProposals()
                 if (reply == QMessageBox::No)
                     return false;
 
-                std::vector<std::pair<std::string, uint256> > inputHashesAndPaths;
+                std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
                 vMultisigWallets[0].client.ParseTxProposal(values[0], inputHashesAndPaths);
 
-                std::string hexHash = DBB::HexStr(inputHashesAndPaths[0].second, inputHashesAndPaths[0].second+32);
+                std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second.front(), &inputHashesAndPaths[0].second.back());
 
                 std::string command = "{\"sign\": { \"type\": \"hash\", \"data\" : \"" + BitPayWalletClient::ReversePairs(hexHash) + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + inputHashesAndPaths[0].first + "\" }}";
                 //printf("Command: %s\n", command.c_str());

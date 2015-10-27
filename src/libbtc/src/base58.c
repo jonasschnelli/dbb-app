@@ -219,22 +219,24 @@ int btc_base58_encode_check(const uint8_t *data, int datalen, char *str, int str
 int btc_base58_decode_check(const char *str, uint8_t *data, size_t datalen)
 {
     int ret;
+    size_t strl = strlen(str);
 
-    if (datalen > 128) {
+    if (strl > 128 || datalen < strl * 733 / 1000 + 1) {
         return 0;
     }
-    uint8_t d[datalen + 4];
-    size_t res = datalen + 4;
-    if (btc_base58_decode(d, &res, str) != true) {
+
+    size_t binsize = strlen(str);
+    if (btc_base58_decode(data, &binsize, str) != true) {
         ret = 0;
-    } else if (res != datalen + 4) {
-        ret = 0;
-    } else if (btc_b58check(d, res, str) < 0) {
+    }
+
+    memcpy(data, data+strlen(str)-binsize, binsize);
+    memset(data+binsize, 0, strlen(str)-binsize);
+
+    if (btc_b58check(data, binsize, str) < 0) {
         ret = 0;
     } else {
-        memcpy(data, d, datalen);
-        ret = datalen;
+        ret = binsize;
     }
-    memset(d, 0, sizeof(d));
     return ret;
 }
