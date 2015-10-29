@@ -14,4 +14,12 @@
         <file alias="accept">res/accept.png</file>
         <file alias="finger">res/finger.png</file>
     </qresource>
+    <qresource prefix="/theme">
+        <file alias="windowbackground">res/theme/window_background.png</file>
+        <file alias="activearrow">res/theme/active_arrow.png</file>
+    </qresource>
+    <qresource prefix="/fonts">
+    <file alias="AlegreyaSans-Regular">res/fonts/AlegreyaSans-Regular.otf</file>
+    <file alias="AlegreyaSans-Bold">res/fonts/AlegreyaSans-Bold.otf</file>
+    </qresource>
 </RCC>

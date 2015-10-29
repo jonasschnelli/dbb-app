@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include <QSpacerItem>
 #include <QToolBar>
+#include <QFontDatabase>
+
 
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
@@ -83,6 +85,18 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
     ui->setupUi(this);
+
+    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
+    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
+
+    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:16pt; }");
+    this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: black; border:0; color: white; };");
+    this->ui->receiveButton->setStyleSheet(buttonCss);
+    this->ui->overviewButton->setStyleSheet(buttonCss);
+    this->ui->sendButton->setStyleSheet(buttonCss);
+    this->ui->mainSettings->setStyleSheet(buttonCss);
+
     ui->touchbuttonInfo->setVisible(false);
     // set light transparent background for touch button info layer
     this->ui->touchbuttonInfo->setStyleSheet("background-color: rgba(255, 255, 255, 240);");
@@ -131,6 +145,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     spacer->setMinimumWidth(3);
     spacer->setMaximumHeight(10);
     statusBar()->addWidget(spacer);
+    statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
     this->statusBarButton->setEnabled(false);
     this->statusBarButton->setFlat(true);
@@ -165,16 +180,17 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
         settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(settingsAction);
      
-    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
-            toolbar->setMovable(false);
-            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-            toolbar->addAction(overviewAction);
-            toolbar->addAction(walletsAction);
-            toolbar->addAction(settingsAction);
-            overviewAction->setChecked(true);
-    toolbar->setStyleSheet("QToolButton{padding: 3px; font-size:11pt;}");
-    toolbar->setIconSize(QSize(24,24));
-    
+//    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
+//            toolbar->setMovable(false);
+//            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+//            toolbar->addAction(overviewAction);
+//            toolbar->addAction(walletsAction);
+//            toolbar->addAction(settingsAction);
+//            overviewAction->setChecked(true);
+//    toolbar->setStyleSheet("QToolButton{margin:0px; padding: 3px; font-size:11pt;}");
+//    toolbar->setIconSize(QSize(24,24));
+
+    connect(this->ui->receiveButton, SIGNAL(clicked()), this, SLOT(gotoSettingsPage()));
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(walletsAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
