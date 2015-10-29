@@ -12,6 +12,8 @@
 #include <QMessageBox>
 #include <QSpacerItem>
 #include <QToolBar>
+#include <QFontDatabase>
+
 
 #include "ui/ui_overview.h"
 #include "seeddialog.h"
@@ -21,7 +23,6 @@
 
 #include <cstdio>
 #include <ctime>
-#include <functional>
 
 #include <univalue.h>
 #include <btc/bip32.h>
@@ -83,6 +84,29 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
     ui->setupUi(this);
+
+    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
+    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
+
+    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:16pt; }");
+    this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: black; border:0; color: white; };");
+    this->ui->receiveButton->setStyleSheet(buttonCss);
+    this->ui->overviewButton->setStyleSheet(buttonCss);
+    this->ui->sendButton->setStyleSheet(buttonCss);
+    this->ui->mainSettingsButton->setStyleSheet(buttonCss);
+
+    QString labelCSS("QLabel { font-size: 12pt; }");
+
+    this->ui->deviceNameKeyLabel->setStyleSheet(labelCSS);
+    this->ui->deviceNameLabel->setStyleSheet(labelCSS);
+    this->ui->versionKeyLabel->setStyleSheet(labelCSS);
+    this->ui->versionLabel->setStyleSheet(labelCSS);
+
+    this->ui->balanceLabel->setStyleSheet("font-size: 24pt;");
+    this->ui->balanceLabel->setText("12345.12345678 BTC");
+    this->ui->dbbIcon->setVisible(false);
+
     ui->touchbuttonInfo->setVisible(false);
     // set light transparent background for touch button info layer
     this->ui->touchbuttonInfo->setStyleSheet("background-color: rgba(255, 255, 255, 240);");
@@ -131,6 +155,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     spacer->setMinimumWidth(3);
     spacer->setMaximumHeight(10);
     statusBar()->addWidget(spacer);
+    statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
     this->statusBarButton->setEnabled(false);
     this->statusBarButton->setFlat(true);
@@ -165,16 +190,21 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
         settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(settingsAction);
      
-    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
-            toolbar->setMovable(false);
-            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-            toolbar->addAction(overviewAction);
-            toolbar->addAction(walletsAction);
-            toolbar->addAction(settingsAction);
-            overviewAction->setChecked(true);
-    toolbar->setStyleSheet("QToolButton{padding: 3px; font-size:11pt;}");
-    toolbar->setIconSize(QSize(24,24));
-    
+//    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
+//            toolbar->setMovable(false);
+//            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+//            toolbar->addAction(overviewAction);
+//            toolbar->addAction(walletsAction);
+//            toolbar->addAction(settingsAction);
+//            overviewAction->setChecked(true);
+//    toolbar->setStyleSheet("QToolButton{margin:0px; padding: 3px; font-size:11pt;}");
+//    toolbar->setIconSize(QSize(24,24));
+
+    connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
+    connect(this->ui->receiveButton, SIGNAL(clicked()), this, SLOT(mainReceiveButtonClicked()));
+    connect(this->ui->sendButton, SIGNAL(clicked()), this, SLOT(mainSendButtonClicked()));
+    connect(this->ui->mainSettingsButton, SIGNAL(clicked()), this, SLOT(mainSettingsButtonClicked()));
+
     connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
     connect(walletsAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
@@ -192,6 +222,29 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
 
     processComnand = false;
+}
+
+void DBBDaemonGui::setActiveArrow(int pos) {
+    this->ui->activeArrow->move(pos*120+52,39);
+}
+
+void DBBDaemonGui::mainOverviewButtonClicked() {
+    setActiveArrow(0);
+    gotoOverviewPage();
+}
+
+void DBBDaemonGui::mainReceiveButtonClicked() {
+    setActiveArrow(1);
+    gotoMultisigPage();
+}
+
+void DBBDaemonGui::mainSendButtonClicked() {
+    setActiveArrow(2);
+}
+
+void DBBDaemonGui::mainSettingsButtonClicked() {
+    setActiveArrow(3);
+    gotoSettingsPage();
 }
 
 DBBDaemonGui::~DBBDaemonGui()
@@ -258,7 +311,7 @@ void DBBDaemonGui::setLoading(bool status)
 void DBBDaemonGui::resetInfos()
 {
     this->ui->versionLabel->setText("loading info...");
-    this->ui->nameLabel->setText("loading info...");
+    this->ui->deviceNameLabel->setText("loading info...");
 
     updateOverviewFlags(false,false,true);
 }
@@ -598,7 +651,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
-                    this->ui->nameLabel->setText(QString::fromStdString(name.get_str()));
+                    this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
                 updateOverviewFlags(walletAvailable,lockAvailable,false);
             }
