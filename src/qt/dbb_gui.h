@@ -10,6 +10,8 @@
 #include <QLabel>
 #include <QPushButton>
 
+#include <functional>
+
 #include "libbitpay-wallet-client/bpwalletclient.h"
 #include "dbb_app.h"
 #include "backupdialog.h"
@@ -101,6 +103,12 @@ public slots:
     void gotoSettingsPage();
     void getInfo();
 
+    void mainOverviewButtonClicked();
+    void mainReceiveButtonClicked();
+    void mainSendButtonClicked();
+    void mainSettingsButtonClicked();
+
+
     void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
     void showEchoVerification(QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
@@ -138,6 +146,8 @@ private:
     QAction *overviewAction;
     QAction *walletsAction;
     QAction *settingsAction;
+
+    void setActiveArrow(int pos);
 };
 
 #endif
