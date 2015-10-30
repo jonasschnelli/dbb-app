@@ -306,7 +306,7 @@
         <height>331</height>
        </rect>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="copayVLayout">
        <property name="leftMargin">
         <number>10</number>
        </property>
@@ -319,30 +319,6 @@
        <property name="bottomMargin">
         <number>10</number>
        </property>
-       <item>
-        <widget class="QPushButton" name="pushButton_3">
-         <property name="enabled">
-          <bool>false</bool>
-         </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>:/icons/dbb</normaloff>
-           <disabledoff>:/icons/dbb</disabledoff>:/icons/dbb</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>64</width>
-           <height>64</height>
-          </size>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
-         </property>
-        </widget>
-       </item>
        <item>
         <spacer name="verticalSpacer">
          <property name="orientation">
@@ -815,7 +791,7 @@
      <rect>
       <x>0</x>
       <y>0</y>
-      <width>120</width>
+      <width>96</width>
       <height>55</height>
      </rect>
     </property>
@@ -826,12 +802,28 @@
      <bool>false</bool>
     </property>
    </widget>
+   <widget class="QPushButton" name="multisigButton">
+    <property name="geometry">
+     <rect>
+      <x>384</x>
+      <y>0</y>
+      <width>96</width>
+      <height>55</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string>Multisig</string>
+    </property>
+    <property name="flat">
+     <bool>false</bool>
+    </property>
+   </widget>
    <widget class="QPushButton" name="receiveButton">
     <property name="geometry">
      <rect>
-      <x>120</x>
+      <x>96</x>
       <y>0</y>
-      <width>120</width>
+      <width>96</width>
       <height>55</height>
      </rect>
     </property>
@@ -858,9 +850,9 @@
    <widget class="QPushButton" name="sendButton">
     <property name="geometry">
      <rect>
-      <x>240</x>
+      <x>192</x>
       <y>0</y>
-      <width>120</width>
+      <width>96</width>
       <height>55</height>
      </rect>
     </property>
@@ -874,9 +866,9 @@
    <widget class="QPushButton" name="mainSettingsButton">
     <property name="geometry">
      <rect>
-      <x>360</x>
+      <x>288</x>
       <y>0</y>
-      <width>120</width>
+      <width>96</width>
       <height>55</height>
      </rect>
     </property>
