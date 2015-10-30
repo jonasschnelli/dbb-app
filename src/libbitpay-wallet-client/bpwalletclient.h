@@ -94,6 +94,9 @@ public:
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
 
+    //!post a tx proposal reject
+    bool RejectTxProposal(const UniValue& txProposal);
+
     //!tells the wallet server that we'd like to broadcast a txproposal (make sure tx proposal has enought signatures)
     bool BroadcastProposal(const UniValue& txProposal);
 

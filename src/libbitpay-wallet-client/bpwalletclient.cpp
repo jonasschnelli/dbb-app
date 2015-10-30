@@ -255,19 +255,8 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletI
     jsonArgs.push_back(Pair("copayerSignature", copayerSignature));
     std::string json = jsonArgs.write();
 
-    std::string searchS = "\"isTemporaryRequestKey\":0";
-    std::string newStr = "\"isTemporaryRequestKey\":false";
-    size_t pos = 0;
-    while((pos = json.find(searchS, pos)) != std::string::npos){
-        json.replace(pos, searchS.length(), newStr);
-        pos += newStr.length();
-    }
-
-
-
     long httpStatusCode = 0;
     SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode);
-
 
     std::string getWalletsResponse;
     GetWallets(getWalletsResponse);
@@ -529,6 +518,25 @@ int ecdsa_sig_to_der(const uint8_t* sig, uint8_t* der)
 
     *len = *len1 + *len2 + 4;
     return *len + 2;
+}
+
+bool BitPayWalletClient::RejectTxProposal(const UniValue& txProposal)
+{
+    //parse out the txpid
+    UniValue pID = find_value(txProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+
+    UniValue rejectRequest = UniValue(UniValue::VOBJ);
+    rejectRequest.push_back(Pair("reason", ""));
+    std::string response;
+    long httpStatusCode = 0;
+    SendRequest("post", "/v1/txproposals/" + txpID + "/rejections/", rejectRequest.write(), response, httpStatusCode);
+    if (httpStatusCode != 200)
+        return false;
+
+    return true;
 }
 
 bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs)
