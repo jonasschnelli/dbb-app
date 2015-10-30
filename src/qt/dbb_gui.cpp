@@ -226,6 +226,7 @@ void DBBDaemonGui::changeConnectedState(bool state)
 void DBBDaemonGui::checkDevice()
 {
     this->ui->verticalLayoutWidget->setVisible(deviceConnected);
+    //this->ui->balanceLabel->setVisible(deviceConnected);
     this->ui->noDeviceWidget->setVisible(!deviceConnected);
 
     if (!deviceConnected)
@@ -824,8 +825,16 @@ void DBBDaemonGui::_JoinCopayWallet()
     if (!ok || text.isEmpty())
         return;
 
+    // parse invitation code
+    BitpayWalletInvitation invitation;
+    if (!vMultisigWallets[0].client.ParseWalletInvitation(text.toStdString(), invitation))
+    {
+        QMessageBox::warning(this, tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"), QMessageBox::Ok);
+        return;
+    }
+
     std::string result;
-    bool ret = vMultisigWallets[0].client.JoinWallet("digitalbitbox", text.toStdString(), result);
+    bool ret = vMultisigWallets[0].client.JoinWallet(vMultisigWallets[0].participationName, invitation, result);
 
     if (!ret) {
         UniValue responseJSON;
