@@ -217,10 +217,12 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     std::vector<std::string> walletIdParts = split(widHex, splits);
     invitationOut.walletID = walletIdParts[0] + "-" + walletIdParts[1] + "-" + walletIdParts[2] + "-" + walletIdParts[3] + "-" + walletIdParts[4];
 
-    uint8_t rawn[34];
+
     std::string walletPrivKeyStr = secretSplit[1];
+    uint8_t rawn[walletPrivKeyStr.size()];
     printf("wallet pkey: %s\n", walletPrivKeyStr.c_str());
-    int r = btc_base58_decode_check(walletPrivKeyStr.c_str(), rawn, 34);
+    if(!btc_base58_decode_check(walletPrivKeyStr.c_str(), rawn, 100))
+        return false;
 
 
     memcpy(invitationOut.walletPrivKey, &rawn[1], 32);
