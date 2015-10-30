@@ -26,9 +26,11 @@ class DBBMultisigWallet
 public:
     BitPayWalletClient client;
     std::string baseKeyPath;
+    std::string participationName;
     DBBMultisigWallet()
     {
         baseKeyPath = "m/112'";
+        participationName = "digitalbitbox";
     }
 };
 
