@@ -56,24 +56,24 @@ if ENABLE_QT
 
 QT_FORMS_UI = \
   qt/ui/overview.ui \
-	qt/ui/seeddialog.ui \
-	qt/ui/backupdialog.ui
+  qt/ui/paymentproposal.ui \
+  qt/ui/backupdialog.ui
 	
 DBB_GUI_H = \
-	qt/seeddialog.h
+	qt/paymentproposal.h
 
 DBB_GUI_CPP = \
-	qt/seeddialog.cpp \
+	qt/paymentproposal.cpp \
     qt/backupdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
-	qt/moc_seeddialog.cpp \
+	qt/moc_paymentproposal.cpp \
     qt/moc_backupdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
-  qt/seeddialog.moc \
+  qt/paymentproposal.moc \
   qt/backupdialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))

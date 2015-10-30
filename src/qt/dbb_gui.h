@@ -10,9 +10,12 @@
 #include <QLabel>
 #include <QPushButton>
 
+#include <functional>
+
 #include "libbitpay-wallet-client/bpwalletclient.h"
 #include "dbb_app.h"
 #include "backupdialog.h"
+#include "paymentproposal.h"
 
 namespace Ui
 {
@@ -24,9 +27,11 @@ class DBBMultisigWallet
 public:
     BitPayWalletClient client;
     std::string baseKeyPath;
+    std::string participationName;
     DBBMultisigWallet()
     {
-        baseKeyPath = "m/112'";
+        baseKeyPath = "m/120'";
+        participationName = "digitalbitbox";
     }
 };
 
@@ -96,13 +101,21 @@ public slots:
     void JoinCopayWalletWithXPubKey();
     void GetRequestXPubKey();
     bool checkPaymentProposals();
+    void PaymentProposalAction(const UniValue &paymentProposal, int actionType);
     void gotoOverviewPage();
     void gotoMultisigPage();
     void gotoSettingsPage();
     void getInfo();
 
+    void mainOverviewButtonClicked();
+    void mainMultisigButtonClicked();
+    void mainReceiveButtonClicked();
+    void mainSendButtonClicked();
+    void mainSettingsButtonClicked();
+
+
     void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
-    void showEchoVerification(QString echoStr);
+    void showEchoVerification(const UniValue& response, int actionType, QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
 signals:
@@ -112,7 +125,7 @@ signals:
     void RequestXPubKeyForCopayWalletIsAvailable();
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
 
-    void shouldVerifySigning(const QString& signature);
+    void shouldVerifySigning(const UniValue &paymentProposal, const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
 private:
@@ -138,6 +151,10 @@ private:
     QAction *overviewAction;
     QAction *walletsAction;
     QAction *settingsAction;
+
+    void setActiveArrow(int pos);
+    bool hidePaymentProposalsWidget();
+    PaymentProposal *currentPaymentProposalWidget;
 };
 
 #endif

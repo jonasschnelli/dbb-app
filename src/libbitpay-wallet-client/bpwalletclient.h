@@ -48,6 +48,7 @@
 
 #include <btc/ecc_key.h>
 
+//!tiny class for a bitpay wallet service wallet invitation
 class BitpayWalletInvitation
 {
 public:
@@ -55,7 +56,6 @@ public:
     uint8_t walletPrivKey[32];
     std::string network;
 };
-
 
 
 class BitPayWalletClient
@@ -82,11 +82,8 @@ public:
     //!signs a given string with a given key
     bool GetCopayerSignature(const std::string& stringToHash, const uint8_t *privKey, std::string& sigHexOut);
 
-    //!seed a wallet, if you use a hardware wallet, use setPubKeys
-    void seed();
-
     //!joins a Wopay wallet
-    bool JoinWallet(const std::string& name, const std::string& walletInvitation, std::string& response);
+    bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
 
     //!load available wallets over wallet server
     bool GetWallets(std::string& response);
@@ -96,6 +93,9 @@ public:
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
+
+    //!post a tx proposal reject
+    bool RejectTxProposal(const UniValue& txProposal);
 
     //!tells the wallet server that we'd like to broadcast a txproposal (make sure tx proposal has enought signatures)
     bool BroadcastProposal(const UniValue& txProposal);

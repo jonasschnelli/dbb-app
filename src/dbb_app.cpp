@@ -227,6 +227,7 @@ int main(int argc, char** argv)
 
     widget = new DBBDaemonGui(0);
     widget->show();
+    //set style sheets
     app.exec();
 #else
     //directly start libevents main run loop

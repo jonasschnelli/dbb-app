@@ -44,8 +44,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
 
 BitPayWalletClient::BitPayWalletClient()
 {
-//    requestKey = NULL;
-
+    //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
 }
 
@@ -53,6 +52,7 @@ BitPayWalletClient::~BitPayWalletClient()
 {
 }
 
+//helper: split a string into chunks (re-wrote in c++ from copay [js])
 std::vector<std::string> BitPayWalletClient::split(const std::string& str, std::vector<int> indexes)
 {
     std::vector<std::string> parts;
@@ -75,6 +75,7 @@ std::string BitPayWalletClient::GetXPubKey()
 {
     return masterPubKey;
 }
+
 bool BitPayWalletClient::GetCopayerHash(const std::string& name, std::string& out)
 {
     std::string requestKeyHex;
@@ -85,12 +86,14 @@ bool BitPayWalletClient::GetCopayerHash(const std::string& name, std::string& ou
     return true;
 };
 
+//wrapper for a double sha256
 bool BitPayWalletClient::Hash(const std::string &stringIn, uint8_t *hashout)
 {
     const char *s = stringIn.c_str();
     btc_hash((const uint8_t *)s, stringIn.size(), hashout);
 }
 
+// creates a hex signature for the given string
 bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, const uint8_t *privKey, std::string& sigHexOut)
 {
     uint8_t hash[32];
@@ -123,6 +126,7 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
     return true;
 };
 
+//set the extended master pub key
 void BitPayWalletClient::setMasterPubKey(const std::string& xPubKey)
 {
     masterPubKey = xPubKey;
@@ -132,14 +136,14 @@ void BitPayWalletClient::setMasterPubKey(const std::string& xPubKey)
 
 void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEntropy)
 {
-//    //now this is a ugly workaround because we need a request keypair (pub/priv)
-//    //for signing the requests after BitAuth
-//    //Signing over the hardware wallet would be a very bad UX (press button on
-//    // every request) and it would be slow
-//    //the request key should be deterministic and linked to the master key
-//    //
-//    //we now generate a private key by (miss)using the xpub at m/1'/0' as entropy
-//    //for a new private key
+    //now this is a ugly workaround because we need a request keypair (pub/priv)
+    //for signing the requests after BitAuth
+    //Signing over the hardware wallet would be a very bad UX (press button on
+    // every request) and it would be slow
+    //the request key should be deterministic and linked to the master key
+    //
+    //we now generate a private key by (miss)using the xpub at m/1'/0' as entropy
+    //for a new private key
 
     btc_hdnode node;
     bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), &btc_chain_test, &node);
@@ -167,31 +171,8 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
     SaveLocalData();
 }
 
-void BitPayWalletClient::seed()
-{
-//    CKeyingMaterial vSeed;
-//    vSeed.resize(32);
-//
-//    RandAddSeedPerfmon();
-//    do {
-//        GetRandBytes(&vSeed[0], vSeed.size());
-//    } while (!eccrypto::Check(&vSeed[0]));
-//
-//    CExtKey masterPrivKeyRoot;
-//    masterPrivKeyRoot.SetMaster(&vSeed[0], vSeed.size()); //m
-//    masterPrivKeyRoot.Derive(masterPrivKey, 45);          //m/45' xpriv
-//    masterPubKey = masterPrivKey.Neuter();                //m/45' xpub
-//
-//    CExtKey requestKeyChain;
-//    masterPrivKeyRoot.Derive(requestKeyChain, 1); //m/1'
-//
-//    CExtKey requestKeyExt;
-//    requestKeyChain.Derive(requestKeyExt, 0);
-//
-//    requestKey = requestKeyExt.key;
-//    printf("seed: request key: %s\n", HexStr(requestKey.begin(), requestKey.end(), false).c_str());
-}
-
+//returns the request pubkey
+//TODO: requires caching
 bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
 {
     btc_pubkey pubkey;
@@ -205,19 +186,23 @@ bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
     return true;
 }
 
+//!returns to copyer ID (=single sha256 of the masterpubkey)
 std::string BitPayWalletClient::GetCopayerId()
 {
     uint8_t hashout[32];
+    //here we need a signle sha256
     btc_hash_sngl_sha256((const uint8_t *)masterPubKey.c_str(), masterPubKey.size(), hashout);
     return DBB::HexStr(hashout, hashout + 32);
 }
 
 bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut)
 {
+    if (walletInvitation.size() < 74)
+        return false;
+
     std::vector<int> splits = {22, 74};
     std::vector<std::string> secretSplit = split(walletInvitation, splits);
 
-    //TODO: var widBase58 = secretSplit[0].replace(/0/g, '');
     std::string widBase58 = secretSplit[0];
     std::vector<unsigned char> vch;
 
@@ -232,10 +217,12 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     std::vector<std::string> walletIdParts = split(widHex, splits);
     invitationOut.walletID = walletIdParts[0] + "-" + walletIdParts[1] + "-" + walletIdParts[2] + "-" + walletIdParts[3] + "-" + walletIdParts[4];
 
-    uint8_t rawn[34];
+
     std::string walletPrivKeyStr = secretSplit[1];
+    uint8_t rawn[walletPrivKeyStr.size()];
     printf("wallet pkey: %s\n", walletPrivKeyStr.c_str());
-    int r = btc_base58_decode_check(walletPrivKeyStr.c_str(), rawn, 34);
+    if(!btc_base58_decode_check(walletPrivKeyStr.c_str(), rawn, 100))
+        return false;
 
 
     memcpy(invitationOut.walletPrivKey, &rawn[1], 32);
@@ -244,14 +231,10 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     return true;
 }
 
-bool BitPayWalletClient::JoinWallet(const std::string& name, const std::string& walletInvitation, std::string& response)
+bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response)
 {
     std::string requestPubKey;
     if (!GetRequestPubKey(requestPubKey))
-        return false;
-
-    BitpayWalletInvitation invitation;
-    if (!ParseWalletInvitation(walletInvitation, invitation))
         return false;
 
     std::string copayerHash;
@@ -272,19 +255,8 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const std::string& 
     jsonArgs.push_back(Pair("copayerSignature", copayerSignature));
     std::string json = jsonArgs.write();
 
-    std::string searchS = "\"isTemporaryRequestKey\":0";
-    std::string newStr = "\"isTemporaryRequestKey\":false";
-    size_t pos = 0;
-    while((pos = json.find(searchS, pos)) != std::string::npos){
-        json.replace(pos, searchS.length(), newStr);
-        pos += newStr.length();
-    }
-
-
-
     long httpStatusCode = 0;
     SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode);
-
 
     std::string getWalletsResponse;
     GetWallets(getWalletsResponse);
@@ -546,6 +518,25 @@ int ecdsa_sig_to_der(const uint8_t* sig, uint8_t* der)
 
     *len = *len1 + *len2 + 4;
     return *len + 2;
+}
+
+bool BitPayWalletClient::RejectTxProposal(const UniValue& txProposal)
+{
+    //parse out the txpid
+    UniValue pID = find_value(txProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+
+    UniValue rejectRequest = UniValue(UniValue::VOBJ);
+    rejectRequest.push_back(Pair("reason", ""));
+    std::string response;
+    long httpStatusCode = 0;
+    SendRequest("post", "/v1/txproposals/" + txpID + "/rejections/", rejectRequest.write(), response, httpStatusCode);
+    if (httpStatusCode != 200)
+        return false;
+
+    return true;
 }
 
 bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs)
