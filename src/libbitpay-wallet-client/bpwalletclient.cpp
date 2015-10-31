@@ -6,15 +6,19 @@
 
 #include "config/_dbb-config.h"
 
-#include <algorithm>
+#if defined _MSC_VER
+#include <direct.h>
+#elif defined __GNUC__
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
 
+#include <algorithm>
 #include <assert.h>
 #include <string.h>
 
 #include "libdbb/crypto.h"
 #include "dbb_util.h"
-
-#include <boost/filesystem.hpp>
 
 #include <btc/base58.h>
 #include <btc/ecc_key.h>
@@ -673,63 +677,53 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     return error;
 };
 
-
-bool TryCreateDirectory(const boost::filesystem::path& p)
-{
-    try
-    {
-        return boost::filesystem::create_directory(p);
-    } catch (const boost::filesystem::filesystem_error&) {
-        if (!boost::filesystem::exists(p) || !boost::filesystem::is_directory(p))
-            throw;
-    }
-
-    // create_directory didn't create the directory, it had to have existed already
-    return false;
+void CreateDir(const char *dir) {
+#if defined _MSC_VER
+    _mkdir(dir);
+#elif defined __GNUC__
+    mkdir(dir, 0777);
+#endif
 }
 
 #ifdef WIN32
-boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate)
+std::string GetSpecialFolderPath(int nFolder, bool fCreate)
 {
-    namespace fs = boost::filesystem;
-
     char pszPath[MAX_PATH] = "";
 
     if(SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate))
     {
-        return fs::path(pszPath);
+        return std::string(pszPath);
     }
 
     LogPrintf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
-    return fs::path("");
+    return std::string("");
 }
 #endif
 
-boost::filesystem::path GetDefaultDBBDataDir()
+std::string GetDefaultDBBDataDir()
 {
-    namespace fs = boost::filesystem;
 // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
 // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
 // Mac: ~/Library/Application Support/Bitcoin
 // Unix: ~/.bitcoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) / "DBB";
+    return GetSpecialFolderPath(CSIDL_APPDATA) + "/DBB";
 #else
-    fs::path pathRet;
+    std::string pathRet;
     char* pszHome = getenv("HOME");
     if (pszHome == NULL || strlen(pszHome) == 0)
-        pathRet = fs::path("/");
+        pathRet = "/";
     else
-        pathRet = fs::path(pszHome);
+        pathRet = std::string(pszHome);
 #ifdef MAC_OSX
     // Mac
-    pathRet /= "Library/Application Support";
-    TryCreateDirectory(pathRet);
-    return pathRet / "DBB";
+    pathRet += "/Library/Application Support";
+    CreateDir(pathRet.c_str());
+    return pathRet += "/DBB";
 #else
     // Unix
-    return pathRet / ".dbb";
+    return pathRet += "/.dbb";
 #endif
 #endif
 }
@@ -747,9 +741,9 @@ bool BitPayWalletClient::IsSeeded()
 void BitPayWalletClient::SaveLocalData()
 {
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
-    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
-    boost::filesystem::create_directories(dataDir);
-    FILE* writeFile = fopen((dataDir / "copay.dat").string().c_str(), "wb");
+    std::string dataDir = GetDefaultDBBDataDir();
+    CreateDir(dataDir.c_str());
+    FILE* writeFile = fopen((dataDir + "/copay.dat").c_str(), "wb");
     if (writeFile) {
 
         unsigned char header[2] = {0xAA, 0xF0};
@@ -764,9 +758,9 @@ void BitPayWalletClient::SaveLocalData()
 
 void BitPayWalletClient::LoadLocalData()
 {
-    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
-    boost::filesystem::create_directories(dataDir);
-    FILE* fh = fopen((dataDir / "copay.dat").string().c_str(), "rb");
+    std::string dataDir = GetDefaultDBBDataDir();
+    CreateDir(dataDir.c_str());
+    FILE* fh = fopen((dataDir + "/copay.dat").c_str(), "rb");
     if (fh) {
         unsigned char header[2];
         if (fread(&header, 1, 2, fh) != 2)
@@ -793,6 +787,6 @@ void BitPayWalletClient::LoadLocalData()
 
 void BitPayWalletClient::RemoveLocalData()
 {
-    boost::filesystem::path dataDir = GetDefaultDBBDataDir();
-    boost::filesystem::remove(dataDir / "copay.dat");
+    std::string dataDir = GetDefaultDBBDataDir();
+    remove((dataDir + "/copay.dat").c_str());
 }
