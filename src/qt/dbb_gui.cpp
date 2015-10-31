@@ -81,7 +81,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     deviceConnected(0),
     cachedWalletAvailableState(0),
     currentPaymentProposalWidget(0),
-    loginScreenIndicatorOpacityAnimation(0)
+    loginScreenIndicatorOpacityAnimation(0),
+    statusBarloadingIndicatorOpacityAnimation(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
@@ -196,6 +197,21 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     this->statusBarLabelRight = new QLabel("");
     statusBar()->addPermanentWidget(this->statusBarLabelRight);
+    if (!statusBarloadingIndicatorOpacityAnimation)
+    {
+        QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+        this->statusBarLabelRight->setGraphicsEffect(eff);
+
+        statusBarloadingIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
+
+        statusBarloadingIndicatorOpacityAnimation->setDuration(500);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
+        statusBarloadingIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        statusBarloadingIndicatorOpacityAnimation->setLoopCount(-1);
+    }
+    
 
     // tabbar
     QActionGroup *tabGroup = new QActionGroup(this);
@@ -358,6 +374,15 @@ void DBBDaemonGui::setLoading(bool status)
         ui->touchbuttonInfo->setVisible(false);
 
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
+
+    if (statusBarloadingIndicatorOpacityAnimation)
+    {
+        if (status)
+            statusBarloadingIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+        else
+            statusBarloadingIndicatorOpacityAnimation->stop();
+    }
+
     this->ui->unlockingInfo->setText((status) ? "Unlocking Device..." : "");
     //TODO, subclass label and make it animated
 }
@@ -408,14 +433,14 @@ void DBBDaemonGui::passwordProvided()
         this->ui->unlockingInfo->setGraphicsEffect(eff);
 
         loginScreenIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
-    }
 
-    loginScreenIndicatorOpacityAnimation->setDuration(500);
-    loginScreenIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
-    loginScreenIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
-    loginScreenIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
-    loginScreenIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
-    loginScreenIndicatorOpacityAnimation->setLoopCount(-1);
+        loginScreenIndicatorOpacityAnimation->setDuration(500);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
+        loginScreenIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        loginScreenIndicatorOpacityAnimation->setLoopCount(-1);
+    }
 
     // to slide in call
     loginScreenIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
@@ -725,21 +750,17 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             UniValue errorMessageObj = find_value(errorObj, "message");
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108)
             {
-                //password wrong
                 QMessageBox::warning(this, tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
 
                 //try again
                 askForSessionPassword();
-                getInfo();
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110)
             {
-                //password wrong
                 QMessageBox::critical(this, tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101)
             {
-                //password wrong
                 QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
 
                 sessionPassword.clear();

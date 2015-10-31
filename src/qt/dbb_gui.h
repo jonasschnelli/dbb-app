@@ -140,6 +140,7 @@ private:
     bool deviceConnected;
     bool cachedWalletAvailableState;
     QPropertyAnimation *loginScreenIndicatorOpacityAnimation;
+    QPropertyAnimation *statusBarloadingIndicatorOpacityAnimation;
     std::string sessionPassword; //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBMultisigWallet> vMultisigWallets;
