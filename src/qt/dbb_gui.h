@@ -153,7 +153,7 @@ private:
     QAction *settingsAction;
 
     void setActiveArrow(int pos);
-    bool hidePaymentProposalsWidget();
+    void hidePaymentProposalsWidget();
     PaymentProposal *currentPaymentProposalWidget;
 };
 

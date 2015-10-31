@@ -91,7 +91,7 @@ bool BitPayWalletClient::GetCopayerHash(const std::string& name, std::string& ou
 };
 
 //wrapper for a double sha256
-bool BitPayWalletClient::Hash(const std::string &stringIn, uint8_t *hashout)
+void BitPayWalletClient::Hash(const std::string &stringIn, uint8_t *hashout)
 {
     const char *s = stringIn.c_str();
     btc_hash((const uint8_t *)s, stringIn.size(), hashout);
@@ -286,7 +286,7 @@ bool BitPayWalletClient::GetWallets(std::string& response)
     return true;
 }
 
-std::string BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char>> >& vInputTxHashes)
+void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char>> >& vInputTxHashes)
 {
     btc_tx *tx = btc_tx_new();
     

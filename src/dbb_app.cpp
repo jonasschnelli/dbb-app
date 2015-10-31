@@ -230,6 +230,8 @@ int main(int argc, char** argv)
     //directly start libevents main run loop
     event_base_dispatch(base);
     ecc_stop();
+
+    DBB::closeConnection(); //clean up HID
 #endif
 
     exit(1);

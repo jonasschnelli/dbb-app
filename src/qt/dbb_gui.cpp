@@ -947,7 +947,7 @@ void DBBDaemonGui::JoinCopayWalletWithXPubKey()
 }
 
 
-bool DBBDaemonGui::hidePaymentProposalsWidget()
+void DBBDaemonGui::hidePaymentProposalsWidget()
 {
     if(currentPaymentProposalWidget)
     {
