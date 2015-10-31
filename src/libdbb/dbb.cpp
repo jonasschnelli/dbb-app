@@ -23,6 +23,8 @@
 #include "univalue.h"
 #include "hidapi/hidapi.h"
 
+#include <btc/hash.h>
+
 #define HID_REPORT_SIZE 2048
 
 #ifdef DBB_ENABLE_DEBUG
@@ -51,6 +53,7 @@ static bool api_hid_close(void)
     //TODO: way to handle multiple DBB
     if (HID_HANDLE) {
         hid_close(HID_HANDLE); //vendor-id, product-id
+        hid_exit();
         return true;
     }
 
@@ -119,11 +122,12 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 
 bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut)
 {
-    unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
+    unsigned char passwordSha256[BTC_HASH_LENGTH];
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char*)password.c_str(), passwordSha256);
+    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
 
     //decrypt result: TODO:
@@ -146,12 +150,10 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
     unsigned int base64_len = base64dec.size();
     unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
-    unsigned char* decryptedStream;
+    unsigned char decryptedStream[base64_len - DBB_AES_BLOCKSIZE];
     unsigned char* decryptedCommand;
     memcpy(aesIV, base64dec_c, DBB_AES_BLOCKSIZE); //copy first 16 bytes and take as IV
-    int outlen = 0;
-    if (!aesDecrypt(aesKey, aesIV, base64dec_c + DBB_AES_BLOCKSIZE, base64_len - DBB_AES_BLOCKSIZE, &decryptedStream, &outlen))
-        throw std::runtime_error("decryption failed");
+    aesDecrypt(aesKey, aesIV, base64dec_c + DBB_AES_BLOCKSIZE, base64_len - DBB_AES_BLOCKSIZE, decryptedStream);
 
     int decrypt_len = 0;
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
@@ -167,7 +169,6 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
     dec[base64_len - DBB_AES_BLOCKSIZE - padlen] = 0;
     decrypt_len = base64_len - DBB_AES_BLOCKSIZE - padlen + 1;
     memset(decryptedStream, 0, sizeof(&decryptedStream));
-    free(decryptedStream);
 
     stringOut.assign((const char*)dec);
     free(dec);
@@ -180,12 +181,12 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
         return false;
 
     //double sha256 the password
-    unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
-    unsigned char* cypher;
+    unsigned char passwordSha256[BTC_HASH_LENGTH];
+
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char*)password.c_str(), passwordSha256);
+    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
 
     //set random IV
     getRandIV(aesIV);
@@ -208,11 +209,11 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
     memcpy(enc_cat, aesIV, DBB_AES_BLOCKSIZE);
 
     //encrypt
-    aesEncrypt(aesKey, aesIV, inpad, inlen, &cypher);
+    unsigned char cypher[inpadlen];
+    aesEncrypt(aesKey, aesIV, inpad, inpadlen, cypher);
 
     //copy the encypted data to the stream where the iv is already
     memcpy(enc_cat + DBB_AES_BLOCKSIZE, cypher, inpadlen);
-    free(cypher);
 
     //base64 encode
     base64strOut = base64_encode(enc_cat, inpadlen + DBB_AES_BLOCKSIZE);
