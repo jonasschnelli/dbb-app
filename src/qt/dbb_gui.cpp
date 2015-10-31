@@ -13,6 +13,7 @@
 #include <QSpacerItem>
 #include <QToolBar>
 #include <QFontDatabase>
+#include <QGraphicsOpacityEffect>
 
 
 #include "ui/ui_overview.h"
@@ -79,7 +80,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     processComnand(0),
     deviceConnected(0),
     cachedWalletAvailableState(0),
-    currentPaymentProposalWidget(0)
+    currentPaymentProposalWidget(0),
+    loginScreenIndicatorOpacityAnimation(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
@@ -135,7 +137,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     // connect custom signals
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
-    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable()), this, SLOT(GetRequestXPubKey()));
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable()), this, SLOT(JoinCopayWalletWithXPubKey()));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)));
@@ -214,6 +215,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(walletsAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
 
+    //login screen setup
+    this->ui->blockerView->setVisible(false);
+    connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()),this,SLOT(passwordProvided()));
+
     //load local pubkeys
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
@@ -228,7 +233,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     processComnand = false;
 
-
+    //connect the device status update at very last point in init
+    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
 }
 
 void DBBDaemonGui::setActiveArrow(int pos) {
@@ -288,6 +294,16 @@ void DBBDaemonGui::changeConnectedState(bool state)
     }
 }
 
+void DBBDaemonGui::setTabbarEnabled(bool status)
+{
+    this->ui->menuBlocker->setVisible(!status);
+    this->ui->overviewButton->setEnabled(status);
+    this->ui->receiveButton->setEnabled(status);
+    this->ui->sendButton->setEnabled(status);
+    this->ui->mainSettingsButton->setEnabled(status);
+    this->ui->multisigButton->setEnabled(status);
+}
+
 void DBBDaemonGui::checkDevice()
 {
     this->ui->verticalLayoutWidget->setVisible(deviceConnected);
@@ -299,16 +315,18 @@ void DBBDaemonGui::checkDevice()
         walletsAction->setEnabled(false);
         settingsAction->setEnabled(false);
         gotoOverviewPage();
+        setActiveArrow(0);
         overviewAction->setChecked(true);
         resetInfos();
         sessionPassword.clear();
+        hideSessionPasswordView();
+        setTabbarEnabled(false);
     }
     else
     {
         walletsAction->setEnabled(true);
         settingsAction->setEnabled(true);
         askForSessionPassword();
-        getInfo();
     }
 }
 
@@ -318,6 +336,7 @@ void DBBDaemonGui::setLoading(bool status)
         ui->touchbuttonInfo->setVisible(false);
 
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
+    this->ui->unlockingInfo->setText((status) ? "Unlocking Device..." : "");
     //TODO, subclass label and make it animated
 }
 
@@ -359,14 +378,73 @@ void DBBDaemonGui::showEchoVerification(const UniValue &proposalData, int action
     PaymentProposalAction(proposalData, actionType);
 }
 
+void DBBDaemonGui::passwordProvided()
+{
+    if (!loginScreenIndicatorOpacityAnimation)
+    {
+        QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+        this->ui->unlockingInfo->setGraphicsEffect(eff);
+
+        loginScreenIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
+    }
+
+    loginScreenIndicatorOpacityAnimation->setDuration(500);
+    loginScreenIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
+    loginScreenIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
+    loginScreenIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
+    loginScreenIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+    loginScreenIndicatorOpacityAnimation->setLoopCount(-1);
+
+    // to slide in call
+    loginScreenIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+
+    sessionPassword = this->ui->passwordLineEdit->text().toStdString();
+    getInfo();
+}
+
+void DBBDaemonGui::passwordAccepted()
+{
+    hideSessionPasswordView();
+    this->ui->passwordLineEdit->setText("");
+    setTabbarEnabled(true);
+}
+
+
 void DBBDaemonGui::askForSessionPassword()
 {
-    //ask for session password
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
-    if (ok && !text.isEmpty()) {
-        sessionPassword = text.toStdString();
-    }
+    setLoading(false);
+    this->ui->blockerView->setVisible(true);
+    QWidget* slide = this->ui->blockerView;
+    // setup slide
+    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    // then a animation:
+    QPropertyAnimation *animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(0,0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
+}
+
+void DBBDaemonGui::hideSessionPasswordView()
+{
+    if (loginScreenIndicatorOpacityAnimation)
+        loginScreenIndicatorOpacityAnimation->stop();
+
+    QWidget* slide = this->ui->blockerView;
+    // setup slide
+    //slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    // then a animation:
+    QPropertyAnimation *animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(-slide->width(),0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
 }
 
 //TODO: remove, not direct json result text in UI, add log
@@ -669,6 +747,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
                 updateOverviewFlags(walletAvailable,lockAvailable,false);
+
+                //enable UI
+                passwordAccepted();
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET)
@@ -1072,7 +1153,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processComnand = false;
         setLoading(false);

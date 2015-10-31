@@ -9,6 +9,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QPropertyAnimation>
 
 #include <functional>
 
@@ -118,6 +119,7 @@ public slots:
     void showEchoVerification(const UniValue& response, int actionType, QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
+    void passwordProvided();
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
@@ -137,6 +139,7 @@ private:
     bool processComnand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    QPropertyAnimation *loginScreenIndicatorOpacityAnimation;
     std::string sessionPassword; //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBMultisigWallet> vMultisigWallets;
@@ -155,6 +158,9 @@ private:
     void setActiveArrow(int pos);
     void hidePaymentProposalsWidget();
     PaymentProposal *currentPaymentProposalWidget;
+    void hideSessionPasswordView();
+    void setTabbarEnabled(bool status);
+    void passwordAccepted();
 };
 
 #endif
