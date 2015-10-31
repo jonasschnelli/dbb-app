@@ -39,7 +39,6 @@
 
 #include "univalue.h"
 #include "hidapi/hidapi.h"
-#include "openssl/sha.h"
 
 //simple class for a dbb command
 class CDBBCommand
@@ -230,6 +229,7 @@ int main(int argc, char* argv[])
                 if (cmd.requiresEncryption || DBB::mapArgs.count("-password")) {
                     if (!DBB::mapArgs.count("-password")) {
                         printf("This command requires the -password argument\n");
+                        DBB::closeConnection();
                         return 0;
                     }
 
@@ -252,6 +252,7 @@ int main(int argc, char* argv[])
                         DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
                     } catch (const std::exception& ex) {
                         printf("%s\n", ex.what());
+                        DBB::closeConnection();
                         exit(0);
                     }
 
@@ -280,6 +281,9 @@ int main(int argc, char* argv[])
 
             printf("command (%s) not found, use \"help\" to list available commands\n", DBB::SanitizeString(userCmd).c_str());
         }
+
+        DBB::closeConnection();
     }
+
     return 0;
 }

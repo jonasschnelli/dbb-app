@@ -48,9 +48,6 @@
 #include "libbitpay-wallet-client/bpwalletclient.h"
 
 #include "hidapi/hidapi.h"
-#include "openssl/sha.h"
-#include <openssl/err.h>
-#include <openssl/rand.h>
 
 #include <event2/event.h>
 #include <event2/http.h>

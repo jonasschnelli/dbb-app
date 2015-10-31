@@ -10,18 +10,18 @@ UNIVALUE=univalue/libunivalue.la
 $(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
-DBB_INCLUDES += -I$(srcdir)/libbtc/include -I$(srcdir)/libbtc/src
+LIBBTC_INCLUDES = -I$(srcdir)/libbtc/include -I$(srcdir)/libbtc/src
 
 $(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
-DBB_INCLUDES += -I$(srcdir)/univalue/include
+DBB_INCLUDES += -I$(srcdir)/univalue/include $(LIBBTC_INCLUDES)
 
 
 noinst_LIBRARIES = libdbb.a libbpwalletclient.a
 
 libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
-libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h
+libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(LIBBTC_INCLUDES)
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
 libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
@@ -38,7 +38,7 @@ dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(CRYPTO_LIBS)
+dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC)
 
 
 #check if we should build the dbb app
@@ -50,7 +50,7 @@ dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
 dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) $(UNIVALUE) $(BOOST_LIBS)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(UNIVALUE) $(BOOST_LIBS)
 
 if ENABLE_QT
 
