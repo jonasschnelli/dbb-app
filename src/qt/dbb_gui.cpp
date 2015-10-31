@@ -87,21 +87,39 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     
     ui->setupUi(this);
 
+    /////////// UI Styling
+#if defined(Q_OS_MAC)
+    std::string balanceFontSize = "24pt";
+    std::string menuFontSize = "18pt";
+    std::string stdFontSize = "16pt";
+    std::string smallFontSize = "12pt";
+#elif defined(Q_OS_WIN)
+    std::string balanceFontSize = "24pt";
+    std::string menuFontSize = "18pt";
+    std::string stdFontSize = "16pt";
+    std::string smallFontSize = "12pt";
+#else
+    std::string balanceFontSize = "20pt";
+    std::string menuFontSize = "14pt";
+    std::string stdFontSize = "12pt";
+    std::string smallFontSize = "10pt";
+#endif
+
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
 
-    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:16pt; }");
+    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:" + QString::fromStdString(stdFontSize) + "; }");
     this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
-    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: black; border:0; color: white; };");
-    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: #003366; border:0; color: white; };");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:"+QString::fromStdString(menuFontSize)+"; background-color: black; border:0; color: white; };");
+    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:"+QString::fromStdString(menuFontSize)+"; background-color: #003366; border:0; color: white; };");
+
+    QString labelCSS("QLabel { font-size: "+QString::fromStdString(smallFontSize)+"; }");
 
     this->ui->receiveButton->setStyleSheet(buttonCss);
     this->ui->overviewButton->setStyleSheet(buttonCss);
     this->ui->sendButton->setStyleSheet(buttonCss);
     this->ui->mainSettingsButton->setStyleSheet(buttonCss);
     this->ui->multisigButton->setStyleSheet(msButtonCss);
-
-    QString labelCSS("QLabel { font-size: 12pt; }");
 
     this->ui->deviceNameKeyLabel->setStyleSheet(labelCSS);
     this->ui->deviceNameLabel->setStyleSheet(labelCSS);
@@ -110,7 +128,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
 
     this->ui->balanceLabel->setStyleSheet("font-size: 24pt;");
-    this->ui->balanceLabel->setText("12345.12345678 BTC");
+    this->ui->balanceLabel->setText("0.00 BTC");
+
+    ////////////// END STYLING
+
+
     this->ui->dbbIcon->setVisible(false);
 
     ui->touchbuttonInfo->setVisible(false);
