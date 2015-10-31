@@ -1085,7 +1085,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
         if (!echoStr.isNull() && echoStr.isStr())
         {
 
-            emit shouldVerifySigning(paymentProposal, QString::fromStdString(echoStr.get_str()));
+            emit shouldVerifySigning(paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
         }
         else
         {

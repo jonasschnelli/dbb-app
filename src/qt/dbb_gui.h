@@ -125,7 +125,7 @@ signals:
     void RequestXPubKeyForCopayWalletIsAvailable();
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
 
-    void shouldVerifySigning(const UniValue &paymentProposal, const QString& signature);
+    void shouldVerifySigning(const UniValue &paymentProposal, int actionType, const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
 private:
