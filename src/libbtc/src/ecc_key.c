@@ -33,8 +33,8 @@
 
 #include "btc/ecc.h"
 #include "btc/hash.h"
+#include "btc/random.h"
 
-#include "random.h"
 #include "ripemd160.h"
 #include "utils.h"
 
@@ -109,7 +109,7 @@ void btc_pubkey_cleanse(btc_pubkey* pubkey)
 }
 
 
-void btc_pubkey_get_hash160(const btc_pubkey* pubkey, uint8_t *hash160)
+void btc_pubkey_get_hash160(const btc_pubkey* pubkey, uint8_t* hash160)
 {
     ripemd160(pubkey->pubkey, pubkey->compressed ? BTC_ECKEY_COMPRESSED_LENGTH : BTC_ECKEY_UNCOMPRESSED_LENGTH, hash160);
 }
