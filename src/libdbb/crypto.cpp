@@ -8,27 +8,12 @@
 #include <openssl/bio.h>
 #include <openssl/buffer.h>
 #include <openssl/evp.h>
-#include <openssl/sha.h>
 #include <openssl/rand.h>
 
 #include <string.h>
 
 //ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
-
-void doubleSha256(char* string, unsigned char* hashOut)
-{
-    unsigned char firstSha[SHA256_DIGEST_LENGTH];
-    SHA256_CTX sha256;
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, string, strlen(string));
-    SHA256_Final(firstSha, &sha256);
-
-    SHA256_Init(&sha256);
-    SHA256_Update(&sha256, firstSha, SHA256_DIGEST_LENGTH);
-    SHA256_Final(hashOut, &sha256);
-}
-
 
 bool aesDecrypt(unsigned char* aesKey, unsigned char* aesIV, unsigned char* encMsg, size_t encMsgLen, unsigned char** decMsg, int* outlen)
 {

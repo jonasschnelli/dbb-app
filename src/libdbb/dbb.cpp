@@ -23,6 +23,8 @@
 #include "univalue.h"
 #include "hidapi/hidapi.h"
 
+#include <btc/hash.h>
+
 #define HID_REPORT_SIZE 2048
 
 #ifdef DBB_ENABLE_DEBUG
@@ -119,11 +121,12 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 
 bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut)
 {
-    unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
+    unsigned char passwordSha256[BTC_HASH_LENGTH];
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char*)password.c_str(), passwordSha256);
+    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
 
     //decrypt result: TODO:
@@ -180,12 +183,12 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
         return false;
 
     //double sha256 the password
-    unsigned char passwordSha256[DBB_SHA256_DIGEST_LENGTH];
+    unsigned char passwordSha256[BTC_HASH_LENGTH];
     unsigned char* cypher;
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    doubleSha256((char*)password.c_str(), passwordSha256);
+    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
 
     //set random IV
     getRandIV(aesIV);
