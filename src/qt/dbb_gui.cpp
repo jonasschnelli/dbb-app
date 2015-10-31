@@ -956,6 +956,7 @@ bool DBBDaemonGui::hidePaymentProposalsWidget()
         currentPaymentProposalWidget = NULL;
     }
 }
+
 bool DBBDaemonGui::checkPaymentProposals()
 {
     bool ret = false;
@@ -1014,8 +1015,8 @@ bool DBBDaemonGui::checkPaymentProposals()
                             }
                         }
                     }
-//                    if (skipProposal)
-//                        continue;
+                    if (skipProposal)
+                        continue;
 
                     if (toAddressUni.isStr())
                         toAddress = QString::fromStdString(toAddressUni.get_str());
@@ -1032,10 +1033,6 @@ bool DBBDaemonGui::checkPaymentProposals()
                     currentPaymentProposalWidget->show();
                     currentPaymentProposalWidget->SetData(oneProposal);
                     return true;
-                    
-                    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
-                    if (reply == QMessageBox::No)
-                        return false;
                 } //end proposal loop
             }
         }
@@ -1077,6 +1074,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
         processComnand = false;
         setLoading(false);
 
+        //TODO: check touchbutton user abort
         printf("cmd back: %s\n", cmdOut.c_str());
         UniValue jsonOut(UniValue::VOBJ);
         jsonOut.read(cmdOut);
@@ -1103,7 +1101,6 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
                         if (!sigObject.isNull() && sigObject.isStr())
                         {
                             sigs.push_back(sigObject.get_str());
-                            //client.BroadcastProposal(values[0]);
                         }
                     }
 
