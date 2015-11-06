@@ -159,18 +159,26 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
     char* dec = (char*)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
     if (!dec) {
-        decrypt_len = 0;
-        memset(decryptedStream, 0, sizeof(&decryptedStream));
-        free(decryptedStream);
+        decrypt_len = 0;;
+        memset(decryptedStream, 0, sizeof(decryptedStream));
         throw std::runtime_error("decription failed");
         return false;
     }
+    int totalLength = (base64_len - DBB_AES_BLOCKSIZE - padlen);
+    if (totalLength  < 0 || totalLength > sizeof(decryptedStream) )
+    {
+        free(dec);
+        throw std::runtime_error("decription failed");
+        return false;
+    }
+
     memcpy(dec, decryptedStream, base64_len - DBB_AES_BLOCKSIZE - padlen);
     dec[base64_len - DBB_AES_BLOCKSIZE - padlen] = 0;
     decrypt_len = base64_len - DBB_AES_BLOCKSIZE - padlen + 1;
-    memset(decryptedStream, 0, sizeof(&decryptedStream));
 
     stringOut.assign((const char*)dec);
+
+    memset(decryptedStream, 0, sizeof(decryptedStream));
     free(dec);
     return true;
 }
