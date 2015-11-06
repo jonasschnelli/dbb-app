@@ -73,9 +73,6 @@ public:
     //!get the copyer id as string
     std::string GetCopayerId();
 
-    //TODO: move to utils
-    bool Hash(const std::string &stringIn, uint8_t *hashout);
-
     //!generates the copayer hash (name, xpub, request key)
     bool GetCopayerHash(const std::string& name, std::string& hashOut);
 
@@ -89,7 +86,7 @@ public:
     bool GetWallets(std::string& response);
 
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
-    std::string ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
+    void ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
@@ -144,5 +141,8 @@ private:
 
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
     std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);
+
+    //!Wrapper for libbtcs doubla sha
+    void Hash(const std::string &stringIn, uint8_t *hashout);
 };
 #endif //BP_WALLET_CLIENT_H

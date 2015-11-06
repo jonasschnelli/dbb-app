@@ -9,6 +9,7 @@
 #include <QWidget>
 #include <QLabel>
 #include <QPushButton>
+#include <QPropertyAnimation>
 
 #include <functional>
 
@@ -118,6 +119,7 @@ public slots:
     void showEchoVerification(const UniValue& response, int actionType, QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
+    void passwordProvided();
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
@@ -125,7 +127,7 @@ signals:
     void RequestXPubKeyForCopayWalletIsAvailable();
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
 
-    void shouldVerifySigning(const UniValue &paymentProposal, const QString& signature);
+    void shouldVerifySigning(const UniValue &paymentProposal, int actionType, const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
 private:
@@ -137,6 +139,8 @@ private:
     bool processComnand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    QPropertyAnimation *loginScreenIndicatorOpacityAnimation;
+    QPropertyAnimation *statusBarloadingIndicatorOpacityAnimation;
     std::string sessionPassword; //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBMultisigWallet> vMultisigWallets;
@@ -153,8 +157,11 @@ private:
     QAction *settingsAction;
 
     void setActiveArrow(int pos);
-    bool hidePaymentProposalsWidget();
+    void hidePaymentProposalsWidget();
     PaymentProposal *currentPaymentProposalWidget;
+    void hideSessionPasswordView();
+    void setTabbarEnabled(bool status);
+    void passwordAccepted();
 };
 
 #endif

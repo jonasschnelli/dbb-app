@@ -13,6 +13,7 @@
 #include <QSpacerItem>
 #include <QToolBar>
 #include <QFontDatabase>
+#include <QGraphicsOpacityEffect>
 
 
 #include "ui/ui_overview.h"
@@ -79,27 +80,47 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     processComnand(0),
     deviceConnected(0),
     cachedWalletAvailableState(0),
-    currentPaymentProposalWidget(0)
+    currentPaymentProposalWidget(0),
+    loginScreenIndicatorOpacityAnimation(0),
+    statusBarloadingIndicatorOpacityAnimation(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
     
     ui->setupUi(this);
 
+    /////////// UI Styling
+#if defined(Q_OS_MAC)
+    std::string balanceFontSize = "24pt";
+    std::string menuFontSize = "18pt";
+    std::string stdFontSize = "16pt";
+    std::string smallFontSize = "12pt";
+#elif defined(Q_OS_WIN)
+    std::string balanceFontSize = "24pt";
+    std::string menuFontSize = "18pt";
+    std::string stdFontSize = "16pt";
+    std::string smallFontSize = "12pt";
+#else
+    std::string balanceFontSize = "20pt";
+    std::string menuFontSize = "14pt";
+    std::string stdFontSize = "12pt";
+    std::string smallFontSize = "10pt";
+#endif
+
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
 
-    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:16pt; }");
+    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:" + QString::fromStdString(stdFontSize) + "; }");
     this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
-    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: black; border:0; color: white; };");
-    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:18pt; background-color: #003366; border:0; color: white; };");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:"+QString::fromStdString(menuFontSize)+"; background-color: black; border:0; color: white; };");
+    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:"+QString::fromStdString(menuFontSize)+"; background-color: #003366; border:0; color: white; };");
+
+    QString labelCSS("QLabel { font-size: "+QString::fromStdString(smallFontSize)+"; }");
 
     this->ui->receiveButton->setStyleSheet(buttonCss);
     this->ui->overviewButton->setStyleSheet(buttonCss);
     this->ui->sendButton->setStyleSheet(buttonCss);
     this->ui->mainSettingsButton->setStyleSheet(buttonCss);
     this->ui->multisigButton->setStyleSheet(msButtonCss);
-
-    QString labelCSS("QLabel { font-size: 12pt; }");
 
     this->ui->deviceNameKeyLabel->setStyleSheet(labelCSS);
     this->ui->deviceNameLabel->setStyleSheet(labelCSS);
@@ -108,7 +129,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
 
     this->ui->balanceLabel->setStyleSheet("font-size: 24pt;");
-    this->ui->balanceLabel->setText("12345.12345678 BTC");
+    this->ui->balanceLabel->setText("0.00 BTC");
+
+    ////////////// END STYLING
+
+
     this->ui->dbbIcon->setVisible(false);
 
     ui->touchbuttonInfo->setVisible(false);
@@ -135,7 +160,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     // connect custom signals
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
-    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable()), this, SLOT(GetRequestXPubKey()));
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable()), this, SLOT(JoinCopayWalletWithXPubKey()));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)));
@@ -173,6 +197,21 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     this->statusBarLabelRight = new QLabel("");
     statusBar()->addPermanentWidget(this->statusBarLabelRight);
+    if (!statusBarloadingIndicatorOpacityAnimation)
+    {
+        QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+        this->statusBarLabelRight->setGraphicsEffect(eff);
+
+        statusBarloadingIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
+
+        statusBarloadingIndicatorOpacityAnimation->setDuration(500);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
+        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
+        statusBarloadingIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        statusBarloadingIndicatorOpacityAnimation->setLoopCount(-1);
+    }
+    
 
     // tabbar
     QActionGroup *tabGroup = new QActionGroup(this);
@@ -214,6 +253,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(walletsAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
 
+    //login screen setup
+    this->ui->blockerView->setVisible(false);
+    connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()),this,SLOT(passwordProvided()));
+
     //load local pubkeys
     DBBMultisigWallet copayWallet;
     copayWallet.client.LoadLocalData();
@@ -228,7 +271,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     processComnand = false;
 
-
+    //connect the device status update at very last point in init
+    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
 }
 
 void DBBDaemonGui::setActiveArrow(int pos) {
@@ -288,6 +332,16 @@ void DBBDaemonGui::changeConnectedState(bool state)
     }
 }
 
+void DBBDaemonGui::setTabbarEnabled(bool status)
+{
+    this->ui->menuBlocker->setVisible(!status);
+    this->ui->overviewButton->setEnabled(status);
+    this->ui->receiveButton->setEnabled(status);
+    this->ui->sendButton->setEnabled(status);
+    this->ui->mainSettingsButton->setEnabled(status);
+    this->ui->multisigButton->setEnabled(status);
+}
+
 void DBBDaemonGui::checkDevice()
 {
     this->ui->verticalLayoutWidget->setVisible(deviceConnected);
@@ -299,16 +353,18 @@ void DBBDaemonGui::checkDevice()
         walletsAction->setEnabled(false);
         settingsAction->setEnabled(false);
         gotoOverviewPage();
+        setActiveArrow(0);
         overviewAction->setChecked(true);
         resetInfos();
         sessionPassword.clear();
+        hideSessionPasswordView();
+        setTabbarEnabled(false);
     }
     else
     {
         walletsAction->setEnabled(true);
         settingsAction->setEnabled(true);
         askForSessionPassword();
-        getInfo();
     }
 }
 
@@ -318,6 +374,16 @@ void DBBDaemonGui::setLoading(bool status)
         ui->touchbuttonInfo->setVisible(false);
 
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
+
+    if (statusBarloadingIndicatorOpacityAnimation)
+    {
+        if (status)
+            statusBarloadingIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+        else
+            statusBarloadingIndicatorOpacityAnimation->stop();
+    }
+
+    this->ui->unlockingInfo->setText((status) ? "Unlocking Device..." : "");
     //TODO, subclass label and make it animated
 }
 
@@ -359,14 +425,73 @@ void DBBDaemonGui::showEchoVerification(const UniValue &proposalData, int action
     PaymentProposalAction(proposalData, actionType);
 }
 
+void DBBDaemonGui::passwordProvided()
+{
+    if (!loginScreenIndicatorOpacityAnimation)
+    {
+        QGraphicsOpacityEffect *eff = new QGraphicsOpacityEffect(this);
+        this->ui->unlockingInfo->setGraphicsEffect(eff);
+
+        loginScreenIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
+
+        loginScreenIndicatorOpacityAnimation->setDuration(500);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
+        loginScreenIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
+        loginScreenIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        loginScreenIndicatorOpacityAnimation->setLoopCount(-1);
+    }
+
+    // to slide in call
+    loginScreenIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+
+    sessionPassword = this->ui->passwordLineEdit->text().toStdString();
+    getInfo();
+}
+
+void DBBDaemonGui::passwordAccepted()
+{
+    hideSessionPasswordView();
+    this->ui->passwordLineEdit->setText("");
+    setTabbarEnabled(true);
+}
+
+
 void DBBDaemonGui::askForSessionPassword()
 {
-    //ask for session password
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Start Session"), tr("Current Password"), QLineEdit::Normal, "", &ok);
-    if (ok && !text.isEmpty()) {
-        sessionPassword = text.toStdString();
-    }
+    setLoading(false);
+    this->ui->blockerView->setVisible(true);
+    QWidget* slide = this->ui->blockerView;
+    // setup slide
+    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    // then a animation:
+    QPropertyAnimation *animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(0,0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
+}
+
+void DBBDaemonGui::hideSessionPasswordView()
+{
+    if (loginScreenIndicatorOpacityAnimation)
+        loginScreenIndicatorOpacityAnimation->stop();
+
+    QWidget* slide = this->ui->blockerView;
+    // setup slide
+    //slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    // then a animation:
+    QPropertyAnimation *animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(-slide->width(),0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
 }
 
 //TODO: remove, not direct json result text in UI, add log
@@ -625,21 +750,17 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             UniValue errorMessageObj = find_value(errorObj, "message");
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108)
             {
-                //password wrong
                 QMessageBox::warning(this, tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
 
                 //try again
                 askForSessionPassword();
-                getInfo();
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110)
             {
-                //password wrong
                 QMessageBox::critical(this, tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101)
             {
-                //password wrong
                 QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
 
                 sessionPassword.clear();
@@ -669,6 +790,9 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
                 updateOverviewFlags(walletAvailable,lockAvailable,false);
+
+                //enable UI
+                passwordAccepted();
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET)
@@ -947,7 +1071,7 @@ void DBBDaemonGui::JoinCopayWalletWithXPubKey()
 }
 
 
-bool DBBDaemonGui::hidePaymentProposalsWidget()
+void DBBDaemonGui::hidePaymentProposalsWidget()
 {
     if(currentPaymentProposalWidget)
     {
@@ -1072,7 +1196,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processComnand = false;
         setLoading(false);
@@ -1085,7 +1209,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
         if (!echoStr.isNull() && echoStr.isStr())
         {
 
-            emit shouldVerifySigning(paymentProposal, QString::fromStdString(echoStr.get_str()));
+            emit shouldVerifySigning(paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
         }
         else
         {
