@@ -24,18 +24,24 @@ class PaymentProposal : public QWidget
 
 signals:
     void processProposal(const UniValue &proposalData, int actionType);
+    void shouldDisplayProposal(const UniValue &pendingTxp, const std::string &proposalId);
 
 public slots:
     void acceptPressed();
     void rejectPressed();
+    void prevPressed();
+    void nextPressed();
 
 public:
     explicit PaymentProposal(QWidget *parent = 0);
     ~PaymentProposal();
     Ui::PaymentProposal *ui;
-    void SetData(const UniValue &data);
+    void SetData(const std::string copayerID, const UniValue &pendingTxp, const UniValue &data, const std::string &prevID, const std::string &nextID);
 private:
+    UniValue pendingTxp;
     UniValue proposalData;
+    std::string prevProposalID;
+    std::string nextProposalID;
 };
 
 #endif // DBB_PAYMENTPROPOSAL_H

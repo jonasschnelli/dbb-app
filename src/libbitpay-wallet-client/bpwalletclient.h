@@ -59,6 +59,9 @@ public:
     BitPayWalletClient();
     ~BitPayWalletClient();
 
+    //!set the filename base to store local data
+    void setFilenameBase(const std::string &filenameBaseIn);
+
     //!parse a wallet invitation code
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);
 
@@ -73,6 +76,9 @@ public:
 
     //!signs a given string with a given key
     bool GetCopayerSignature(const std::string& stringToHash, const uint8_t *privKey, std::string& sigHexOut);
+
+    //!Create a wallet
+    bool CreateWallet(const std::string& walletName);
 
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
@@ -132,6 +138,7 @@ private:
     std::string masterPubKey; // "m/45'"
     btc_key requestKey;  //"m/1'/0"
 
+    std::string filenameBase;
     std::string baseURL; //!< base URL for the wallet server
 
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);

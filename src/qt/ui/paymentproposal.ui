@@ -87,6 +87,9 @@
         <property name="text">
          <string>Amount</string>
         </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+        </property>
        </widget>
       </item>
       <item>
@@ -100,6 +103,9 @@
        <widget class="QLabel" name="feeLabelKey">
         <property name="text">
          <string>Fee</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -115,7 +121,7 @@
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout_5">
       <item>
-       <widget class="QPushButton" name="pushButton_2">
+       <widget class="QPushButton" name="arrowLeft">
         <property name="maximumSize">
          <size>
           <width>30</width>
@@ -135,14 +141,30 @@
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="acceptButton">
+       <widget class="QLabel" name="actionLabel">
+        <property name="styleSheet">
+         <string notr="true">color: #000066</string>
+        </property>
         <property name="text">
-         <string>Accept</string>
+         <string>TextLabel</string>
+        </property>
+        <property name="alignment">
+         <set>Qt::AlignCenter</set>
         </property>
        </widget>
       </item>
       <item>
-       <widget class="QPushButton" name="pushButton_3">
+       <widget class="QPushButton" name="acceptButton">
+        <property name="text">
+         <string>Accept</string>
+        </property>
+        <property name="checkable">
+         <bool>false</bool>
+        </property>
+       </widget>
+      </item>
+      <item>
+       <widget class="QPushButton" name="arrowRight">
         <property name="maximumSize">
          <size>
           <width>30</width>
@@ -169,6 +191,9 @@
      <width>450</width>
      <height>120</height>
     </rect>
+   </property>
+   <property name="styleSheet">
+    <string notr="true">border:1px;</string>
    </property>
   </widget>
   <zorder>bgWidget</zorder>

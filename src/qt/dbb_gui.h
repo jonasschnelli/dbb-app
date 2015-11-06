@@ -12,6 +12,8 @@
 #include <QPropertyAnimation>
 
 #include <functional>
+#include <thread>
+#include <mutex>
 
 #include "libbitpay-wallet-client/bpwalletclient.h"
 #include "dbb_app.h"
@@ -29,9 +31,12 @@ public:
     BitPayWalletClient client;
     std::string baseKeyPath;
     std::string participationName;
+    std::string walletRemoteName;
+    UniValue currentPaymentProposals;
+    int64_t availableBalance;
     DBBMultisigWallet()
     {
-        baseKeyPath = "m/120'";
+        baseKeyPath = "m/131'";
         participationName = "digitalbitbox";
     }
 };
@@ -43,6 +48,8 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_PASSWORD,
     DBB_RESPONSE_TYPE_XPUB_MS_MASTER,
     DBB_RESPONSE_TYPE_XPUB_MS_REQUEST,
+    DBB_RESPONSE_TYPE_XPUB_SW_MASTER,
+    DBB_RESPONSE_TYPE_XPUB_SW_REQUEST,
     DBB_RESPONSE_TYPE_CREATE_WALLET,
     DBB_RESPONSE_TYPE_INFO,
     DBB_RESPONSE_TYPE_ERASE,
@@ -67,7 +74,7 @@ class DBBDaemonGui : public QMainWindow
 public:
     explicit DBBDaemonGui(QWidget* parent = 0);
     ~DBBDaemonGui();
-    void GetXPubKey();
+    void GetXPubKey(int walletIndex);
 
 public slots:
     //!main callback when the device gets connected/disconnected
@@ -92,21 +99,32 @@ public slots:
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
 
-    //!enable or disable loading indication in the UI
+    //!enable or disable dbb/usb/loading indication in the UI
     void setLoading(bool status);
+
+    //!enable or disable net/loading indication in the UI
+    void setNetLoading(bool status);
+
     //!resets device infos (in case of a disconnect)
     void resetInfos();
     //!update overview flags (wallet / lock, etc)
     void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
-    void JoinCopayWallet();
-    void JoinCopayWalletWithXPubKey();
-    void GetRequestXPubKey();
-    bool checkPaymentProposals();
+    void JoinCopayWallet(int walletIndex = -1);
+    void JoinCopayWalletWithXPubKey(int walletIndex);
+    void GetRequestXPubKey(int walletIndex);
+
+    void MultisigUpdateWallets();
+    void MultisigParseWalletsResponse(bool walletAvailable, const std::string &walletsResponse);
+    bool MultisigUpdatePaymentProposals(const UniValue &response);
+    bool MultisigDisplayPaymentProposal(const UniValue &pendingTxps, const std::string &targetID);
+    void updateUIMultisigWallets(const UniValue &walletResponse);
     void PaymentProposalAction(const UniValue &paymentProposal, int actionType);
     void gotoOverviewPage();
     void gotoMultisigPage();
     void gotoSettingsPage();
     void getInfo();
+
+    void createSingleWallet();
 
     void mainOverviewButtonClicked();
     void mainMultisigButtonClicked();
@@ -115,7 +133,7 @@ public slots:
     void mainSettingsButtonClicked();
 
 
-    void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
+    void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag);
     void showEchoVerification(const UniValue& response, int actionType, QString echoStr);
     void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
 
@@ -123,9 +141,11 @@ public slots:
 signals:
     void showCommandResult(const QString& result);
     void deviceStateHasChanged(bool state);
-    void XPubForCopayWalletIsAvailable();
-    void RequestXPubKeyForCopayWalletIsAvailable();
-    void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag);
+    void XPubForCopayWalletIsAvailable(int walletIndex);
+    void RequestXPubKeyForCopayWalletIsAvailable(int walletIndex);
+    void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
+
+    void multisigWalletResponseAvailable(bool walletsAvailable, const std::string &walletsResponse);
 
     void shouldVerifySigning(const UniValue &paymentProposal, int actionType, const QString& signature);
     void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
@@ -149,7 +169,7 @@ private:
     void checkDevice();
 
     bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
-    void _JoinCopayWallet();
+    void _JoinCopayWallet(int walletIndex);
     bool QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
     QAction *overviewAction;
@@ -162,6 +182,10 @@ private:
     void hideSessionPasswordView();
     void setTabbarEnabled(bool status);
     void passwordAccepted();
+
+    bool netThreadBusy;
+    std::thread netThread;
+    std::mutex cs_vMultisigWallets;
 };
 
 #endif
