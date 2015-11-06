@@ -107,7 +107,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     this->ui->versionLabel->setStyleSheet(labelCSS);
 
 
-    this->ui->balanceLabel->setStyleSheet("font-size: 24pt;");
+    this->ui->balanceLabel->setStyleSheet("font-size: "+balanceFontSize+";");
+    this->ui->multisigBalance->setStyleSheet("font-size: "+balanceFontSize+";");
     this->ui->balanceLabel->setText("12345.12345678 BTC");
     this->ui->dbbIcon->setVisible(false);
 
@@ -956,6 +957,28 @@ bool DBBDaemonGui::hidePaymentProposalsWidget()
         currentPaymentProposalWidget = NULL;
     }
 }
+
+void DBBDaemonGui::updateMultisigWallet(const UniValue &walletResponse)
+{
+    // get balance and name
+    UniValue balanceObj = find_value(walletResponse, "balance");
+    if (balanceObj.isObject())
+    {
+        UniValue availableAmountUni = find_value(balanceObj, "availableAmount");
+        vMultisigWallets[0].availableBalance = availableAmountUni.get_int64();
+    }
+
+    UniValue walletObj = find_value(walletResponse, "wallet");
+    if (walletObj.isObject())
+    {
+        UniValue nameUni = find_value(walletObj, "name");
+        vMultisigWallets[0].walletRemoteName = nameUni.get_str();
+    }
+
+    this->ui->multisigBalance->setText(tr("%1").arg(vMultisigWallets[0].availableBalance));
+    this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[0].walletRemoteName));
+}
+
 bool DBBDaemonGui::checkPaymentProposals()
 {
     bool ret = false;
@@ -975,6 +998,8 @@ bool DBBDaemonGui::checkPaymentProposals()
     if (response.read(walletsResponse)) {
         if (response.isObject()) {
             printf("Wallet: %s\n", response.write(true, 2).c_str());
+
+            updateMultisigWallet(response);
 
             UniValue pendingTxps;
             pendingTxps = find_value(response, "pendingTxps");

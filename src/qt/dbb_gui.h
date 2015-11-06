@@ -28,6 +28,8 @@ public:
     BitPayWalletClient client;
     std::string baseKeyPath;
     std::string participationName;
+    std::string walletRemoteName;
+    int64_t availableBalance;
     DBBMultisigWallet()
     {
         baseKeyPath = "m/120'";
@@ -101,6 +103,7 @@ public slots:
     void JoinCopayWalletWithXPubKey();
     void GetRequestXPubKey();
     bool checkPaymentProposals();
+    void updateMultisigWallet(const UniValue &walletResponse);
     void PaymentProposalAction(const UniValue &paymentProposal, int actionType);
     void gotoOverviewPage();
     void gotoMultisigPage();
