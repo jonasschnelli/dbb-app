@@ -27,11 +27,6 @@
 #ifndef BP_WALLET_CLIENT_H
 #define BP_WALLET_CLIENT_H
 
-#include <openssl/sha.h>
-#include <openssl/err.h>
-#include <openssl/rand.h>
-
-
 #include <stdio.h>
 #include <string>
 
