@@ -128,9 +128,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     this->ui->versionLabel->setStyleSheet(labelCSS);
 
 
-    this->ui->balanceLabel->setStyleSheet("font-size: 24pt;");
-    this->ui->balanceLabel->setText("0.00 BTC");
+    this->ui->balanceLabel->setStyleSheet("font-size: "+QString::fromStdString(balanceFontSize)+";");
+    this->ui->multisigBalance->setStyleSheet("font-size: "+QString::fromStdString(balanceFontSize)+";");
 
+    this->ui->multisigBalanceKey->setStyleSheet(labelCSS);
+    this->ui->multisigWalletNameKey->setStyleSheet(labelCSS);
     ////////////// END STYLING
 
 
@@ -142,6 +144,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     // allow serval signaling data types
     qRegisterMetaType<UniValue>("UniValue");
+    qRegisterMetaType<std::string>("std::string");
     qRegisterMetaType<dbb_cmd_execution_status_t>("dbb_cmd_execution_status_t");
     qRegisterMetaType<dbb_response_type_t>("dbb_response_type_t");
     qRegisterMetaType<std::vector<std::string>>("std::vector<std::string>");
@@ -152,19 +155,21 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seed()));
+    connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
-    connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(checkPaymentProposals()));
+    connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(MultisigUpdateWallets()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
     connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
     connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
 
     // connect custom signals
     connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
-    connect(this, SIGNAL(XPubForCopayWalletIsAvailable()), this, SLOT(GetRequestXPubKey()));
-    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable()), this, SLOT(JoinCopayWalletWithXPubKey()));
-    connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t)));
+    connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(GetRequestXPubKey(int)));
+    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(JoinCopayWalletWithXPubKey(int)));
+    connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)));
     connect(this, SIGNAL(shouldVerifySigning(const UniValue&, int, const QString&)), this, SLOT(showEchoVerification(const UniValue&, int, const QString&)));
     connect(this, SIGNAL(signedProposalAvailable(const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignedPaymentProposal(const UniValue&, const std::vector<std::string> &)));
+    connect(this, SIGNAL(multisigWalletResponseAvailable(bool, const std::string&)), this, SLOT(MultisigParseWalletsResponse(bool, const std::string&)));
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
@@ -258,9 +263,18 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()),this,SLOT(passwordProvided()));
 
     //load local pubkeys
+
+    DBBMultisigWallet singleCopayWallet;
+    singleCopayWallet.client.setFilenameBase("copay_single");
+    singleCopayWallet.baseKeyPath = "m/200'";
+    singleCopayWallet.client.LoadLocalData();
+    vMultisigWallets.push_back(singleCopayWallet);
+
     DBBMultisigWallet copayWallet;
+    copayWallet.client.setFilenameBase("copay_multisig");
     copayWallet.client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
+
 
     deviceConnected = false;
     resetInfos();
@@ -273,6 +287,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
+
+    //update multisig wallet data
+    MultisigUpdateWallets();
 }
 
 void DBBDaemonGui::setActiveArrow(int pos) {
@@ -387,6 +404,19 @@ void DBBDaemonGui::setLoading(bool status)
     //TODO, subclass label and make it animated
 }
 
+void DBBDaemonGui::setNetLoading(bool status)
+{
+    this->statusBarLabelRight->setText((status) ? "loading..." : "");
+
+    if (statusBarloadingIndicatorOpacityAnimation)
+    {
+        if (status)
+            statusBarloadingIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+        else
+            statusBarloadingIndicatorOpacityAnimation->stop();
+    }
+}
+
 void DBBDaemonGui::resetInfos()
 {
     this->ui->versionLabel->setText("loading info...");
@@ -401,6 +431,21 @@ void DBBDaemonGui::resetInfos()
  UI Action Stack
  /////////////////
 */
+
+void DBBDaemonGui::createSingleWallet()
+{
+    if (!vMultisigWallets[0].client.IsSeeded())
+    {
+        GetXPubKey(0);
+    }
+    else
+    {
+        std::string walletsResponse;
+        vMultisigWallets[0].client.GetWallets(walletsResponse);
+        int i = 1;
+    }
+}
+
 void DBBDaemonGui::gotoOverviewPage()
 {
     this->ui->stackedWidget->setCurrentIndex(0);
@@ -555,7 +600,11 @@ void DBBDaemonGui::eraseClicked()
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
         }))
     {
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+
         vMultisigWallets[0].client.RemoveLocalData();
+        vMultisigWallets[1].client.RemoveLocalData();
+
         sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword.clear();
     }
@@ -726,7 +775,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
  DBB USB Commands (Response Parsing)
  ///////////////////////////////////
 */
-void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_status_t status, dbb_response_type_t tag)
+void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag)
 {
     processComnand = false;
     setLoading(false);
@@ -869,8 +918,12 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
                 std::string xPubKeyNew(outbuf);
 
-                vMultisigWallets[0].client.setMasterPubKey(xPubKeyNew);
-                emit XPubForCopayWalletIsAvailable();
+                {
+                    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+                    vMultisigWallets[subtag].client.setMasterPubKey(xPubKeyNew);
+                }
+
+                emit XPubForCopayWalletIsAvailable(subtag);
             }
             else
             {
@@ -899,9 +952,12 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
                 std::string xRequestKeyNew(outbuf);
 
-                vMultisigWallets[0].client.setRequestPubKey(xRequestKeyNew);
+                {
+                    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+                    vMultisigWallets[subtag].client.setRequestPubKey(xRequestKeyNew);
+                }
 
-                emit RequestXPubKeyForCopayWalletIsAvailable();
+                emit RequestXPubKeyForCopayWalletIsAvailable(subtag);
             }
             else
             {
@@ -995,21 +1051,32 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 copay stack
 /////////////////
 */
-void DBBDaemonGui::JoinCopayWallet()
+
+void DBBDaemonGui::JoinCopayWallet(int walletIndex)
 {
+    
+    if (walletIndex == -1)
+        walletIndex = 1;
+
     setResultText(QString::fromStdString(""));
 
-    if (!vMultisigWallets[0].client.IsSeeded()) {
+    bool isSeeded = false;
+    {
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        isSeeded = vMultisigWallets[walletIndex].client.IsSeeded();
+    }
+
+    if (!isSeeded) {
         //if there is no xpub and request key, seed over DBB
         setResultText("Initializing Copay Client... this might take some seconds.");
-        GetXPubKey();
+        GetXPubKey(walletIndex);
     } else {
         //send a join request
-        _JoinCopayWallet();
+        _JoinCopayWallet(walletIndex);
     }
 }
 
-void DBBDaemonGui::_JoinCopayWallet()
+void DBBDaemonGui::_JoinCopayWallet(int walletIndex)
 {
     bool ok;
     QString text = QInputDialog::getText(this, tr("Join Copay Wallet"), tr("Wallet Invitation Code"), QLineEdit::Normal, "", &ok);
@@ -1017,15 +1084,17 @@ void DBBDaemonGui::_JoinCopayWallet()
         return;
 
     // parse invitation code
+    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+
     BitpayWalletInvitation invitation;
-    if (!vMultisigWallets[0].client.ParseWalletInvitation(text.toStdString(), invitation))
+    if (!vMultisigWallets[walletIndex].client.ParseWalletInvitation(text.toStdString(), invitation))
     {
         QMessageBox::warning(this, tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"), QMessageBox::Ok);
         return;
     }
 
     std::string result;
-    bool ret = vMultisigWallets[0].client.JoinWallet(vMultisigWallets[0].participationName, invitation, result);
+    bool ret = vMultisigWallets[walletIndex].client.JoinWallet(vMultisigWallets[walletIndex].participationName, invitation, result);
 
     if (!ret) {
         UniValue responseJSON;
@@ -1044,30 +1113,48 @@ void DBBDaemonGui::_JoinCopayWallet()
     }
 }
 
-void DBBDaemonGui::GetXPubKey()
+void DBBDaemonGui::GetXPubKey(int walletIndex)
 {
-    QTexecuteCommandWrapper("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    std::string baseKeyPath;
+    {
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        baseKeyPath = vMultisigWallets[walletIndex].baseKeyPath;
+    }
+
+    QTexecuteCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER, walletIndex);
     });
 }
 
-void DBBDaemonGui::GetRequestXPubKey()
+void DBBDaemonGui::GetRequestXPubKey(int walletIndex)
 {
+    std::string baseKeyPath;
+    {
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        baseKeyPath = vMultisigWallets[walletIndex].baseKeyPath;
+    }
+
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    QTexecuteCommandWrapper("{\"xpub\":\"" + vMultisigWallets[0].baseKeyPath + "/1'/0\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    QTexecuteCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/1'/0\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST, walletIndex);
     });
 }
 
-void DBBDaemonGui::JoinCopayWalletWithXPubKey()
+void DBBDaemonGui::JoinCopayWalletWithXPubKey(int walletIndex)
 {
+    if (walletIndex == 0)
+    {
+        //single wallet, create wallet first
+        vMultisigWallets[walletIndex].client.CreateWallet(vMultisigWallets[walletIndex].participationName);
+        vMultisigWallets[walletIndex].client.CreateWallet(vMultisigWallets[walletIndex].participationName);
+    }
     //set the keys and try to join the wallet
-    _JoinCopayWallet();
+    _JoinCopayWallet(walletIndex);
 }
 
 
@@ -1079,20 +1166,92 @@ void DBBDaemonGui::hidePaymentProposalsWidget()
         delete currentPaymentProposalWidget;
         currentPaymentProposalWidget = NULL;
     }
-}
-bool DBBDaemonGui::checkPaymentProposals()
-{
-    bool ret = false;
-    int copayerIndex = INT_MAX;
 
-    std::string walletsResponse;
-    bool walletsAvailable = vMultisigWallets[0].client.GetWallets(walletsResponse);
+    this->ui->noProposalsAvailable->setVisible(true);
+}
+
+void DBBDaemonGui::updateUIMultisigWallets(const UniValue &walletResponse)
+{
+    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+
+    // get balance and name
+    UniValue balanceObj = find_value(walletResponse, "balance");
+    if (balanceObj.isObject())
+    {
+        UniValue availableAmountUni = find_value(balanceObj, "availableAmount");
+        vMultisigWallets[1].availableBalance = availableAmountUni.get_int64();
+    }
+
+    UniValue walletObj = find_value(walletResponse, "wallet");
+    if (walletObj.isObject())
+    {
+        UniValue nameUni = find_value(walletObj, "name");
+        if (nameUni.isStr())
+            vMultisigWallets[1].walletRemoteName = nameUni.get_str();
+
+
+        std::string mStr;
+        std::string nStr;
+
+        UniValue mUni = find_value(walletObj, "m");
+        if (mUni.isNum())
+            mStr = std::to_string(mUni.get_int());
+
+        UniValue nUni = find_value(walletObj, "n");
+        if (nUni.isNum())
+            nStr = std::to_string(nUni.get_int());
+
+        if (mStr.size() > 0 && nStr.size() > 0)
+            vMultisigWallets[1].walletRemoteName += " ("+mStr+" of "+nStr+")";
+    }
+
+    UniValue pendingTxps;
+    pendingTxps = find_value(walletResponse, "pendingTxps");
+    if (pendingTxps.isArray()) {
+        this->ui->proposalsLabel->setText(tr("Current Payment Proposals (%1)").arg(pendingTxps.size()));
+    }
+
+
+
+    //TODO, add a monetary amount / unit helper function
+    this->ui->multisigBalance->setText(tr("%1 Bits").arg(vMultisigWallets[1].availableBalance));
+    this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[1].walletRemoteName));
+}
+
+void DBBDaemonGui::MultisigUpdateWallets()
+{
+    if (netThreadBusy)
+        return;
+
+    //join the tread in case if one is already running
+    if (netThread.joinable())
+        netThread.join();
+
+    //TODO: find a better more generic way to detach net threads
+    netThread = std::thread([this]() {
+        std::string walletsResponse;
+
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        bool walletsAvailable = this->vMultisigWallets[1].client.GetWallets(walletsResponse);
+        emit multisigWalletResponseAvailable(walletsAvailable, walletsResponse);
+    });
+    netThreadBusy = true;
+    setNetLoading(true);
+
+    int i = 1;
+}
+
+void DBBDaemonGui::MultisigParseWalletsResponse(bool walletsAvailable, const std::string &walletsResponse)
+{
+    netThreadBusy = false;
+    setNetLoading(false);
 
     if (!walletsAvailable)
     {
         QMessageBox::warning(this, tr("No Wallet"),
                              tr("No Copay Wallet Available"),
                              QMessageBox::Ok);
+        return;
     }
 
     UniValue response;
@@ -1100,84 +1259,147 @@ bool DBBDaemonGui::checkPaymentProposals()
         if (response.isObject()) {
             printf("Wallet: %s\n", response.write(true, 2).c_str());
 
-            UniValue pendingTxps;
-            pendingTxps = find_value(response, "pendingTxps");
-            if (!pendingTxps.isNull() && pendingTxps.isArray()) {
-                printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
-                std::vector<UniValue> values = pendingTxps.getValues();
-                if (values.size() == 0)
+            updateUIMultisigWallets(response);
+            MultisigUpdatePaymentProposals(response);
+        }
+    }
+}
+
+bool DBBDaemonGui::MultisigDisplayPaymentProposal(const UniValue &pendingTxps, const std::string &targetID)
+{
+    if (pendingTxps.isArray()) {
+        std::vector<UniValue> values = pendingTxps.getValues();
+        if (values.size() == 0)
+        {
+            hidePaymentProposalsWidget();
+            return false;
+        }
+
+        size_t cnt = 0;
+        for (const UniValue &oneProposal : values)
+        {
+
+            UniValue idUni = find_value(oneProposal, "id");
+            if (!idUni.isStr() || idUni.get_str() != targetID)
+            {
+                cnt++;
+                continue;
+            }
+
+            std::string prevProposalID;
+            std::string nextProposalID;
+
+            if (cnt > 0)
+            {
+                UniValue idUni = find_value(values[cnt-1], "id");
+                if (idUni.isStr())
+                    prevProposalID = idUni.get_str();
+            }
+
+            if (cnt < values.size()-1)
+            {
+                UniValue idUni = find_value(values[cnt+1], "id");
+                if (idUni.isStr())
+                    nextProposalID = idUni.get_str();
+            }
+
+            if (!currentPaymentProposalWidget)
+            {
+                currentPaymentProposalWidget = new PaymentProposal(this->ui->copay);
+                connect(currentPaymentProposalWidget, SIGNAL(processProposal(const UniValue &, int )), this, SLOT(PaymentProposalAction(const UniValue &, int)));
+                connect(currentPaymentProposalWidget, SIGNAL(shouldDisplayProposal(const UniValue &, const std::string &)), this, SLOT(MultisigDisplayPaymentProposal(const UniValue &, const std::string &)));
+            }
+
+            currentPaymentProposalWidget->move(15,115);
+            currentPaymentProposalWidget->show();
+            currentPaymentProposalWidget->SetData(vMultisigWallets[1].client.GetCopayerId(), pendingTxps, oneProposal, prevProposalID, nextProposalID);
+
+            this->ui->noProposalsAvailable->setVisible(false);
+
+            cnt++;
+        }
+    }
+}
+
+bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue &response)
+{
+    bool ret = false;
+    int copayerIndex = INT_MAX;
+
+    UniValue pendingTxps;
+    pendingTxps = find_value(response, "pendingTxps");
+    if (!pendingTxps.isNull() && pendingTxps.isArray()) {
+
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        vMultisigWallets[1].currentPaymentProposals = pendingTxps;
+
+        printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
+        std::vector<UniValue> values = pendingTxps.getValues();
+        if (values.size() == 0)
+        {
+            hidePaymentProposalsWidget();
+            return false;
+        }
+
+        size_t cnt = 0;
+
+        for (const UniValue &oneProposal : values)
+        {
+
+            QString amount;
+            QString toAddress;
+
+            UniValue toAddressUni = find_value(oneProposal, "toAddress");
+            UniValue amountUni = find_value(oneProposal, "amount");
+            UniValue actions = find_value(oneProposal, "actions");
+
+            bool skipProposal = false;
+            if (actions.isArray())
+            {
+                for (const UniValue &oneAction : actions.getValues())
                 {
-                    hidePaymentProposalsWidget();
-                    return false;
-                }
+                    UniValue copayerId = find_value(oneAction, "copayerId");
+                    UniValue actionType = find_value(oneAction, "type");
 
-                for (const UniValue &oneProposal : values)
-                {
+                    if (!copayerId.isStr() || !actionType.isStr())
+                        continue;
 
-                    QString amount;
-                    QString toAddress;
-
-                    UniValue toAddressUni = find_value(oneProposal, "toAddress");
-                    UniValue amountUni = find_value(oneProposal, "amount");
-                    UniValue actions = find_value(oneProposal, "actions");
-
-                    bool skipProposal = false;
-                    if (actions.isArray())
-                    {
-                        for (const UniValue &oneAction : actions.getValues())
-                        {
-                            UniValue copayerId = find_value(oneAction, "copayerId");
-                            UniValue actionType = find_value(oneAction, "type");
-
-                            if (!copayerId.isStr() || !actionType.isStr())
-                                continue;
-
-                            if (vMultisigWallets[0].client.GetCopayerId() == copayerId.get_str() && actionType.get_str() == "accept") {
-                                skipProposal = true;
-                                break;
-                            }
-                        }
+                    if (vMultisigWallets[1].client.GetCopayerId() == copayerId.get_str() && actionType.get_str() == "accept") {
+                        skipProposal = true;
+                        break;
                     }
+                }
+            }
 //                    if (skipProposal)
 //                        continue;
 
-                    if (toAddressUni.isStr())
-                        toAddress = QString::fromStdString(toAddressUni.get_str());
-                    if (amountUni.isNum())
-                        amount = QString::number(((double)amountUni.get_int64()/100000000.0));
-
-                    if (!currentPaymentProposalWidget)
-                    {
-                        currentPaymentProposalWidget = new PaymentProposal(this->ui->copay);
-                        connect(currentPaymentProposalWidget, SIGNAL(processProposal(const UniValue &, int )), this, SLOT(PaymentProposalAction(const UniValue &, int)));
-                    }
-                    
-                    currentPaymentProposalWidget->move(15,15);
-                    currentPaymentProposalWidget->show();
-                    currentPaymentProposalWidget->SetData(oneProposal);
-                    return true;
-                    
-                    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
-                    if (reply == QMessageBox::No)
-                        return false;
-                } //end proposal loop
-            }
-        }
+            UniValue isUni = find_value(oneProposal, "id");
+            if (isUni.isStr())
+                MultisigDisplayPaymentProposal(pendingTxps, isUni.get_str());
+            
+            return true;
+            
+            QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
+            if (reply == QMessageBox::No)
+                return false;
+        } //end proposal loop
     }
-    hidePaymentProposalsWidget();
+
     return ret;
 }
 
 void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int actionType)
 {
+    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+
     if (actionType == ProposalActionTypeReject)
     {
-        vMultisigWallets[0].client.RejectTxProposal(paymentProposal);
-        checkPaymentProposals();
+        vMultisigWallets[1].client.RejectTxProposal(paymentProposal);
+        MultisigUpdateWallets();
         return;
     }
     std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
-    vMultisigWallets[0].client.ParseTxProposal(paymentProposal, inputHashesAndPaths);
+    vMultisigWallets[1].client.ParseTxProposal(paymentProposal, inputHashesAndPaths);
 
     //build sign command
     std::string hashCmd;
@@ -1185,7 +1407,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     {
         std::string hexHash = DBB::HexStr((unsigned char *)&hashAndPathPair.second[0], (unsigned char *)&hashAndPathPair.second[0]+32);
 
-        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[0].baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
+        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[1].baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
     }
     hashCmd.pop_back(); hashCmd.pop_back(); // remove ", "
 
@@ -1242,6 +1464,8 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
 
 void DBBDaemonGui::postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs)
 {
+    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+
     vMultisigWallets[0].client.PostSignaturesForTxProposal(proposal, vSigs);
-    checkPaymentProposals();
+    MultisigUpdateWallets();
 }

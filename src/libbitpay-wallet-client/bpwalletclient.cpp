@@ -50,6 +50,13 @@ BitPayWalletClient::BitPayWalletClient()
 {
     //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
+    filenameBase = "copay_multisig";
+}
+
+void BitPayWalletClient::setFilenameBase(const std::string &filenameBaseIn)
+{
+    if (filenameBase.size() > 0)
+        filenameBase = filenameBaseIn;
 }
 
 BitPayWalletClient::~BitPayWalletClient()
@@ -233,6 +240,54 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     printf("wallet pkey hex: %s\n", DBB::HexStr(invitationOut.walletPrivKey, invitationOut.walletPrivKey+32).c_str());
     invitationOut.network = secretSplit[2] == "T" ? "testnet" : "livenet";
     return true;
+}
+
+bool BitPayWalletClient::CreateWallet(const std::string& walletName)
+{
+    btc_key key;
+    btc_privkey_init(&key);
+    btc_privkey_gen(&key);
+
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    btc_pubkey_from_key(&key, &pubkey);
+
+    std::string pubKeyHex = DBB::HexStr(pubkey.pubkey, pubkey.pubkey+33);
+
+    //form request
+    UniValue jsonArgs(UniValue::VOBJ);
+    jsonArgs.push_back(Pair("m", 1));
+    jsonArgs.push_back(Pair("n", 1));
+    jsonArgs.push_back(Pair("name", walletName));
+    jsonArgs.push_back(Pair("pubKey", pubKeyHex));
+    jsonArgs.push_back(Pair("network", "testnet"));
+    std::string json = jsonArgs.write();
+
+    long httpStatusCode = 0;
+    std::string response;
+    SendRequest("post", "/v1/wallets/", json, response, httpStatusCode);
+
+    if (httpStatusCode != 200)
+        return false;
+
+    UniValue responseUni;
+    responseUni.read(response);
+
+    if (!responseUni.isObject())
+        return false;
+
+    UniValue walletID = find_value(responseUni, "walletId");
+    if (!walletID.isStr())
+        return false;
+    
+
+    BitpayWalletInvitation inv;
+    inv.walletID = walletID.get_str();
+    inv.network = "testnet";
+    memcpy(inv.walletPrivKey, key.privkey, 32);
+
+    std::string newResponse;
+    JoinWallet("digitalbitbox", inv, newResponse);
 }
 
 bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response)
@@ -743,7 +798,7 @@ void BitPayWalletClient::SaveLocalData()
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* writeFile = fopen((dataDir + "/copay.dat").c_str(), "wb");
+    FILE* writeFile = fopen((dataDir + "/"+filenameBase+".dat").c_str(), "wb");
     if (writeFile) {
 
         unsigned char header[2] = {0xAA, 0xF0};
@@ -760,7 +815,7 @@ void BitPayWalletClient::LoadLocalData()
 {
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* fh = fopen((dataDir + "/copay.dat").c_str(), "rb");
+    FILE* fh = fopen((dataDir + "/"+filenameBase+".dat").c_str(), "rb");
     if (fh) {
         unsigned char header[2];
         if (fread(&header, 1, 2, fh) != 2)
@@ -788,5 +843,5 @@ void BitPayWalletClient::LoadLocalData()
 void BitPayWalletClient::RemoveLocalData()
 {
     std::string dataDir = GetDefaultDBBDataDir();
-    remove((dataDir + "/copay.dat").c_str());
+    remove((dataDir + "/"+filenameBase+".dat").c_str());
 }
