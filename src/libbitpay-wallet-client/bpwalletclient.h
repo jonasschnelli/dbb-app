@@ -80,6 +80,14 @@ public:
     //!Create a wallet
     bool CreateWallet(const std::string& walletName);
 
+    //!Get a new address and writes it to &newAddress
+    bool GetNewAddress(std::string& newAddress);
+
+    //!Return the last (disk) cached known address for receiving coins
+    std::string GetLastKnownAddress();
+
+    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb);
+
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
 
@@ -140,6 +148,7 @@ private:
 
     std::string filenameBase;
     std::string baseURL; //!< base URL for the wallet server
+    std::string lastKnownAddressJson; //!< base URL for the wallet server
 
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
     std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);

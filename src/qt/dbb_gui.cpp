@@ -156,6 +156,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seed()));
     connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
+    connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(MultisigUpdateWallets()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
@@ -268,6 +269,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     singleCopayWallet.client.setFilenameBase("copay_single");
     singleCopayWallet.baseKeyPath = "m/200'";
     singleCopayWallet.client.LoadLocalData();
+    this->ui->currentAddress->setText(QString::fromStdString(singleCopayWallet.client.GetLastKnownAddress()));
     vMultisigWallets.push_back(singleCopayWallet);
 
     DBBMultisigWallet copayWallet;
@@ -308,11 +310,12 @@ void DBBDaemonGui::mainMultisigButtonClicked() {
 
 void DBBDaemonGui::mainReceiveButtonClicked() {
     setActiveArrow(1);
-    gotoMultisigPage();
+    gotoReceivePage();
 }
 
 void DBBDaemonGui::mainSendButtonClicked() {
     setActiveArrow(2);
+    gotoSendCoinsPage();
 }
 
 void DBBDaemonGui::mainSettingsButtonClicked() {
@@ -446,9 +449,32 @@ void DBBDaemonGui::createSingleWallet()
     }
 }
 
+void DBBDaemonGui::getNewAddress()
+{
+    if (vMultisigWallets[0].client.IsSeeded())
+    {
+        std::string address;
+        vMultisigWallets[0].client.GetNewAddress(address);
+        this->ui->currentAddress->setText(QString::fromStdString(address));
+    }
+    else
+    {
+    }
+}
+
 void DBBDaemonGui::gotoOverviewPage()
 {
     this->ui->stackedWidget->setCurrentIndex(0);
+}
+
+void DBBDaemonGui::gotoSendCoinsPage()
+{
+    this->ui->stackedWidget->setCurrentIndex(3);
+}
+
+void DBBDaemonGui::gotoReceivePage()
+{
+    this->ui->stackedWidget->setCurrentIndex(4);
 }
 
 void DBBDaemonGui::gotoMultisigPage()
