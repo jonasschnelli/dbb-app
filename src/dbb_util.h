@@ -43,5 +43,8 @@ std::string HexStr(unsigned char* itbegin, unsigned char* itend, bool fSpaces=fa
 std::vector<unsigned char> ParseHex(const char* psz);
 std::vector<unsigned char> ParseHex(const std::string& str);
 signed char HexDigit(char c);
+
+std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems);
+std::vector<std::string> split(const std::string &s, char delim);
 }
 #endif // LIBDBB_UTIL_H

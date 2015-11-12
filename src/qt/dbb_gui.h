@@ -15,7 +15,7 @@
 #include <thread>
 #include <mutex>
 
-#include "libbitpay-wallet-client/bpwalletclient.h"
+#include "dbb_wallet.h"
 #include "dbb_app.h"
 #include "backupdialog.h"
 #include "paymentproposal.h"
@@ -24,22 +24,6 @@ namespace Ui
 {
 class MainWindow;
 }
-
-class DBBMultisigWallet
-{
-public:
-    BitPayWalletClient client;
-    std::string baseKeyPath;
-    std::string participationName;
-    std::string walletRemoteName;
-    UniValue currentPaymentProposals;
-    int64_t availableBalance;
-    DBBMultisigWallet()
-    {
-        baseKeyPath = "m/131'";
-        participationName = "digitalbitbox";
-    }
-};
 
 //DBB USB response types
 typedef enum DBB_RESPONSE_TYPE
@@ -74,84 +58,26 @@ class DBBDaemonGui : public QMainWindow
 public:
     explicit DBBDaemonGui(QWidget* parent = 0);
     ~DBBDaemonGui();
-    void GetXPubKey(int walletIndex);
 
 public slots:
-    //!main callback when the device gets connected/disconnected
-    void changeConnectedState(bool state);
-    //!slot to ask for the current session password
-    void askForSessionPassword();
 
-    void eraseClicked();
-    void ledClicked();
-    void setResultText(const QString& result);
-    void setPasswordClicked(bool showInfo=true);
-    void seed();
-
-    //backup calls
-    void showBackupDialog();
-    void addBackup();
-    void listBackup();
-    void eraseAllBackups();
-    void restoreBackup(const QString& backupFilename);
-
-    void getRandomNumber();
-    //!lock the device, disabled "backup", "verifypass" and "seed" command
-    void lockDevice();
-
-    //!enable or disable dbb/usb/loading indication in the UI
-    void setLoading(bool status);
-
-    //!enable or disable net/loading indication in the UI
-    void setNetLoading(bool status);
-
-    //!resets device infos (in case of a disconnect)
-    void resetInfos();
-    //!update overview flags (wallet / lock, etc)
-    void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
-    void JoinCopayWallet(int walletIndex = -1);
-    void JoinCopayWalletWithXPubKey(int walletIndex);
-    void GetRequestXPubKey(int walletIndex);
-
-    void MultisigUpdateWallets();
-    void MultisigParseWalletsResponse(bool walletAvailable, const std::string &walletsResponse);
-    bool MultisigUpdatePaymentProposals(const UniValue &response);
-    bool MultisigDisplayPaymentProposal(const UniValue &pendingTxps, const std::string &targetID);
-    void updateUIMultisigWallets(const UniValue &walletResponse);
-    void PaymentProposalAction(const UniValue &paymentProposal, int actionType);
-    void gotoOverviewPage();
-    void gotoReceivePage();
-    void gotoSendCoinsPage();
-    void gotoMultisigPage();
-    void gotoSettingsPage();
-    void getInfo();
-
-    void createSingleWallet();
-    void getNewAddress();
-
-    void mainOverviewButtonClicked();
-    void mainMultisigButtonClicked();
-    void mainReceiveButtonClicked();
-    void mainSendButtonClicked();
-    void mainSettingsButtonClicked();
-
-
-    void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag);
-    void showEchoVerification(const UniValue& response, int actionType, QString echoStr);
-    void postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs);
-
-    void passwordProvided();
 signals:
-    void showCommandResult(const QString& result);
+    //emited when the device state has chaned (connected / disconnected)
     void deviceStateHasChanged(bool state);
+    //emited when the DBB could generate a xpub
     void XPubForCopayWalletIsAvailable(int walletIndex);
+    //emited when the request xpub key is available
     void RequestXPubKeyForCopayWalletIsAvailable(int walletIndex);
+    //emited when a response from the DBB is available
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
-
-    void multisigWalletResponseAvailable(bool walletsAvailable, const std::string &walletsResponse);
-
-    void shouldVerifySigning(const UniValue &paymentProposal, int actionType, const QString& signature);
-    void signedProposalAvailable(const UniValue& proposal, const std::vector<std::string> &vSigs);
+    //emited when a copay getwallet response is available
+    void getWalletsResponseAvailable(DBBWallet *wallet, bool walletsAvailable, const std::string &walletsResponse);
+    //emited when a payment proposal and a given signatures should be verified
+    void shouldVerifySigning(DBBWallet *, const UniValue &paymentProposal, int actionType, const QString& signature);
+    //emited when signatures for a payment proposal are available
+    void signedProposalAvailable(DBBWallet *, const UniValue& proposal, const std::vector<std::string> &vSigs);
+    //emited when a wallet needs update
+    void shouldUpdateWallet(DBBWallet *);
 
 private:
     Ui::MainWindow* ui;
@@ -159,6 +85,9 @@ private:
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
+    QAction *overviewAction;
+    QAction *walletsAction;
+    QAction *settingsAction;
     bool processComnand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
@@ -166,29 +95,144 @@ private:
     QPropertyAnimation *statusBarloadingIndicatorOpacityAnimation;
     std::string sessionPassword; //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
-    std::vector<DBBMultisigWallet> vMultisigWallets;
+    std::vector<DBBWallet*> vMultisigWallets;  //!<immutable pointers to the multisig wallet objects (currently only 1)
+    DBBWallet *singleWallet; //!<immutable pointer to the single wallet object
+    PaymentProposal *currentPaymentProposalWidget; //!< UI element for showing a payment proposal
 
-    //!check device state and do a UI update
-    void checkDevice();
 
-    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
-    void _JoinCopayWallet(int walletIndex);
-    bool QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
-
-    QAction *overviewAction;
-    QAction *walletsAction;
-    QAction *settingsAction;
-
-    void setActiveArrow(int pos);
-    void hidePaymentProposalsWidget();
-    PaymentProposal *currentPaymentProposalWidget;
-    void hideSessionPasswordView();
+    //== Plug / Unplug ==
+    //! gets called when the device was sucessfully unlocked (password accepted)
+    void deviceIsReadyToInteract();
+    //!enabled or disabled the tabbar
     void setTabbarEnabled(bool status);
-    void passwordAccepted();
+    //!enable or disable dbb/usb/loading indication in the UI
+    void setLoading(bool status);
+    //!enable or disable net/loading indication in the UI
+    void setNetLoading(bool status);
+    //!resets device infos (in case of a disconnect)
+    void resetInfos();
+    //! updates the ui after the current device state
+    void uiUpdateDeviceState();
 
-    bool netThreadBusy;
-    std::thread netThread;
+    //== UI ==
+    //general proxy function to show an alert;
+    void showAlert(const QString &title, const QString &errorOut, bool critical = false);
+    void setActiveArrow(int pos);
+    //!gets called when the password was accepted by the DBB hardware
+    void passwordAccepted();
+    //!hides the enter password form
+    void hideSessionPasswordView();
+    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
+    //!update overview flags (wallet / lock, etc)
+    void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
+
+    //== USB ==
+    //wrapper for the DBB USB command action
+    bool executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+
+    //== Copay Wallet ==
+    void hidePaymentProposalsWidget();
+    void executeNetUpdateWallet(DBBWallet *wallet, std::function<void(bool, std::string&)> cmdFinished);
+
+
+
+
+
+
+
+
+    bool multisigWalletIsUpdating;
+    bool singleWalletIsUpdating;
+    std::vector<std::pair<std::time_t, std::thread*> > netThreads;
     std::mutex cs_vMultisigWallets;
+
+private slots:
+    //!main callback when the device gets connected/disconnected
+    void changeConnectedState(bool state);
+
+    //== UI ==
+    //general proxy function to show an alert;
+    void mainOverviewButtonClicked();
+    void mainMultisigButtonClicked();
+    void mainReceiveButtonClicked();
+    void mainSendButtonClicked();
+    void mainSettingsButtonClicked();
+    void gotoOverviewPage();
+    void gotoReceivePage();
+    void gotoSendCoinsPage();
+    void gotoMultisigPage();
+    void gotoSettingsPage();
+    //!shows info about the smartphone verification
+    void showEchoVerification(DBBWallet *, const UniValue& response, int actionType, QString echoStr);
+    //!gets called when the user hits enter in the "enter password form"
+    void passwordProvided();
+    //!slot to ask for the current session password
+    void askForSessionPassword();
+
+    //== DBB USB ==
+    //!function is user whishes to erase the DBB
+    void eraseClicked();
+    void ledClicked();
+    //!get basic informations about the connected DBB
+    void getInfo();
+    void setPasswordClicked(bool showInfo=true);
+    //!seed the wallet, flush everything and create a new bip32 entropy
+    void seedHardware();
+
+    //== DBB USB / UTILS ==
+    //!get a random number from the dbb
+    void getRandomNumber();
+    //!lock the device, disabled "backup", "verifypass" and "seed" command
+    void lockDevice();
+
+    //== DBB USB / BACKUP ==
+    void showBackupDialog();
+    void addBackup();
+    void listBackup();
+    void eraseAllBackups();
+    void restoreBackup(const QString& backupFilename);
+
+    //== DBB USB Commands (Response Parsing) ==
+    //!main function to parse a response from the DBB
+    void parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag);
+
+    //== Copay Wallet ==
+    //!create a single wallet
+    void createSingleWallet();
+    //!get a new address
+    void getNewAddress();
+    //!check the UI values and create a payment proposal from them, sign and post them
+    void createTxProposalPressed();
+    void joinCopayWalletClicked();
+    //!initiates a copay multisig wallet join
+    void joinMultisigWalletInitiate(DBBWallet *);
+    //!gets a xpub key for the copay wallet
+    void getXPubKeyForCopay(int walletIndex);
+    //!gets a xpub key at the keypath that is used for the request private key
+    void getRequestXPubKeyForCopay(int walletIndex);
+    //!joins a copay wallet with given xpub key
+    void joinCopayWalletWithXPubKey(int walletIndex);
+    //!update a given wallet object
+    void updateWallet(DBBWallet *wallet);
+    //!update multisig wallets
+    void MultisigUpdateWallets();
+    //!update single wallet
+    void SingleWalletUpdateWallets();
+    //!update the mutisig ui from a getWallets response
+    void updateUIMultisigWallets(const UniValue &walletResponse);
+    //!update the singlewallet ui from a getWallets response
+    void updateUISingleWallet(const UniValue &walletResponse);
+
+    //!parse single wallet wallet response
+    void parseWalletsResponse(DBBWallet *wallet, bool walletsAvailable, const std::string &walletsResponse);
+    //!update payment proposals
+    bool MultisigUpdatePaymentProposals(const UniValue &response);
+    //!show a single payment proposals with given id
+    bool MultisigShowPaymentProposal(const UniValue &pendingTxps, const std::string &targetID);
+    //!execute payment proposal action
+    void PaymentProposalAction(DBBWallet *wallet, const UniValue &paymentProposal, int actionType);
+    //!post 
+    void postSignaturesForPaymentProposal(DBBWallet *wallet, const UniValue& proposal, const std::vector<std::string> &vSigs);
 };
 
 #endif

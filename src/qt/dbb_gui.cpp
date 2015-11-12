@@ -11,6 +11,7 @@
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSpacerItem>
+#include <QTimer>
 #include <QToolBar>
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
@@ -20,52 +21,25 @@
 #include <dbb.h>
 
 #include "dbb_util.h"
+#include "dbb_netthread.h"
 
 #include <cstdio>
 #include <ctime>
+#include <chrono>
 
 #include <univalue.h>
 #include <btc/bip32.h>
 #include <btc/tx.h>
 
 
-//TODO: move to util:
-std::vector<std::string> &split(const std::string &s, char delim, std::vector<std::string> &elems) {
-    std::stringstream ss(s);
-    std::string item;
-    while (std::getline(ss, item, delim)) {
-        elems.push_back(item);
-    }
-    return elems;
+//function from dbb_app.cpp
+extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+
+
+DBBDaemonGui::~DBBDaemonGui()
+{
+
 }
-
-
-std::vector<std::string> split(const std::string &s, char delim) {
-    std::vector<std::string> elems;
-    split(s, delim, elems);
-    return elems;
-}
-/////////////////
-
-void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
-
-bool DBBDaemonGui::QTexecuteCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished) {
-
-    if (processComnand)
-        return false;
-
-    if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON)
-    {
-            ui->touchbuttonInfo->setVisible(true);
-    }
-
-    setLoading(true);
-    processComnand = true;
-    executeCommand(cmd, sessionPassword, cmdFinished);
-
-    return true;
-}
-
 
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     QMainWindow(parent),
@@ -148,29 +122,32 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     qRegisterMetaType<dbb_cmd_execution_status_t>("dbb_cmd_execution_status_t");
     qRegisterMetaType<dbb_response_type_t>("dbb_response_type_t");
     qRegisterMetaType<std::vector<std::string>>("std::vector<std::string>");
+    qRegisterMetaType<DBBWallet *>("DBBWallet *");
 
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
-    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seed()));
-    connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seed()));
+    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
+    connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seedHardware()));
     connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
-    connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(JoinCopayWallet()));
+    connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(joinCopayWalletClicked()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(MultisigUpdateWallets()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
     connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
     connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
+    connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
 
     // connect custom signals
-    connect(this, SIGNAL(showCommandResult(const QString&)), this, SLOT(setResultText(const QString&)));
-    connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(GetRequestXPubKey(int)));
-    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(JoinCopayWalletWithXPubKey(int)));
+    connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
+    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(joinCopayWalletWithXPubKey(int)));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)));
-    connect(this, SIGNAL(shouldVerifySigning(const UniValue&, int, const QString&)), this, SLOT(showEchoVerification(const UniValue&, int, const QString&)));
-    connect(this, SIGNAL(signedProposalAvailable(const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignedPaymentProposal(const UniValue&, const std::vector<std::string> &)));
-    connect(this, SIGNAL(multisigWalletResponseAvailable(bool, const std::string&)), this, SLOT(MultisigParseWalletsResponse(bool, const std::string&)));
+    connect(this, SIGNAL(shouldVerifySigning(DBBWallet *, const UniValue&, int, const QString&)), this, SLOT(showEchoVerification(DBBWallet *, const UniValue&, int, const QString&)));
+    connect(this, SIGNAL(signedProposalAvailable(DBBWallet *, const UniValue&, const std::vector<std::string> &)), this, SLOT(postSignaturesForPaymentProposal(DBBWallet *,const UniValue&, const std::vector<std::string> &)));
+    connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet *, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet *, bool, const std::string&)));
+
+    connect(this, SIGNAL(shouldUpdateWallet(DBBWallet *)), this, SLOT(updateWallet(DBBWallet *)));
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
@@ -238,16 +215,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
         settingsAction->setCheckable(true);
         settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
     tabGroup->addAction(settingsAction);
-     
-//    QToolBar *toolbar = addToolBar(tr("Tabs toolbar"));
-//            toolbar->setMovable(false);
-//            toolbar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-//            toolbar->addAction(overviewAction);
-//            toolbar->addAction(walletsAction);
-//            toolbar->addAction(settingsAction);
-//            overviewAction->setChecked(true);
-//    toolbar->setStyleSheet("QToolButton{margin:0px; padding: 3px; font-size:11pt;}");
-//    toolbar->setIconSize(QSize(24,24));
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
@@ -264,24 +231,22 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()),this,SLOT(passwordProvided()));
 
     //load local pubkeys
+    singleWallet = new DBBWallet();
+    singleWallet->client.setFilenameBase("copay_single");
+    singleWallet->baseKeyPath = "m/203'";
+    singleWallet->client.LoadLocalData();
+    this->ui->currentAddress->setText(QString::fromStdString(singleWallet->client.GetLastKnownAddress()));
 
-    DBBMultisigWallet singleCopayWallet;
-    singleCopayWallet.client.setFilenameBase("copay_single");
-    singleCopayWallet.baseKeyPath = "m/200'";
-    singleCopayWallet.client.LoadLocalData();
-    this->ui->currentAddress->setText(QString::fromStdString(singleCopayWallet.client.GetLastKnownAddress()));
-    vMultisigWallets.push_back(singleCopayWallet);
-
-    DBBMultisigWallet copayWallet;
-    copayWallet.client.setFilenameBase("copay_multisig");
-    copayWallet.client.LoadLocalData();
+    DBBWallet *copayWallet = new DBBWallet();
+    copayWallet->client.setFilenameBase("copay_multisig");
+    copayWallet->client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
 
 
     deviceConnected = false;
     resetInfos();
     //set status bar connection status
-    checkDevice();
+    uiUpdateDeviceState();
     changeConnectedState(DBB::isConnectionOpen());
 
 
@@ -289,43 +254,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) :
 
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
-
-    //update multisig wallet data
-    MultisigUpdateWallets();
-}
-
-void DBBDaemonGui::setActiveArrow(int pos) {
-    this->ui->activeArrow->move(pos*96+40,39);
-}
-
-void DBBDaemonGui::mainOverviewButtonClicked() {
-    setActiveArrow(0);
-    gotoOverviewPage();
-}
-
-void DBBDaemonGui::mainMultisigButtonClicked() {
-    setActiveArrow(4);
-    gotoMultisigPage();
-}
-
-void DBBDaemonGui::mainReceiveButtonClicked() {
-    setActiveArrow(1);
-    gotoReceivePage();
-}
-
-void DBBDaemonGui::mainSendButtonClicked() {
-    setActiveArrow(2);
-    gotoSendCoinsPage();
-}
-
-void DBBDaemonGui::mainSettingsButtonClicked() {
-    setActiveArrow(3);
-    gotoSettingsPage();
-}
-
-DBBDaemonGui::~DBBDaemonGui()
-{
-
 }
 
 /*
@@ -333,6 +261,15 @@ DBBDaemonGui::~DBBDaemonGui()
  Plug / Unplug / GetInfo stack
  /////////////////////////////
 */
+#pragma mark plug / unpluag stack
+
+void DBBDaemonGui::deviceIsReadyToInteract()
+{
+    //update multisig wallet data
+    MultisigUpdateWallets();
+    SingleWalletUpdateWallets();
+}
+
 void DBBDaemonGui::changeConnectedState(bool state)
 {
     bool stateChanged = deviceConnected != state;
@@ -348,7 +285,7 @@ void DBBDaemonGui::changeConnectedState(bool state)
             this->statusBarButton->setVisible(false);
         }
 
-        checkDevice();
+        uiUpdateDeviceState();
     }
 }
 
@@ -360,32 +297,6 @@ void DBBDaemonGui::setTabbarEnabled(bool status)
     this->ui->sendButton->setEnabled(status);
     this->ui->mainSettingsButton->setEnabled(status);
     this->ui->multisigButton->setEnabled(status);
-}
-
-void DBBDaemonGui::checkDevice()
-{
-    this->ui->verticalLayoutWidget->setVisible(deviceConnected);
-    this->ui->balanceLabel->setVisible(deviceConnected);
-    this->ui->noDeviceWidget->setVisible(!deviceConnected);
-
-    if (!deviceConnected)
-    {
-        walletsAction->setEnabled(false);
-        settingsAction->setEnabled(false);
-        gotoOverviewPage();
-        setActiveArrow(0);
-        overviewAction->setChecked(true);
-        resetInfos();
-        sessionPassword.clear();
-        hideSessionPasswordView();
-        setTabbarEnabled(false);
-    }
-    else
-    {
-        walletsAction->setEnabled(true);
-        settingsAction->setEnabled(true);
-        askForSessionPassword();
-    }
 }
 
 void DBBDaemonGui::setLoading(bool status)
@@ -428,38 +339,75 @@ void DBBDaemonGui::resetInfos()
     updateOverviewFlags(false,false,true);
 }
 
+void DBBDaemonGui::uiUpdateDeviceState()
+{
+    this->ui->verticalLayoutWidget->setVisible(deviceConnected);
+    this->ui->balanceLabel->setVisible(deviceConnected);
+    this->ui->noDeviceWidget->setVisible(!deviceConnected);
+
+    if (!deviceConnected)
+    {
+        walletsAction->setEnabled(false);
+        settingsAction->setEnabled(false);
+        gotoOverviewPage();
+        setActiveArrow(0);
+        overviewAction->setChecked(true);
+        resetInfos();
+        sessionPassword.clear();
+        hideSessionPasswordView();
+        setTabbarEnabled(false);
+    }
+    else
+    {
+        walletsAction->setEnabled(true);
+        settingsAction->setEnabled(true);
+        askForSessionPassword();
+    }
+}
 
 /*
  /////////////////
  UI Action Stack
  /////////////////
 */
+#pragma mark UI Action Stack
 
-void DBBDaemonGui::createSingleWallet()
+void DBBDaemonGui::showAlert(const QString &title, const QString &errorOut, bool critical)
 {
-    if (!vMultisigWallets[0].client.IsSeeded())
-    {
-        GetXPubKey(0);
-    }
+    if (critical)
+        QMessageBox::critical(this, title, errorOut, QMessageBox::Ok);
     else
-    {
-        std::string walletsResponse;
-        vMultisigWallets[0].client.GetWallets(walletsResponse);
-        int i = 1;
-    }
+        QMessageBox::warning(this, title, errorOut, QMessageBox::Ok);
+
 }
 
-void DBBDaemonGui::getNewAddress()
-{
-    if (vMultisigWallets[0].client.IsSeeded())
-    {
-        std::string address;
-        vMultisigWallets[0].client.GetNewAddress(address);
-        this->ui->currentAddress->setText(QString::fromStdString(address));
-    }
-    else
-    {
-    }
+void DBBDaemonGui::setActiveArrow(int pos) {
+    this->ui->activeArrow->move(pos*96+40,39);
+}
+
+void DBBDaemonGui::mainOverviewButtonClicked() {
+    setActiveArrow(0);
+    gotoOverviewPage();
+}
+
+void DBBDaemonGui::mainMultisigButtonClicked() {
+    setActiveArrow(4);
+    gotoMultisigPage();
+}
+
+void DBBDaemonGui::mainReceiveButtonClicked() {
+    setActiveArrow(1);
+    gotoReceivePage();
+}
+
+void DBBDaemonGui::mainSendButtonClicked() {
+    setActiveArrow(2);
+    gotoSendCoinsPage();
+}
+
+void DBBDaemonGui::mainSettingsButtonClicked() {
+    setActiveArrow(3);
+    gotoSettingsPage();
 }
 
 void DBBDaemonGui::gotoOverviewPage()
@@ -487,13 +435,10 @@ void DBBDaemonGui::gotoSettingsPage()
     this->ui->stackedWidget->setCurrentIndex(2);
 }
 
-void DBBDaemonGui::showEchoVerification(const UniValue &proposalData, int actionType, QString echoStr)
+void DBBDaemonGui::showEchoVerification(DBBWallet *wallet, const UniValue &proposalData, int actionType, QString echoStr)
 {
-    QMessageBox::information(this, tr("Verify Transaction"),
-                             tr("Use your Smartphone to verify the transaction integriry"),
-                             QMessageBox::Ok);
-
-    PaymentProposalAction(proposalData, actionType);
+    showAlert(tr("Verify Transaction"), tr("Use your Smartphone to verify the transaction integriry"));
+    PaymentProposalAction(wallet, proposalData, actionType);
 }
 
 void DBBDaemonGui::passwordProvided()
@@ -527,7 +472,6 @@ void DBBDaemonGui::passwordAccepted()
     setTabbarEnabled(true);
 }
 
-
 void DBBDaemonGui::askForSessionPassword()
 {
     setLoading(false);
@@ -552,8 +496,6 @@ void DBBDaemonGui::hideSessionPasswordView()
         loginScreenIndicatorOpacityAnimation->stop();
 
     QWidget* slide = this->ui->blockerView;
-    // setup slide
-    //slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
 
     // then a animation:
     QPropertyAnimation *animation = new QPropertyAnimation(slide, "pos");
@@ -563,14 +505,6 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start();
-}
-
-//TODO: remove, not direct json result text in UI, add log
-void DBBDaemonGui::setResultText(const QString& result)
-{
-    processComnand = false;
-    qDebug() << "SetResultText Called\n";
-    this->statusBarLabelRight->setText("");
 }
 
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
@@ -597,30 +531,28 @@ void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable,
  DBB USB Commands (General)
  //////////////////////////
 */
+#pragma mark DBB USB Commands (General)
 
-//TODO: remove sendCommand method
-bool DBBDaemonGui::sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag)
-{
-    //ensure we don't fill the queue
-    //at the moment the UI should only post one command into the queue
+bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished) {
 
-    if (processComnand) {
-        qDebug() << "Already processing a command\n";
+    if (processComnand)
         return false;
+
+    if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON)
+    {
+        ui->touchbuttonInfo->setVisible(true);
     }
+
+    setLoading(true);
     processComnand = true;
-    QTexecuteCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, tag](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-        //send a signal to the main thread
-        UniValue jsonOut;
-        jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, tag);
-    });
+    executeCommand(cmd, sessionPassword, cmdFinished);
+
     return true;
 }
 
 void DBBDaemonGui::eraseClicked()
 {
-    if (QTexecuteCommandWrapper("{\"reset\":\"__ERASE__\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    if (executeCommandWrapper("{\"reset\":\"__ERASE__\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
@@ -628,8 +560,8 @@ void DBBDaemonGui::eraseClicked()
     {
         std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
 
-        vMultisigWallets[0].client.RemoveLocalData();
-        vMultisigWallets[1].client.RemoveLocalData();
+        singleWallet->client.RemoveLocalData();
+        vMultisigWallets[0]->client.RemoveLocalData();
 
         sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword.clear();
@@ -638,7 +570,7 @@ void DBBDaemonGui::eraseClicked()
 
 void DBBDaemonGui::ledClicked()
 {
-    QTexecuteCommandWrapper("{\"led\" : \"toggle\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"led\" : \"toggle\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
 
@@ -648,7 +580,7 @@ void DBBDaemonGui::ledClicked()
 
 void DBBDaemonGui::getInfo()
 {
-    QTexecuteCommandWrapper("{\"device\":\"info\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"device\":\"info\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
@@ -662,7 +594,7 @@ void DBBDaemonGui::setPasswordClicked(bool showInfo)
     if (ok && !text.isEmpty()) {
         std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
 
-        if (QTexecuteCommandWrapper(command, (showInfo) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        if (executeCommandWrapper(command, (showInfo) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
@@ -675,13 +607,13 @@ void DBBDaemonGui::setPasswordClicked(bool showInfo)
 
 }
 
-void DBBDaemonGui::seed()
+void DBBDaemonGui::seedHardware()
 {
     std::string command = "{\"seed\" : {\"source\" :\"create\","
     "\"decrypt\": \"no\","
     "\"salt\" : \"\"} }";
 
-    QTexecuteCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
@@ -689,16 +621,15 @@ void DBBDaemonGui::seed()
 }
 
 /*
- /////////////////
- Utils
- /////////////////
+/////////////////
+DBB Utils
+/////////////////
 */
+#pragma mark DBB Utils
+
 void DBBDaemonGui::getRandomNumber()
 {
-
-    std::string command = "{\"random\" : \"true\" }";
-
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"random\" : \"true\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
@@ -707,10 +638,7 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
-
-    std::string command = "{\"device\" : \"lock\" }";
-
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
@@ -718,10 +646,12 @@ void DBBDaemonGui::lockDevice()
 }
 
 /*
- /////////////////
- Backup Stack
- /////////////////
+/////////////////
+DBB Backup Stack
+/////////////////
 */
+#pragma mark DBB Backup
+
 void DBBDaemonGui::showBackupDialog()
 {
     backupDialog->show();
@@ -744,7 +674,7 @@ void DBBDaemonGui::addBackup()
     std::string command = "{\"backup\" : {\"encrypt\" :\"no\","
     "\"filename\": \"backup-"+timeStr+".bak\"} }";
 
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ADD_BACKUP);
@@ -755,7 +685,7 @@ void DBBDaemonGui::listBackup()
 {
     std::string command = "{\"backup\" : \"list\" }";
 
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_LIST_BACKUP);
@@ -772,7 +702,7 @@ void DBBDaemonGui::eraseAllBackups()
 
     std::string command = "{\"backup\" : \"erase\" }";
 
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP);
@@ -787,7 +717,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
     "\"decrypt\": \"no\","
     "\"salt\" : \"\"} }";
 
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
@@ -801,6 +731,8 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
  DBB USB Commands (Response Parsing)
  ///////////////////////////////////
 */
+#pragma mark DBB USB Commands (Response Parsing)
+
 void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag)
 {
     processComnand = false;
@@ -814,7 +746,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
         if (touchbuttonObj.isStr())
         {
-            QMessageBox::information(this, tr("Touchbutton"), QString::fromStdString(touchbuttonObj.get_str()), QMessageBox::Ok);
+            showAlert(tr("Touchbutton"), QString::fromStdString(touchbuttonObj.get_str()));
             touchErrorShowed = true;
         }
 
@@ -825,18 +757,18 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             UniValue errorMessageObj = find_value(errorObj, "message");
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108)
             {
-                QMessageBox::warning(this, tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
+                showAlert(tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())));
 
                 //try again
                 askForSessionPassword();
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110)
             {
-                QMessageBox::critical(this, tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), QMessageBox::Ok);
+                showAlert(tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), true);
             }
             else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101)
             {
-                QMessageBox::warning(this, tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
+                showAlert(tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()));
 
                 sessionPassword.clear();
                 setPasswordClicked(false);
@@ -844,7 +776,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             else
             {
                 //password wrong
-                QMessageBox::warning(this, tr("Error"), QString::fromStdString(errorMessageObj.get_str()), QMessageBox::Ok);
+                showAlert(tr("Error"), QString::fromStdString(errorMessageObj.get_str()));
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_INFO)
@@ -868,6 +800,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
                 //enable UI
                 passwordAccepted();
+                deviceIsReadyToInteract();
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET)
@@ -897,7 +830,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             else
             {
                 if (!touchErrorShowed)
-                    QMessageBox::warning(this, tr("Wallet Error"), errorString, QMessageBox::Ok);
+                    showAlert(tr("Wallet Error"), errorString);
             }
         }
         else if (tag == DBB_RESPONSE_TYPE_PASSWORD)
@@ -925,7 +858,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 sessionPassword = sessionPasswordDuringChangeProcess;
                 sessionPasswordDuringChangeProcess.clear();
 
-                QMessageBox::warning(this, tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString), QMessageBox::Ok);
+                showAlert(tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString));
             }
         }
         else if(tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER)
@@ -944,10 +877,11 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
                 std::string xPubKeyNew(outbuf);
 
-                {
-                    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-                    vMultisigWallets[subtag].client.setMasterPubKey(xPubKeyNew);
-                }
+                //0 = singlewallet
+                if (subtag == 0)
+                    singleWallet->client.setMasterPubKey(xPubKeyNew);
+                else
+                    vMultisigWallets[0]->client.setMasterPubKey(xPubKeyNew);
 
                 emit XPubForCopayWalletIsAvailable(subtag);
             }
@@ -960,7 +894,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                         errorString = QString::fromStdString(errorObj.get_str());
                 }
 
-                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Ok);
+                showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         }
         else if(tag == DBB_RESPONSE_TYPE_XPUB_MS_REQUEST)
@@ -978,10 +912,10 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
                 std::string xRequestKeyNew(outbuf);
 
-                {
-                    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-                    vMultisigWallets[subtag].client.setRequestPubKey(xRequestKeyNew);
-                }
+                if (subtag == 0)
+                    singleWallet->client.setRequestPubKey(xRequestKeyNew);
+                else
+                    vMultisigWallets[0]->client.setRequestPubKey(xRequestKeyNew);
 
                 emit RequestXPubKeyForCopayWalletIsAvailable(subtag);
             }
@@ -994,7 +928,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                         errorString = QString::fromStdString(errorObj.get_str());
                 }
 
-                QMessageBox::warning(this, tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString), QMessageBox::Ok);
+                showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         }
         else if(tag == DBB_RESPONSE_TYPE_ERASE)
@@ -1015,7 +949,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
 
                 if (!touchErrorShowed)
-                    QMessageBox::warning(this, tr("Erase error"), tr("Could not reset device"), QMessageBox::Ok);
+                    showAlert(tr("Erase error"), tr("Could not reset device"));
             }
         }
         else if(tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog)
@@ -1023,7 +957,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             UniValue backupObj = find_value(response, "backup");
             if (backupObj.isStr())
             {
-                std::vector<std::string> data = split(backupObj.get_str(), ',');
+                std::vector<std::string> data = DBB::split(backupObj.get_str(), ',');
                 backupDialog->showList(data);
             }
         }
@@ -1059,7 +993,7 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
             if (suc)
                 QMessageBox::information(this, tr("Success"), tr("Your device is now locked"), QMessageBox::Ok);
             else
-                QMessageBox::warning(this, tr("Error"), tr("Could not lock your device"), QMessageBox::Ok);
+                showAlert(tr("Error"), tr("Could not lock your device"));
 
             //reload device infos
             resetInfos();
@@ -1074,35 +1008,66 @@ void DBBDaemonGui::parseResponse(const UniValue &response, dbb_cmd_execution_sta
 
 /*
 /////////////////
-copay stack
+copay single- and multisig wallet stack
 /////////////////
 */
+#pragma mark copay single- and multisig wallet stack
 
-void DBBDaemonGui::JoinCopayWallet(int walletIndex)
+void DBBDaemonGui::createSingleWallet()
 {
-    
-    if (walletIndex == -1)
-        walletIndex = 1;
-
-    setResultText(QString::fromStdString(""));
-
-    bool isSeeded = false;
+    if (!singleWallet->client.IsSeeded())
     {
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        isSeeded = vMultisigWallets[walletIndex].client.IsSeeded();
+        getXPubKeyForCopay(0);
     }
-
-    if (!isSeeded) {
-        //if there is no xpub and request key, seed over DBB
-        setResultText("Initializing Copay Client... this might take some seconds.");
-        GetXPubKey(walletIndex);
-    } else {
-        //send a join request
-        _JoinCopayWallet(walletIndex);
+    else
+    {
+        SingleWalletUpdateWallets();
     }
 }
 
-void DBBDaemonGui::_JoinCopayWallet(int walletIndex)
+void DBBDaemonGui::getNewAddress()
+{
+    if (singleWallet->client.IsSeeded())
+    {
+        std::string address;
+        singleWallet->client.GetNewAddress(address);
+        this->ui->currentAddress->setText(QString::fromStdString(address));
+    }
+    else
+    {
+    }
+}
+
+void DBBDaemonGui::createTxProposalPressed()
+{
+    UniValue proposalOut;
+    std::string errorOut;
+    if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), this->ui->sendAmount->text().toULongLong(), 2000, proposalOut, errorOut))
+    {
+        showAlert("Error", QString::fromStdString(errorOut));
+    }
+    else
+    {
+        PaymentProposalAction(singleWallet, proposalOut, ProposalActionTypeAccept);
+    }
+
+    SingleWalletUpdateWallets();
+}
+
+void DBBDaemonGui::joinCopayWalletClicked()
+{
+    bool isSeeded = vMultisigWallets[0]->client.IsSeeded();
+
+    if (!isSeeded) {
+        //if there is no xpub and request key, seed over DBB
+        getXPubKeyForCopay(1);
+    } else {
+        //send a join request
+        joinMultisigWalletInitiate(vMultisigWallets[0]);
+    }
+}
+
+void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet *wallet)
 {
     bool ok;
     QString text = QInputDialog::getText(this, tr("Join Copay Wallet"), tr("Wallet Invitation Code"), QLineEdit::Normal, "", &ok);
@@ -1113,14 +1078,14 @@ void DBBDaemonGui::_JoinCopayWallet(int walletIndex)
     std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
 
     BitpayWalletInvitation invitation;
-    if (!vMultisigWallets[walletIndex].client.ParseWalletInvitation(text.toStdString(), invitation))
+    if (!wallet->client.ParseWalletInvitation(text.toStdString(), invitation))
     {
-        QMessageBox::warning(this, tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"), QMessageBox::Ok);
+        showAlert(tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"));
         return;
     }
 
     std::string result;
-    bool ret = vMultisigWallets[walletIndex].client.JoinWallet(vMultisigWallets[walletIndex].participationName, invitation, result);
+    bool ret = wallet->client.JoinWallet(wallet->participationName, invitation, result);
 
     if (!ret) {
         UniValue responseJSON;
@@ -1131,58 +1096,66 @@ void DBBDaemonGui::_JoinCopayWallet(int walletIndex)
             if (!errorText.isNull() && errorText.isStr())
                 additionalErrorText = errorText.get_str();
         }
-        setResultText(QString::fromStdString(result));
 
-        int ret = QMessageBox::warning(this, tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)), QMessageBox::Ok);
+        showAlert(tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)));
     } else {
         QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfull joined Copay Wallet"), QMessageBox::Ok);
     }
 }
 
-void DBBDaemonGui::GetXPubKey(int walletIndex)
+void DBBDaemonGui::getXPubKeyForCopay(int walletIndex)
 {
+    DBBWallet *wallet = vMultisigWallets[0];
+    if (walletIndex == 0)
+        wallet = singleWallet;
+
     std::string baseKeyPath;
     {
         std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        baseKeyPath = vMultisigWallets[walletIndex].baseKeyPath;
+        baseKeyPath = wallet->baseKeyPath;
     }
 
-    QTexecuteCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER, walletIndex);
     });
 }
 
-void DBBDaemonGui::GetRequestXPubKey(int walletIndex)
+void DBBDaemonGui::getRequestXPubKeyForCopay(int walletIndex)
 {
-    std::string baseKeyPath;
-    {
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        baseKeyPath = vMultisigWallets[walletIndex].baseKeyPath;
-    }
+    DBBWallet *wallet = vMultisigWallets[0];
+    if (walletIndex == 0)
+        wallet = singleWallet;
+
+    std::string baseKeyPath = wallet->baseKeyPath;
 
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
-    QTexecuteCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/1'/0\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/1'/0\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_REQUEST, walletIndex);
     });
 }
 
-void DBBDaemonGui::JoinCopayWalletWithXPubKey(int walletIndex)
+void DBBDaemonGui::joinCopayWalletWithXPubKey(int walletIndex)
 {
+    DBBWallet *wallet = vMultisigWallets[0];
+    if (walletIndex == 0)
+        wallet = singleWallet;
+
     if (walletIndex == 0)
     {
         //single wallet, create wallet first
-        vMultisigWallets[walletIndex].client.CreateWallet(vMultisigWallets[walletIndex].participationName);
-        vMultisigWallets[walletIndex].client.CreateWallet(vMultisigWallets[walletIndex].participationName);
+        wallet->client.CreateWallet(wallet->participationName);
     }
-    //set the keys and try to join the wallet
-    _JoinCopayWallet(walletIndex);
+    else
+    {
+        //set the keys and try to join the wallet
+        joinMultisigWalletInitiate(wallet);
+    }
 }
-
 
 void DBBDaemonGui::hidePaymentProposalsWidget()
 {
@@ -1196,102 +1169,166 @@ void DBBDaemonGui::hidePaymentProposalsWidget()
     this->ui->noProposalsAvailable->setVisible(true);
 }
 
-void DBBDaemonGui::updateUIMultisigWallets(const UniValue &walletResponse)
+void DBBDaemonGui::updateWallet(DBBWallet *wallet)
 {
-    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-
-    // get balance and name
-    UniValue balanceObj = find_value(walletResponse, "balance");
-    if (balanceObj.isObject())
+    if (wallet == singleWallet)
     {
-        UniValue availableAmountUni = find_value(balanceObj, "availableAmount");
-        vMultisigWallets[1].availableBalance = availableAmountUni.get_int64();
+        SingleWalletUpdateWallets();
     }
-
-    UniValue walletObj = find_value(walletResponse, "wallet");
-    if (walletObj.isObject())
-    {
-        UniValue nameUni = find_value(walletObj, "name");
-        if (nameUni.isStr())
-            vMultisigWallets[1].walletRemoteName = nameUni.get_str();
-
-
-        std::string mStr;
-        std::string nStr;
-
-        UniValue mUni = find_value(walletObj, "m");
-        if (mUni.isNum())
-            mStr = std::to_string(mUni.get_int());
-
-        UniValue nUni = find_value(walletObj, "n");
-        if (nUni.isNum())
-            nStr = std::to_string(nUni.get_int());
-
-        if (mStr.size() > 0 && nStr.size() > 0)
-            vMultisigWallets[1].walletRemoteName += " ("+mStr+" of "+nStr+")";
-    }
-
-    UniValue pendingTxps;
-    pendingTxps = find_value(walletResponse, "pendingTxps");
-    if (pendingTxps.isArray()) {
-        this->ui->proposalsLabel->setText(tr("Current Payment Proposals (%1)").arg(pendingTxps.size()));
-    }
-
-
-
-    //TODO, add a monetary amount / unit helper function
-    this->ui->multisigBalance->setText(tr("%1 Bits").arg(vMultisigWallets[1].availableBalance));
-    this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[1].walletRemoteName));
+    else
+        MultisigUpdateWallets();
 }
 
 void DBBDaemonGui::MultisigUpdateWallets()
 {
-    if (netThreadBusy)
+    DBBWallet *wallet = vMultisigWallets[0];
+    if (!wallet->client.IsSeeded())
         return;
 
-    //join the tread in case if one is already running
-    if (netThread.joinable())
-        netThread.join();
-
-    //TODO: find a better more generic way to detach net threads
-    netThread = std::thread([this]() {
-        std::string walletsResponse;
-
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        bool walletsAvailable = this->vMultisigWallets[1].client.GetWallets(walletsResponse);
-        emit multisigWalletResponseAvailable(walletsAvailable, walletsResponse);
+    multisigWalletIsUpdating = true;
+    executeNetUpdateWallet(wallet, [wallet, this](bool walletsAvailable, const std::string &walletsResponse){
+        emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse);
     });
-    netThreadBusy = true;
-    setNetLoading(true);
-
-    int i = 1;
 }
 
-void DBBDaemonGui::MultisigParseWalletsResponse(bool walletsAvailable, const std::string &walletsResponse)
+void DBBDaemonGui::SingleWalletUpdateWallets()
 {
-    netThreadBusy = false;
+    if (!singleWallet->client.IsSeeded())
+        return;
+
+    singleWalletIsUpdating = true;
+    executeNetUpdateWallet(singleWallet, [this](bool walletsAvailable, const std::string &walletsResponse){
+        emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
+    });
+}
+
+void DBBDaemonGui::updateUIMultisigWallets(const UniValue &walletResponse)
+{
+    vMultisigWallets[0]->updateData(walletResponse);
+
+    if (vMultisigWallets[0]->currentPaymentProposals.isArray()) {
+        this->ui->proposalsLabel->setText(tr("Current Payment Proposals (%1)").arg(vMultisigWallets[0]->currentPaymentProposals.size()));
+    }
+    
+    //TODO, add a monetary amount / unit helper function
+    this->ui->multisigBalance->setText(tr("%1 Bits").arg(vMultisigWallets[0]->totalBalance));
+    this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
+}
+
+void DBBDaemonGui::updateUISingleWallet(const UniValue &walletResponse)
+{
+    singleWallet->updateData(walletResponse);
+
+    //TODO, add a monetary amount / unit helper function
+    this->ui->balanceLabel->setText(tr("%1 Bits").arg(singleWallet->totalBalance));
+}
+
+void DBBDaemonGui::executeNetUpdateWallet(DBBWallet *wallet, std::function<void(bool, std::string&)> cmdFinished)
+{
+    DBBNetThread *thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([wallet, cmdFinished]() {
+        std::string walletsResponse;
+
+        //std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        bool walletsAvailable = wallet->client.GetWallets(walletsResponse);
+        cmdFinished(walletsAvailable, walletsResponse);
+    });
+
+    setNetLoading(true);
+}
+
+void DBBDaemonGui::parseWalletsResponse(DBBWallet *wallet, bool walletsAvailable, const std::string &walletsResponse)
+{
+
     setNetLoading(false);
 
-    if (!walletsAvailable)
-    {
-        QMessageBox::warning(this, tr("No Wallet"),
-                             tr("No Copay Wallet Available"),
-                             QMessageBox::Ok);
-        return;
-    }
+    if (wallet == singleWallet)
+        singleWallet = false;
+    else
+        multisigWalletIsUpdating = false;
 
     UniValue response;
     if (response.read(walletsResponse)) {
         if (response.isObject()) {
             printf("Wallet: %s\n", response.write(true, 2).c_str());
 
-            updateUIMultisigWallets(response);
-            MultisigUpdatePaymentProposals(response);
+            if (wallet == singleWallet)
+                updateUISingleWallet(response);
+            else
+            {
+                updateUIMultisigWallets(response);
+                MultisigUpdatePaymentProposals(response);
+            }
         }
     }
 }
 
-bool DBBDaemonGui::MultisigDisplayPaymentProposal(const UniValue &pendingTxps, const std::string &targetID)
+bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue &response)
+{
+    bool ret = false;
+    int copayerIndex = INT_MAX;
+
+    UniValue pendingTxps;
+    pendingTxps = find_value(response, "pendingTxps");
+    if (!pendingTxps.isNull() && pendingTxps.isArray()) {
+
+        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        vMultisigWallets[0]->currentPaymentProposals = pendingTxps;
+
+        printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
+        std::vector<UniValue> values = pendingTxps.getValues();
+        if (values.size() == 0)
+        {
+            hidePaymentProposalsWidget();
+            return false;
+        }
+
+        size_t cnt = 0;
+
+        for (const UniValue &oneProposal : values)
+        {
+
+            QString amount;
+            QString toAddress;
+
+            UniValue toAddressUni = find_value(oneProposal, "toAddress");
+            UniValue amountUni = find_value(oneProposal, "amount");
+            UniValue actions = find_value(oneProposal, "actions");
+
+            bool skipProposal = false;
+            if (actions.isArray())
+            {
+                for (const UniValue &oneAction : actions.getValues())
+                {
+                    UniValue copayerId = find_value(oneAction, "copayerId");
+                    UniValue actionType = find_value(oneAction, "type");
+
+                    if (!copayerId.isStr() || !actionType.isStr())
+                        continue;
+
+                    if (vMultisigWallets[0]->client.GetCopayerId() == copayerId.get_str() && actionType.get_str() == "accept") {
+                        skipProposal = true;
+                        break;
+                    }
+                }
+            }
+
+            UniValue isUni = find_value(oneProposal, "id");
+            if (isUni.isStr())
+                MultisigShowPaymentProposal(pendingTxps, isUni.get_str());
+
+            return true;
+
+            QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
+            if (reply == QMessageBox::No)
+                return false;
+        } //end proposal loop
+    }
+    
+    return ret;
+}
+
+bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue &pendingTxps, const std::string &targetID)
 {
     if (pendingTxps.isArray()) {
         std::vector<UniValue> values = pendingTxps.getValues();
@@ -1332,13 +1369,13 @@ bool DBBDaemonGui::MultisigDisplayPaymentProposal(const UniValue &pendingTxps, c
             if (!currentPaymentProposalWidget)
             {
                 currentPaymentProposalWidget = new PaymentProposal(this->ui->copay);
-                connect(currentPaymentProposalWidget, SIGNAL(processProposal(const UniValue &, int )), this, SLOT(PaymentProposalAction(const UniValue &, int)));
-                connect(currentPaymentProposalWidget, SIGNAL(shouldDisplayProposal(const UniValue &, const std::string &)), this, SLOT(MultisigDisplayPaymentProposal(const UniValue &, const std::string &)));
+                connect(currentPaymentProposalWidget, SIGNAL(processProposal(DBBWallet *, const UniValue &, int )), this, SLOT(PaymentProposalAction(DBBWallet *, const UniValue &, int)));
+                connect(currentPaymentProposalWidget, SIGNAL(shouldDisplayProposal(const UniValue &, const std::string &)), this, SLOT(MultisigShowPaymentProposal(const UniValue &, const std::string &)));
             }
 
             currentPaymentProposalWidget->move(15,115);
             currentPaymentProposalWidget->show();
-            currentPaymentProposalWidget->SetData(vMultisigWallets[1].client.GetCopayerId(), pendingTxps, oneProposal, prevProposalID, nextProposalID);
+            currentPaymentProposalWidget->SetData(vMultisigWallets[0], vMultisigWallets[0]->client.GetCopayerId(), pendingTxps, oneProposal, prevProposalID, nextProposalID);
 
             this->ui->noProposalsAvailable->setVisible(false);
 
@@ -1347,85 +1384,24 @@ bool DBBDaemonGui::MultisigDisplayPaymentProposal(const UniValue &pendingTxps, c
     }
 }
 
-bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue &response)
-{
-    bool ret = false;
-    int copayerIndex = INT_MAX;
-
-    UniValue pendingTxps;
-    pendingTxps = find_value(response, "pendingTxps");
-    if (!pendingTxps.isNull() && pendingTxps.isArray()) {
-
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        vMultisigWallets[1].currentPaymentProposals = pendingTxps;
-
-        printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
-        std::vector<UniValue> values = pendingTxps.getValues();
-        if (values.size() == 0)
-        {
-            hidePaymentProposalsWidget();
-            return false;
-        }
-
-        size_t cnt = 0;
-
-        for (const UniValue &oneProposal : values)
-        {
-
-            QString amount;
-            QString toAddress;
-
-            UniValue toAddressUni = find_value(oneProposal, "toAddress");
-            UniValue amountUni = find_value(oneProposal, "amount");
-            UniValue actions = find_value(oneProposal, "actions");
-
-            bool skipProposal = false;
-            if (actions.isArray())
-            {
-                for (const UniValue &oneAction : actions.getValues())
-                {
-                    UniValue copayerId = find_value(oneAction, "copayerId");
-                    UniValue actionType = find_value(oneAction, "type");
-
-                    if (!copayerId.isStr() || !actionType.isStr())
-                        continue;
-
-                    if (vMultisigWallets[1].client.GetCopayerId() == copayerId.get_str() && actionType.get_str() == "accept") {
-                        skipProposal = true;
-                        break;
-                    }
-                }
-            }
-//                    if (skipProposal)
-//                        continue;
-
-            UniValue isUni = find_value(oneProposal, "id");
-            if (isUni.isStr())
-                MultisigDisplayPaymentProposal(pendingTxps, isUni.get_str());
-            
-            return true;
-            
-            QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes|QMessageBox::No);
-            if (reply == QMessageBox::No)
-                return false;
-        } //end proposal loop
-    }
-
-    return ret;
-}
-
-void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int actionType)
+void DBBDaemonGui::PaymentProposalAction(DBBWallet *wallet, const UniValue &paymentProposal, int actionType)
 {
     std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
 
     if (actionType == ProposalActionTypeReject)
     {
-        vMultisigWallets[1].client.RejectTxProposal(paymentProposal);
+        wallet->client.RejectTxProposal(paymentProposal);
+        MultisigUpdateWallets();
+        return;
+    }
+    else if (actionType == ProposalActionTypeDelete)
+    {
+        wallet->client.DeleteTxProposal(paymentProposal);
         MultisigUpdateWallets();
         return;
     }
     std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
-    vMultisigWallets[1].client.ParseTxProposal(paymentProposal, inputHashesAndPaths);
+    wallet->client.ParseTxProposal(paymentProposal, inputHashesAndPaths);
 
     //build sign command
     std::string hashCmd;
@@ -1433,7 +1409,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     {
         std::string hexHash = DBB::HexStr((unsigned char *)&hashAndPathPair.second[0], (unsigned char *)&hashAndPathPair.second[0]+32);
 
-        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + vMultisigWallets[1].baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
+        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
     }
     hashCmd.pop_back(); hashCmd.pop_back(); // remove ", "
 
@@ -1444,7 +1420,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;
-    QTexecuteCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [&ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processComnand = false;
         setLoading(false);
@@ -1457,7 +1433,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
         if (!echoStr.isNull() && echoStr.isStr())
         {
 
-            emit shouldVerifySigning(paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
+            emit shouldVerifySigning(wallet, paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
         }
         else
         {
@@ -1479,7 +1455,7 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
                         }
                     }
 
-                    emit signedProposalAvailable(paymentProposal, sigs);
+                    emit signedProposalAvailable(wallet, paymentProposal, sigs);
                     ret = true;
                 }
             }
@@ -1488,10 +1464,21 @@ void DBBDaemonGui::PaymentProposalAction(const UniValue &paymentProposal, int ac
     });
 }
 
-void DBBDaemonGui::postSignedPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs)
+void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet *wallet, const UniValue& proposal, const std::vector<std::string> &vSigs)
 {
-    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+    void *test = NULL;
 
-    vMultisigWallets[0].client.PostSignaturesForTxProposal(proposal, vSigs);
-    MultisigUpdateWallets();
+    DBBNetThread *thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this, thread, wallet, proposal, vSigs](){
+        //thread->currentThread = ;
+        wallet->postSignaturesForPaymentProposal(proposal, vSigs);
+        wallet->broadcastPaymentProposal(proposal);
+
+        //sleep 3 seconds to get time for the wallet server to process the transaction and response with the correct balance
+        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+
+        emit shouldUpdateWallet(wallet);
+
+        thread->completed();
+    });
 }

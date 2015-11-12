@@ -860,7 +860,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="sendCoins">
+        <widget class="QPushButton" name="sendCoinsButton">
          <property name="text">
           <string>Create Transaction</string>
          </property>

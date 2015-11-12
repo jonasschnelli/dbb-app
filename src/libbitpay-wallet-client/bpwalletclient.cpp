@@ -33,6 +33,8 @@
 
 #include <climits>
 
+#define BP_LOG_MSG printf
+
 std::string BitPayWalletClient::ReversePairs(std::string const& src)
 {
     assert(src.size() % 2 == 0);
@@ -231,13 +233,11 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
 
     std::string walletPrivKeyStr = secretSplit[1];
     uint8_t rawn[walletPrivKeyStr.size()];
-    printf("wallet pkey: %s\n", walletPrivKeyStr.c_str());
     if(!btc_base58_decode_check(walletPrivKeyStr.c_str(), rawn, 100))
         return false;
 
 
     memcpy(invitationOut.walletPrivKey, &rawn[1], 32);
-    printf("wallet pkey hex: %s\n", DBB::HexStr(invitationOut.walletPrivKey, invitationOut.walletPrivKey+32).c_str());
     invitationOut.network = secretSplit[2] == "T" ? "testnet" : "livenet";
     return true;
 }
@@ -287,6 +287,88 @@ std::string BitPayWalletClient::GetLastKnownAddress()
         return "";
 
     return addressUV.get_str();
+}
+
+
+bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue &paymentProposalOut, std::string &errorOut)
+{
+    //form request
+    UniValue jsonArgs(UniValue::VOBJ);
+    jsonArgs.push_back(Pair("toAddress", address));
+    jsonArgs.push_back(Pair("amount", amount));
+    jsonArgs.push_back(Pair("feePerKb", feeperkb));
+    jsonArgs.push_back(Pair("payProUrl", false));
+
+    //[toAddress, amount, (message || ''), (payProUrl || '')].join('|');
+    std::string proposalHashString = address + "|" + std::to_string(amount) + "|" + "" + "|" + "";
+
+    std::string proposalSignature;
+    GetCopayerSignature(proposalHashString, requestKey.privkey, proposalSignature);
+
+    jsonArgs.push_back(Pair("proposalSignature", proposalSignature));
+    std::string json = jsonArgs.write();
+
+    long httpStatusCode = 0;
+    std::string response;
+    SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
+
+    if (httpStatusCode == 400)
+    {
+        UniValue responseUni;
+        responseUni.read(response);
+
+        UniValue codeUni;
+        codeUni = find_value(responseUni, "code");
+        if (codeUni.isStr() && codeUni.get_str() == "LOCKED_FUNDS")
+        {
+            //try to unlock funds
+            std::string walletResponse;
+            if (!GetWallets(walletResponse))
+            {
+                errorOut = "Could not unlock funds";
+                return false;
+            }
+
+            UniValue walletResponseUni;
+            walletResponseUni.read(walletResponse);
+
+            UniValue pendingTxps;
+            pendingTxps = find_value(walletResponseUni, "pendingTxps");
+            if (!pendingTxps.isNull() && pendingTxps.isArray()) {
+                std::vector<UniValue> values = pendingTxps.getValues();
+                for (const UniValue &oneProposal : values)
+                {
+                    DeleteTxProposal(oneProposal);
+                }
+            }
+
+            //post again
+            response.clear();
+            httpStatusCode = 0;
+            SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
+            if (httpStatusCode != 200)
+            {
+                errorOut = "Could not unlock funds";
+                return false;
+            }
+            paymentProposalOut.read(response);
+            return true;
+        }
+        else
+        {
+            //unknown error
+            UniValue messageUni;
+            messageUni = find_value(responseUni, "message");
+
+            if (messageUni.isStr())
+                errorOut = messageUni.get_str();
+            return false;
+        }
+    }
+
+    paymentProposalOut.read(response);
+
+    return true;
 }
 
 bool BitPayWalletClient::CreateWallet(const std::string& walletName)
@@ -458,7 +540,6 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector
                 for (k = 0; k < pubKeyValue.size(); k++) {
                     UniValue aPubKeyObj = pubKeyValue[k];
                     publicKeys.push_back(aPubKeyObj.get_str());
-                    printf("pubkey: %s\n", aPubKeyObj.get_str().c_str());
                 }
 
                 //sort keys
@@ -541,8 +622,8 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector
 
     cstring *txser = cstr_new_sz(1024);
     btc_tx_serialize(txser, tx);
-    std::string sSigDER = DBB::HexStr((unsigned char *)txser->str, (unsigned char *)txser->str + txser->len);
-    printf("%s\n", sSigDER.c_str());
+    std::string txHex = DBB::HexStr((unsigned char *)txser->str, (unsigned char *)txser->str + txser->len);
+    BP_LOG_MSG("\n\nhextx: %s\n\n", txHex.c_str());
     int cnt = 0;
 
     for (cnt = 0; cnt < tx->vin->len; cnt++) {
@@ -554,9 +635,7 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector
         btc_tx_sighash(tx, new_script, cnt, 1, hash);
         cstr_free(new_script, true);
         std::string sSigDER2 = DBB::HexStr((unsigned char *)hash, (unsigned char *)hash + 32);
-        printf("%s\n", sSigDER2.c_str());
 
-        //uint256 hash = SignatureHash(aScript, t, 0, SIGHASH_ALL);
         std::vector<unsigned char> vHash(32);
         vHash.assign(hash, hash+32);
         vInputTxHashes.push_back(std::make_pair(scriptAndPath.first, vHash));
@@ -645,6 +724,24 @@ bool BitPayWalletClient::RejectTxProposal(const UniValue& txProposal)
     return true;
 }
 
+bool BitPayWalletClient::DeleteTxProposal(const UniValue& txProposal)
+{
+    //parse out the txpid
+    UniValue pID = find_value(txProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+
+    UniValue rejectRequest = UniValue(UniValue::VOBJ);
+    std::string response;
+    long httpStatusCode = 0;
+    SendRequest("delete", "/v1/txproposals/" + txpID, rejectRequest.write(), response, httpStatusCode);
+    if (httpStatusCode != 200)
+        return false;
+
+    return true;
+}
+
 bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs)
 {
     //parse out the txpid
@@ -686,7 +783,7 @@ bool BitPayWalletClient::BroadcastProposal(const UniValue& txProposal)
     std::string response;
     long httpStatusCode = 0;
     SendRequest("post", "/v1/txproposals/" + txpID + "/broadcast/", "{}", response, httpStatusCode);
-    printf("Response: %s\n", response.c_str());
+    BP_LOG_MSG("Response: %s\n", response.c_str());
     if (httpStatusCode != 200)
         return false;
 
@@ -702,7 +799,7 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
     uint8_t hash[32];
     btc_hash((const unsigned char *)&message.front(), message.size(), hash);
 
-    printf("signing message: %s, hash: %s\n", message.c_str(), DBB::HexStr(hash, hash+32).c_str());
+    BP_LOG_MSG("signing message: %s, hash: %s\n", message.c_str(), DBB::HexStr(hash, hash+32).c_str());
 
     unsigned char sig[74];
     size_t outlen = 74;
@@ -751,8 +848,16 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
         if (method == "post")
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+
+        if (method == "delete")
+        {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        }
+
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
 #ifdef DBB_ENABLE_DEBUG
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
@@ -760,7 +865,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
 
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            fprintf(stderr, "curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
             error = true;
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
@@ -773,7 +878,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     curl_global_cleanup();
 
 #ifdef DBB_ENABLE_DEBUG
-    printf("response: %s", responseOut.c_str());
+    BP_LOG_MSG("response: %s", responseOut.c_str());
 #endif
 
     return error;
@@ -797,7 +902,6 @@ std::string GetSpecialFolderPath(int nFolder, bool fCreate)
         return std::string(pszPath);
     }
 
-    LogPrintf("SHGetSpecialFolderPathA() failed, could not obtain requested path.\n");
     return std::string("");
 }
 #endif
