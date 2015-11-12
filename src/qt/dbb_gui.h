@@ -120,11 +120,14 @@ public slots:
     void updateUIMultisigWallets(const UniValue &walletResponse);
     void PaymentProposalAction(const UniValue &paymentProposal, int actionType);
     void gotoOverviewPage();
+    void gotoReceivePage();
+    void gotoSendCoinsPage();
     void gotoMultisigPage();
     void gotoSettingsPage();
     void getInfo();
 
     void createSingleWallet();
+    void getNewAddress();
 
     void mainOverviewButtonClicked();
     void mainMultisigButtonClicked();

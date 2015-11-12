@@ -242,6 +242,53 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     return true;
 }
 
+bool BitPayWalletClient::GetNewAddress(std::string& newAddress)
+{
+    //form request
+    UniValue jsonArgs(UniValue::VOBJ);
+    std::string json = jsonArgs.write();
+
+    long httpStatusCode = 0;
+    std::string response;
+    SendRequest("post", "/v1/addresses/", json, response, httpStatusCode);
+
+    if (httpStatusCode != 200)
+        return false;
+
+    UniValue responseUni;
+    responseUni.read(response);
+
+    if (!responseUni.isObject())
+        return false;
+
+    UniValue addressUV = find_value(responseUni, "address");
+    if (!addressUV.isStr())
+        return false;
+
+    newAddress = addressUV.get_str();
+    lastKnownAddressJson = response;
+    SaveLocalData();
+    return true;
+}
+
+std::string BitPayWalletClient::GetLastKnownAddress()
+{
+    if (lastKnownAddressJson.size() == 0)
+        return "";
+
+    UniValue responseUni;
+    responseUni.read(lastKnownAddressJson);
+
+    if (!responseUni.isObject())
+        return "";
+
+    UniValue addressUV = find_value(responseUni, "address");
+    if (!addressUV.isStr())
+        return "";
+
+    return addressUV.get_str();
+}
+
 bool BitPayWalletClient::CreateWallet(const std::string& walletName)
 {
     btc_key key;
@@ -807,6 +854,10 @@ void BitPayWalletClient::SaveLocalData()
         uint32_t masterPubKeylen = masterPubKey.size();
         fwrite(&masterPubKeylen, 1, sizeof(masterPubKeylen), writeFile);
         fwrite(&masterPubKey.front(), 1, masterPubKeylen, writeFile);
+
+        uint32_t lastKnownAddressLength = lastKnownAddressJson.size();
+        fwrite(&lastKnownAddressLength, 1, sizeof(lastKnownAddressLength), writeFile);
+        fwrite(&lastKnownAddressJson.front(), 1, lastKnownAddressLength, writeFile);
     }
     fclose(writeFile);
 }
@@ -816,6 +867,8 @@ void BitPayWalletClient::LoadLocalData()
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
     FILE* fh = fopen((dataDir + "/"+filenameBase+".dat").c_str(), "rb");
+
+    //TODO: better error handling, misses fclose!
     if (fh) {
         unsigned char header[2];
         if (fread(&header, 1, 2, fh) != 2)
@@ -835,6 +888,20 @@ void BitPayWalletClient::LoadLocalData()
         
         if (fread(&masterPubKey[0], 1, masterPubKeylen, fh) != masterPubKeylen)
             return;
+
+        uint32_t lastKnownAddressLength = 0;
+        if (fread(&lastKnownAddressLength, 1, sizeof(lastKnownAddressLength), fh) != sizeof(lastKnownAddressLength))
+            return;
+
+        //TODO: better file corruption handling
+        if (lastKnownAddressLength < 4096)
+        {
+            lastKnownAddressJson.resize(lastKnownAddressLength);
+            if (fread(&lastKnownAddressJson[0], 1, lastKnownAddressLength, fh) != lastKnownAddressLength)
+                return;
+        }
+        else
+            lastKnownAddressJson = "";
 
         fclose(fh);
     }
