@@ -10,12 +10,12 @@ void DBBWallet::broadcastPaymentProposal(const UniValue& proposal)
     client.BroadcastProposal(proposal);
 }
 
-void DBBWallet::postSignaturesForPaymentProposal(const UniValue& proposal, const std::vector<std::string> &vSigs)
+void DBBWallet::postSignaturesForPaymentProposal(const UniValue& proposal, const std::vector<std::string>& vSigs)
 {
     client.PostSignaturesForTxProposal(proposal, vSigs);
 }
 
-void DBBWallet::updateData(const UniValue &walletResponse)
+void DBBWallet::updateData(const UniValue& walletResponse)
 {
     availableBalance = 0;
     walletRemoteName = "";
@@ -23,8 +23,7 @@ void DBBWallet::updateData(const UniValue &walletResponse)
 
     // get balance and name
     UniValue balanceObj = find_value(walletResponse, "balance");
-    if (balanceObj.isObject())
-    {
+    if (balanceObj.isObject()) {
         UniValue availableAmountUni = find_value(balanceObj, "availableAmount");
         if (availableAmountUni.isNum())
             availableBalance = availableAmountUni.get_int64();
@@ -35,8 +34,7 @@ void DBBWallet::updateData(const UniValue &walletResponse)
     }
 
     UniValue walletObj = find_value(walletResponse, "wallet");
-    if (walletObj.isObject())
-    {
+    if (walletObj.isObject()) {
         UniValue nameUni = find_value(walletObj, "name");
         if (nameUni.isStr())
             walletRemoteName = nameUni.get_str();
@@ -54,7 +52,7 @@ void DBBWallet::updateData(const UniValue &walletResponse)
             nStr = std::to_string(nUni.get_int());
 
         if (mStr.size() > 0 && nStr.size() > 0)
-            walletRemoteName += " ("+mStr+" of "+nStr+")";
+            walletRemoteName += " (" + mStr + " of " + nStr + ")";
     }
 
     UniValue pendingTxps = find_value(walletResponse, "pendingTxps");

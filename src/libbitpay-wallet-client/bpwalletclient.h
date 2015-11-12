@@ -60,7 +60,7 @@ public:
     ~BitPayWalletClient();
 
     //!set the filename base to store local data
-    void setFilenameBase(const std::string &filenameBaseIn);
+    void setFilenameBase(const std::string& filenameBaseIn);
 
     //!parse a wallet invitation code
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);
@@ -75,7 +75,7 @@ public:
     bool GetCopayerHash(const std::string& name, std::string& hashOut);
 
     //!signs a given string with a given key
-    bool GetCopayerSignature(const std::string& stringToHash, const uint8_t *privKey, std::string& sigHexOut);
+    bool GetCopayerSignature(const std::string& stringToHash, const uint8_t* privKey, std::string& sigHexOut);
 
     //!Create a wallet
     bool CreateWallet(const std::string& walletName);
@@ -86,7 +86,7 @@ public:
     //!Return the last (disk) cached known address for receiving coins
     std::string GetLastKnownAddress();
 
-    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue &paymentProposalOut, std::string &errorOut);
+    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
 
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
@@ -115,7 +115,8 @@ public:
     //!sign a http request (generates x-signature header string)
     std::string SignRequest(const std::string& method,
                             const std::string& url,
-                            const std::string& args, std::string& hashOut);
+                            const std::string& args,
+                            std::string& hashOut);
 
     //!send a request to the wallet server
     bool SendRequest(const std::string& method,
@@ -140,23 +141,23 @@ public:
     void LoadLocalData();
 
     void RemoveLocalData();
-    
+
     //flip byte order, required to reverse a given LE hash in hex to BE
     static std::string ReversePairs(const std::string& strIn);
 
 private:
-    std::string masterPrivKey;   // "m/45'"
-    std::string masterPubKey; // "m/45'"
-    btc_key requestKey;  //"m/1'/0"
+    std::string masterPrivKey; // "m/45'"
+    std::string masterPubKey;  // "m/45'"
+    btc_key requestKey;        //"m/1'/0"
 
     std::string filenameBase;
-    std::string baseURL; //!< base URL for the wallet server
+    std::string baseURL;              //!< base URL for the wallet server
     std::string lastKnownAddressJson; //!< base URL for the wallet server
 
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
     std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);
 
     //!Wrapper for libbtcs doubla sha
-    void Hash(const std::string &stringIn, uint8_t *hashout);
+    void Hash(const std::string& stringIn, uint8_t* hashout);
 };
 #endif //BP_WALLET_CLIENT_H

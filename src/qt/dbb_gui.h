@@ -26,8 +26,7 @@ class MainWindow;
 }
 
 //DBB USB response types
-typedef enum DBB_RESPONSE_TYPE
-{
+typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_UNKNOWN,
     DBB_RESPONSE_TYPE_PASSWORD,
     DBB_RESPONSE_TYPE_XPUB_MS_MASTER,
@@ -45,8 +44,7 @@ typedef enum DBB_RESPONSE_TYPE
     DBB_RESPONSE_TYPE_DEVICE_LOCK
 } dbb_response_type_t;
 
-typedef enum DBB_PROCESS_INFOLAYER_STYLE
-{
+typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
     DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON
 } dbb_process_infolayer_style_t;
@@ -71,33 +69,33 @@ signals:
     //emited when a response from the DBB is available
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
     //emited when a copay getwallet response is available
-    void getWalletsResponseAvailable(DBBWallet *wallet, bool walletsAvailable, const std::string &walletsResponse);
+    void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
     //emited when a payment proposal and a given signatures should be verified
-    void shouldVerifySigning(DBBWallet *, const UniValue &paymentProposal, int actionType, const QString& signature);
+    void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const QString& signature);
     //emited when signatures for a payment proposal are available
-    void signedProposalAvailable(DBBWallet *, const UniValue& proposal, const std::vector<std::string> &vSigs);
+    void signedProposalAvailable(DBBWallet*, const UniValue& proposal, const std::vector<std::string>& vSigs);
     //emited when a wallet needs update
-    void shouldUpdateWallet(DBBWallet *);
+    void shouldUpdateWallet(DBBWallet*);
 
 private:
     Ui::MainWindow* ui;
-    BackupDialog *backupDialog;
+    BackupDialog* backupDialog;
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
-    QAction *overviewAction;
-    QAction *walletsAction;
-    QAction *settingsAction;
+    QAction* overviewAction;
+    QAction* walletsAction;
+    QAction* settingsAction;
     bool processComnand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
-    QPropertyAnimation *loginScreenIndicatorOpacityAnimation;
-    QPropertyAnimation *statusBarloadingIndicatorOpacityAnimation;
-    std::string sessionPassword; //TODO: needs secure space / mem locking
+    QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
+    QPropertyAnimation* statusBarloadingIndicatorOpacityAnimation;
+    std::string sessionPassword;                    //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
-    std::vector<DBBWallet*> vMultisigWallets;  //!<immutable pointers to the multisig wallet objects (currently only 1)
-    DBBWallet *singleWallet; //!<immutable pointer to the single wallet object
-    PaymentProposal *currentPaymentProposalWidget; //!< UI element for showing a payment proposal
+    std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
+    DBBWallet* singleWallet;                        //!<immutable pointer to the single wallet object
+    PaymentProposal* currentPaymentProposalWidget;  //!< UI element for showing a payment proposal
 
 
     //== Plug / Unplug ==
@@ -116,7 +114,7 @@ private:
 
     //== UI ==
     //general proxy function to show an alert;
-    void showAlert(const QString &title, const QString &errorOut, bool critical = false);
+    void showAlert(const QString& title, const QString& errorOut, bool critical = false);
     void setActiveArrow(int pos);
     //!gets called when the password was accepted by the DBB hardware
     void passwordAccepted();
@@ -132,13 +130,7 @@ private:
 
     //== Copay Wallet ==
     void hidePaymentProposalsWidget();
-    void executeNetUpdateWallet(DBBWallet *wallet, std::function<void(bool, std::string&)> cmdFinished);
-
-
-
-
-
-
+    void executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished);
 
 
     bool multisigWalletIsUpdating;
@@ -163,7 +155,7 @@ private slots:
     void gotoMultisigPage();
     void gotoSettingsPage();
     //!shows info about the smartphone verification
-    void showEchoVerification(DBBWallet *, const UniValue& response, int actionType, QString echoStr);
+    void showEchoVerification(DBBWallet*, const UniValue& response, int actionType, QString echoStr);
     //!gets called when the user hits enter in the "enter password form"
     void passwordProvided();
     //!slot to ask for the current session password
@@ -175,7 +167,7 @@ private slots:
     void ledClicked();
     //!get basic informations about the connected DBB
     void getInfo();
-    void setPasswordClicked(bool showInfo=true);
+    void setPasswordClicked(bool showInfo = true);
     //!seed the wallet, flush everything and create a new bip32 entropy
     void seedHardware();
 
@@ -205,7 +197,7 @@ private slots:
     void createTxProposalPressed();
     void joinCopayWalletClicked();
     //!initiates a copay multisig wallet join
-    void joinMultisigWalletInitiate(DBBWallet *);
+    void joinMultisigWalletInitiate(DBBWallet*);
     //!gets a xpub key for the copay wallet
     void getXPubKeyForCopay(int walletIndex);
     //!gets a xpub key at the keypath that is used for the request private key
@@ -213,26 +205,26 @@ private slots:
     //!joins a copay wallet with given xpub key
     void joinCopayWalletWithXPubKey(int walletIndex);
     //!update a given wallet object
-    void updateWallet(DBBWallet *wallet);
+    void updateWallet(DBBWallet* wallet);
     //!update multisig wallets
     void MultisigUpdateWallets();
     //!update single wallet
     void SingleWalletUpdateWallets();
     //!update the mutisig ui from a getWallets response
-    void updateUIMultisigWallets(const UniValue &walletResponse);
+    void updateUIMultisigWallets(const UniValue& walletResponse);
     //!update the singlewallet ui from a getWallets response
-    void updateUISingleWallet(const UniValue &walletResponse);
+    void updateUISingleWallet(const UniValue& walletResponse);
 
     //!parse single wallet wallet response
-    void parseWalletsResponse(DBBWallet *wallet, bool walletsAvailable, const std::string &walletsResponse);
+    void parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
     //!update payment proposals
-    bool MultisigUpdatePaymentProposals(const UniValue &response);
+    bool MultisigUpdatePaymentProposals(const UniValue& response);
     //!show a single payment proposals with given id
-    bool MultisigShowPaymentProposal(const UniValue &pendingTxps, const std::string &targetID);
+    bool MultisigShowPaymentProposal(const UniValue& pendingTxps, const std::string& targetID);
     //!execute payment proposal action
-    void PaymentProposalAction(DBBWallet *wallet, const UniValue &paymentProposal, int actionType);
-    //!post 
-    void postSignaturesForPaymentProposal(DBBWallet *wallet, const UniValue& proposal, const std::vector<std::string> &vSigs);
+    void PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType);
+    //!post
+    void postSignaturesForPaymentProposal(DBBWallet* wallet, const UniValue& proposal, const std::vector<std::string>& vSigs);
 };
 
 #endif

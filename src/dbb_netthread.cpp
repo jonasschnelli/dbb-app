@@ -4,7 +4,7 @@
 
 #include "dbb_netthread.h"
 
-std::vector<DBBNetThread *> DBBNetThread::netThreads;
+std::vector<DBBNetThread*> DBBNetThread::netThreads;
 std::mutex DBBNetThread::cs_netThreads;
 
 void DBBNetThread::completed()
@@ -26,8 +26,8 @@ DBBNetThread::DBBNetThread()
 DBBNetThread* DBBNetThread::DetachThread()
 {
     CleanupThreads();
-    
-    DBBNetThread *thread = new DBBNetThread();
+
+    DBBNetThread* thread = new DBBNetThread();
     {
         std::unique_lock<std::mutex> lock(cs_netThreads);
         netThreads.push_back(thread);
@@ -39,20 +39,16 @@ void DBBNetThread::CleanupThreads()
 {
     std::unique_lock<std::mutex> lock(cs_netThreads);
 
-    std::vector<DBBNetThread *>::iterator it = netThreads.begin();
-    while(it != netThreads.end())
-    {
-        DBBNetThread *netThread = (*it);
-        if (netThread->hasCompleted())
-        {
+    std::vector<DBBNetThread*>::iterator it = netThreads.begin();
+    while (it != netThreads.end()) {
+        DBBNetThread* netThread = (*it);
+        if (netThread->hasCompleted()) {
             if (netThread->currentThread.joinable())
                 netThread->currentThread.join();
 
             delete netThread;
             it = netThreads.erase(it);
-        }
-        else
-        {
+        } else {
             ++it;
         }
     }
@@ -60,5 +56,4 @@ void DBBNetThread::CleanupThreads()
 
 DBBNetThread::~DBBNetThread()
 {
-
 }

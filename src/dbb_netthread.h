@@ -27,7 +27,7 @@ public:
 
     static DBBNetThread* DetachThread();
     static void CleanupThreads();
-    static std::vector<DBBNetThread *> netThreads;
+    static std::vector<DBBNetThread*> netThreads;
     static std::mutex cs_netThreads;
 };
 #endif
