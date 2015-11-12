@@ -1156,7 +1156,7 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     setNetLoading(false);
 
     if (wallet == singleWallet)
-        singleWallet = false;
+        singleWalletIsUpdating = false;
     else
         multisigWalletIsUpdating = false;
 
