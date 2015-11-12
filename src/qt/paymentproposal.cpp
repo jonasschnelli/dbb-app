@@ -26,8 +26,9 @@ ui(new Ui::PaymentProposal)
 }
 
 
-void PaymentProposal::SetData(const std::string copayerID, const UniValue &pendingTxpIn, const UniValue &proposalDataIn, const std::string &prevID, const std::string &nextID)
+void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, const UniValue &pendingTxpIn, const UniValue &proposalDataIn, const std::string &prevID, const std::string &nextID)
 {
+    wallet = walletIn;
     pendingTxp = pendingTxpIn;
     proposalData = proposalDataIn;
     prevProposalID = prevID;
@@ -97,12 +98,12 @@ void PaymentProposal::nextPressed()
 
 void PaymentProposal::acceptPressed()
 {
-    emit processProposal(proposalData, ProposalActionTypeAccept);
+    emit processProposal(wallet, proposalData, ProposalActionTypeAccept);
 }
 
 void PaymentProposal::rejectPressed()
 {
-    emit processProposal(proposalData, ProposalActionTypeReject);
+    emit processProposal(wallet, proposalData, ProposalActionTypeReject);
 }
 
 PaymentProposal::~PaymentProposal()

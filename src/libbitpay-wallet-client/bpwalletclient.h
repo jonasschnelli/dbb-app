@@ -86,7 +86,7 @@ public:
     //!Return the last (disk) cached known address for receiving coins
     std::string GetLastKnownAddress();
 
-    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb);
+    bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue &paymentProposalOut, std::string &errorOut);
 
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
@@ -102,6 +102,9 @@ public:
 
     //!post a tx proposal reject
     bool RejectTxProposal(const UniValue& txProposal);
+
+    //!delete a tx proposal reject
+    bool DeleteTxProposal(const UniValue& txProposal);
 
     //!tells the wallet server that we'd like to broadcast a txproposal (make sure tx proposal has enought signatures)
     bool BroadcastProposal(const UniValue& txProposal);
