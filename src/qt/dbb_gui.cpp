@@ -1382,6 +1382,7 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue &pendingTxps, cons
             cnt++;
         }
     }
+    return true;
 }
 
 void DBBDaemonGui::PaymentProposalAction(DBBWallet *wallet, const UniValue &paymentProposal, int actionType)
