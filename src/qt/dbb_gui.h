@@ -19,6 +19,7 @@
 #include "dbb_app.h"
 #include "backupdialog.h"
 #include "paymentproposal.h"
+#include "signconfirmationdialog.h"
 
 namespace Ui
 {
@@ -72,10 +73,16 @@ signals:
     void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
     //emited when a payment proposal and a given signatures should be verified
     void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const QString& signature);
+    //emited when the verification dialog shoud hide
+    void shouldHideVerificationInfo();
     //emited when signatures for a payment proposal are available
     void signedProposalAvailable(DBBWallet*, const UniValue& proposal, const std::vector<std::string>& vSigs);
     //emited when a wallet needs update
     void shouldUpdateWallet(DBBWallet*);
+    //emited when a new receiving address is available
+    void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress);
+    //emited when a new receiving address is available
+    void paymentProposalUpdated(DBBWallet *, const UniValue &proposal);
 
 private:
     Ui::MainWindow* ui;
@@ -96,6 +103,7 @@ private:
     std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
     DBBWallet* singleWallet;                        //!<immutable pointer to the single wallet object
     PaymentProposal* currentPaymentProposalWidget;  //!< UI element for showing a payment proposal
+    SignConfirmationDialog* signConfirmationDialog;  //!< UI element for showing a payment proposal
 
 
     //== Plug / Unplug ==
@@ -156,6 +164,8 @@ private slots:
     void gotoSettingsPage();
     //!shows info about the smartphone verification
     void showEchoVerification(DBBWallet*, const UniValue& response, int actionType, QString echoStr);
+    //!hides verification info
+    void hideVerificationInfo();
     //!gets called when the user hits enter in the "enter password form"
     void passwordProvided();
     //!slot to ask for the current session password
@@ -193,8 +203,12 @@ private slots:
     void createSingleWallet();
     //!get a new address
     void getNewAddress();
+    //!gets called when a new address is available
+    void newAddressAvailable(DBBWallet *wallet, const std::string &newAddress);
     //!check the UI values and create a payment proposal from them, sign and post them
     void createTxProposalPressed();
+    //!Report about a submitted payment proposal
+    void reportPaymentProposalPost(DBBWallet* wallet, const UniValue& proposal);
     void joinCopayWalletClicked();
     //!initiates a copay multisig wallet join
     void joinMultisigWalletInitiate(DBBWallet*);

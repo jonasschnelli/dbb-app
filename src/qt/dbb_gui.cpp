@@ -53,6 +53,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               deviceConnected(0),
                                               cachedWalletAvailableState(0),
                                               currentPaymentProposalWidget(0),
+                                              signConfirmationDialog(0),
                                               loginScreenIndicatorOpacityAnimation(0),
                                               statusBarloadingIndicatorOpacityAnimation(0)
 {
@@ -101,6 +102,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
 
     this->ui->balanceLabel->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
+    this->ui->singleWalletBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     this->ui->multisigBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
 
     this->ui->multisigBalanceKey->setStyleSheet(labelCSS);
@@ -142,10 +144,14 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(joinCopayWalletWithXPubKey(int)));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)));
     connect(this, SIGNAL(shouldVerifySigning(DBBWallet*, const UniValue&, int, const QString&)), this, SLOT(showEchoVerification(DBBWallet*, const UniValue&, int, const QString&)));
+    connect(this, SIGNAL(shouldHideVerificationInfo()), this, SLOT(hideVerificationInfo()));
     connect(this, SIGNAL(signedProposalAvailable(DBBWallet*, const UniValue&, const std::vector<std::string>&)), this, SLOT(postSignaturesForPaymentProposal(DBBWallet*, const UniValue&, const std::vector<std::string>&)));
     connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&)));
 
     connect(this, SIGNAL(shouldUpdateWallet(DBBWallet*)), this, SLOT(updateWallet(DBBWallet*)));
+    connect(this, SIGNAL(walletAddressIsAvailable(DBBWallet*,const std::string &)), this, SLOT(newAddressAvailable(DBBWallet*,const std::string&)));
+    connect(this, SIGNAL(paymentProposalUpdated(DBBWallet*,const UniValue&)), this, SLOT(reportPaymentProposalPost(DBBWallet*,const UniValue&)));
+
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
@@ -433,9 +439,22 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, QString echoStr)
 {
-    showAlert(tr("Verify Transaction"), tr("Use your Smartphone to verify the transaction integriry"));
+    if (!signConfirmationDialog) {
+        signConfirmationDialog = new SignConfirmationDialog(0);
+    }
+
+    signConfirmationDialog->setData(proposalData);
+    signConfirmationDialog->show();
     PaymentProposalAction(wallet, proposalData, actionType);
 }
+
+void DBBDaemonGui::hideVerificationInfo()
+{
+    if (signConfirmationDialog) {
+        signConfirmationDialog->hide();
+    }
+}
+
 
 void DBBDaemonGui::passwordProvided()
 {
@@ -955,24 +974,46 @@ void DBBDaemonGui::createSingleWallet()
 void DBBDaemonGui::getNewAddress()
 {
     if (singleWallet->client.IsSeeded()) {
-        std::string address;
-        singleWallet->client.GetNewAddress(address);
-        this->ui->currentAddress->setText(QString::fromStdString(address));
-    } else {
+        DBBNetThread* thread = DBBNetThread::DetachThread();
+        thread->currentThread = std::thread([this]() {
+            std::string walletsResponse;
+
+            std::string address;
+            singleWallet->client.GetNewAddress(address);
+            emit walletAddressIsAvailable(this->singleWallet, address);
+        });
+
+        setNetLoading(true);
     }
+}
+
+void DBBDaemonGui::newAddressAvailable(DBBWallet *wallet, const std::string &newAddress)
+{
+    setNetLoading(false);
+    this->ui->currentAddress->setText(QString::fromStdString(newAddress));
 }
 
 void DBBDaemonGui::createTxProposalPressed()
 {
     UniValue proposalOut;
     std::string errorOut;
-    if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), this->ui->sendAmount->text().toULongLong(), 2000, proposalOut, errorOut)) {
+
+    int64_t amount = 0;
+    if (!DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
+        return showAlert("Error", "Invalid amount");
+
+    if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, 2000, proposalOut, errorOut)) {
         showAlert("Error", QString::fromStdString(errorOut));
     } else {
         PaymentProposalAction(singleWallet, proposalOut, ProposalActionTypeAccept);
     }
 
     SingleWalletUpdateWallets();
+}
+
+void DBBDaemonGui::reportPaymentProposalPost(DBBWallet* wallet, const UniValue& proposal)
+{
+    QMessageBox::information(this, tr("Success"), tr("Transaction was sent successfully"), QMessageBox::Ok);
 }
 
 void DBBDaemonGui::joinCopayWalletClicked()
@@ -1134,7 +1175,11 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
     singleWallet->updateData(walletResponse);
 
     //TODO, add a monetary amount / unit helper function
-    this->ui->balanceLabel->setText(tr("%1 Bits").arg(singleWallet->totalBalance));
+
+    QString balance = QString::fromStdString(DBB::formatMoney(singleWallet->totalBalance));
+
+    this->ui->balanceLabel->setText(tr("%1 BTC").arg(balance));
+    this->ui->singleWalletBalance->setText(tr("%1 BTC").arg(balance));
 }
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)
@@ -1330,24 +1375,36 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
         if (!echoStr.isNull() && echoStr.isStr()) {
             emit shouldVerifySigning(wallet, paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
         } else {
-            UniValue signObject = find_value(jsonOut, "sign");
-            if (signObject.isArray()) {
-                std::vector<UniValue> vSignatureObjects;
-                vSignatureObjects = signObject.getValues();
-                if (vSignatureObjects.size() > 0) {
-                    std::vector<std::string> sigs;
+            UniValue errorObj = find_value(jsonOut, "error");
+            if (errorObj.isObject()) {
+                //error found
+                UniValue errorCodeObj = find_value(errorObj, "code");
+                UniValue errorMessageObj = find_value(errorObj, "message");
 
-                    for (const UniValue& oneSig : vSignatureObjects) {
-                        UniValue sigObject = find_value(oneSig, "sig");
-                        UniValue pubKey = find_value(oneSig, "pubkey");
-                        if (!sigObject.isNull() && sigObject.isStr()) {
-                            sigs.push_back(sigObject.get_str());
-                            //client.BroadcastProposal(values[0]);
+                emit shouldHideVerificationInfo();
+            }
+            else
+            {
+                UniValue signObject = find_value(jsonOut, "sign");
+                if (signObject.isArray()) {
+                    std::vector<UniValue> vSignatureObjects;
+                    vSignatureObjects = signObject.getValues();
+                    if (vSignatureObjects.size() > 0) {
+                        std::vector<std::string> sigs;
+
+                        for (const UniValue& oneSig : vSignatureObjects) {
+                            UniValue sigObject = find_value(oneSig, "sig");
+                            UniValue pubKey = find_value(oneSig, "pubkey");
+                            if (!sigObject.isNull() && sigObject.isStr()) {
+                                sigs.push_back(sigObject.get_str());
+                                //client.BroadcastProposal(values[0]);
+                            }
                         }
-                    }
 
-                    emit signedProposalAvailable(wallet, paymentProposal, sigs);
-                    ret = true;
+                        emit shouldHideVerificationInfo();
+                        emit signedProposalAvailable(wallet, paymentProposal, sigs);
+                        ret = true;
+                    }
                 }
             }
         }
@@ -1356,8 +1413,6 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
 
 void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const UniValue& proposal, const std::vector<std::string>& vSigs)
 {
-    void* test = NULL;
-
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, wallet, proposal, vSigs]() {
         //thread->currentThread = ;
@@ -1368,6 +1423,7 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
         std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
         emit shouldUpdateWallet(wallet);
+        emit paymentProposalUpdated(wallet, proposal);
 
         thread->completed();
     });

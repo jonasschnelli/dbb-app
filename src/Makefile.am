@@ -57,24 +57,29 @@ if ENABLE_QT
 QT_FORMS_UI = \
   qt/ui/overview.ui \
   qt/ui/paymentproposal.ui \
-  qt/ui/backupdialog.ui
+  qt/ui/backupdialog.ui \
+  qt/ui/signconfirmationdialog.ui
 	
 DBB_GUI_H = \
-	qt/paymentproposal.h
+	qt/paymentproposal.h \
+    qt/signconfirmationdialog.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
-    qt/backupdialog.cpp
+    qt/backupdialog.cpp \
+    qt/signconfirmationdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
 	qt/moc_paymentproposal.cpp \
-    qt/moc_backupdialog.cpp
+    qt/moc_backupdialog.cpp \
+    qt/moc_signconfirmationdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
   qt/paymentproposal.moc \
-  qt/backupdialog.moc
+  qt/backupdialog.moc \
+  qt/singconfirmationdialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
