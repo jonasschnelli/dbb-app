@@ -8,6 +8,7 @@
 #include <stdint.h>
 #include <string>
 #include <map>
+#include <memory>
 #include <vector>
 
 #ifndef _SRC_CONFIG__DBB_CONFIG_H
