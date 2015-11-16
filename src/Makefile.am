@@ -46,7 +46,7 @@ if ENABLE_DBB_APP
 bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
+dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp dbb_wallet.h dbb_wallet.cpp dbb_netthread.h dbb_netthread.cpp
 dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)

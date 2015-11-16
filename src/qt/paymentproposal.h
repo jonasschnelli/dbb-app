@@ -8,10 +8,13 @@
 #include <QWidget>
 #include <univalue.h>
 
+#include <dbb_wallet.h>
+
 enum ProposalActionType
 {
     ProposalActionTypeAccept,
-    ProposalActionTypeReject
+    ProposalActionTypeReject,
+    ProposalActionTypeDelete
 };
 
 namespace Ui {
@@ -23,7 +26,7 @@ class PaymentProposal : public QWidget
     Q_OBJECT
 
 signals:
-    void processProposal(const UniValue &proposalData, int actionType);
+    void processProposal(DBBWallet *wallet, const UniValue &proposalData, int actionType);
     void shouldDisplayProposal(const UniValue &pendingTxp, const std::string &proposalId);
 
 public slots:
@@ -36,12 +39,13 @@ public:
     explicit PaymentProposal(QWidget *parent = 0);
     ~PaymentProposal();
     Ui::PaymentProposal *ui;
-    void SetData(const std::string copayerID, const UniValue &pendingTxp, const UniValue &data, const std::string &prevID, const std::string &nextID);
+    void SetData(DBBWallet *walletIn, const std::string copayerID, const UniValue &pendingTxp, const UniValue &data, const std::string &prevID, const std::string &nextID);
 private:
     UniValue pendingTxp;
     UniValue proposalData;
     std::string prevProposalID;
     std::string nextProposalID;
+    DBBWallet *wallet;
 };
 
 #endif // DBB_PAYMENTPROPOSAL_H
