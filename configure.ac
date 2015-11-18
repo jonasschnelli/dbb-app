@@ -201,7 +201,7 @@ case $host in
      ;;
    *linux*)
      TARGET_OS=linux
-     LINUX_LIBS=-lpthread
+     LINUX_LIBS=-ldns_sd
      AC_SUBST(LINUX_LIBS)
      ;;
    *)
