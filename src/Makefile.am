@@ -2,7 +2,7 @@ DIST_SUBDIRS = libbtc univalue
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) -static
 
-DBB_INCLUDES = -I$(srcdir)/../mDNSResponder-333.10/mDNSShared
+DBB_INCLUDES = 
 
 LIBBTC=libbtc/libbtc.la
 UNIVALUE=univalue/libunivalue.la
