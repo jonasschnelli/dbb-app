@@ -62,18 +62,21 @@ QT_FORMS_UI = \
 	
 DBB_GUI_H = \
 	qt/paymentproposal.h \
-    qt/signconfirmationdialog.h
+    qt/signconfirmationdialog.h \
+    qt/dbb_websocketserver.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
     qt/backupdialog.cpp \
-    qt/signconfirmationdialog.cpp
+    qt/signconfirmationdialog.cpp \
+    qt/dbb_websocketserver.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
 	qt/moc_paymentproposal.cpp \
     qt/moc_backupdialog.cpp \
-    qt/moc_signconfirmationdialog.cpp
+    qt/moc_signconfirmationdialog.cpp \
+    qt/moc_dbb_websocketserver.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
