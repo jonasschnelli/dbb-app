@@ -15,8 +15,10 @@
 #include <thread>
 #include <mutex>
 
-#include "dbb_wallet.h"
 #include "dbb_app.h"
+#include "dbb_wallet.h"
+#include "dbb_websocketserver.h"
+
 #include "backupdialog.h"
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
@@ -42,7 +44,8 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_LIST_BACKUP,
     DBB_RESPONSE_TYPE_ERASE_BACKUP,
     DBB_RESPONSE_TYPE_RANDOM_NUM,
-    DBB_RESPONSE_TYPE_DEVICE_LOCK
+    DBB_RESPONSE_TYPE_DEVICE_LOCK,
+    DBB_RESPONSE_TYPE_VERIFYPASS_ECDH
 } dbb_response_type_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE {
@@ -87,15 +90,17 @@ signals:
 private:
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
+    WebsocketServer *websocketServer;
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
     QAction* overviewAction;
     QAction* walletsAction;
     QAction* settingsAction;
-    bool processComnand;
+    bool processCommand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    bool deviceReadyToInteract;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
     QPropertyAnimation* statusBarloadingIndicatorOpacityAnimation;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
@@ -128,7 +133,9 @@ private:
     void passwordAccepted();
     //!hides the enter password form
     void hideSessionPasswordView();
-    bool sendCommand(const std::string& cmd, const std::string& password, dbb_response_type_t tag = DBB_RESPONSE_TYPE_UNKNOWN);
+    //!show general modal info
+    void showModalInfo(const QString &info);
+    void hideModalInfo();
     //!update overview flags (wallet / lock, etc)
     void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
 
@@ -239,6 +246,10 @@ private slots:
     void PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType);
     //!post
     void postSignaturesForPaymentProposal(DBBWallet* wallet, const UniValue& proposal, const std::vector<std::string>& vSigs);
+
+    //== ECDH Pairing ==
+    //!send a ecdh pairing request with pubkey to the DBB
+    void sendECDHPairingRequest(const std::string &pubkey);
 };
 
 #endif

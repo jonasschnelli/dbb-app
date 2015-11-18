@@ -785,8 +785,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>481</width>
-        <height>353</height>
+        <width>480</width>
+        <height>330</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayoutSend">
@@ -1355,6 +1355,58 @@
     <property name="flat">
      <bool>true</bool>
     </property>
+   </widget>
+   <widget class="QWidget" name="modalBlockerView" native="true">
+    <property name="enabled">
+     <bool>true</bool>
+    </property>
+    <property name="geometry">
+     <rect>
+      <x>-480</x>
+      <y>0</y>
+      <width>480</width>
+      <height>400</height>
+     </rect>
+    </property>
+    <property name="styleSheet">
+     <string notr="true"/>
+    </property>
+    <widget class="QWidget" name="modalBgWidget" native="true">
+     <property name="geometry">
+      <rect>
+       <x>0</x>
+       <y>0</y>
+       <width>480</width>
+       <height>400</height>
+      </rect>
+     </property>
+     <property name="styleSheet">
+      <string notr="true">background-color: rgba(0,0,0,240);</string>
+     </property>
+     <widget class="QLabel" name="modalInfoLabel">
+      <property name="geometry">
+       <rect>
+        <x>20</x>
+        <y>100</y>
+        <width>440</width>
+        <height>170</height>
+       </rect>
+      </property>
+      <property name="styleSheet">
+       <string notr="true">color: white;
+background-color: rgba(0,0,0, 0%)</string>
+      </property>
+      <property name="text">
+       <string>Unlocking Device...</string>
+      </property>
+      <property name="alignment">
+       <set>Qt::AlignCenter</set>
+      </property>
+      <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+    </widget>
    </widget>
    <widget class="QWidget" name="blockerView" native="true">
     <property name="enabled">

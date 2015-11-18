@@ -12,8 +12,9 @@ compiler:
 
 before_install:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-        sudo apt-get update -qq
-        && sudo apt-get install -qq g++-4.8 libboost-all-dev libevent-dev libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
+        sudo apt-add-repository -y ppa:beineri/opt-qt55-trusty
+        && sudo apt-get update -qq
+        && sudo apt-get install -qq g++-4.8 libboost-all-dev libevent-dev qt55base qt55tools qt55websockets
         ;
       fi
  
@@ -54,8 +55,9 @@ before_script:
 
 script: 
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
-        ./autogen.sh
-        && ./configure CXX=g++-4.8 --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
+        QTDIR="/opt/qt55" && PATH="$QTDIR/bin:$PATH" && qt55-env.sh
+        && ./autogen.sh
+        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
         ;
      else
         ./autogen.sh

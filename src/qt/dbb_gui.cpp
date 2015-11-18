@@ -16,7 +16,6 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 
-
 #include "ui/ui_overview.h"
 #include <dbb.h>
 
@@ -49,8 +48,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               statusBarLabelRight(0),
                                               statusBarLabelLeft(0),
                                               backupDialog(0),
-                                              processComnand(0),
+                                              websocketServer(0),
+                                              processCommand(0),
                                               deviceConnected(0),
+                                              deviceReadyToInteract(0),
                                               cachedWalletAvailableState(0),
                                               currentPaymentProposalWidget(0),
                                               signConfirmationDialog(0),
@@ -253,10 +254,13 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     changeConnectedState(DBB::isConnectionOpen());
 
 
-    processComnand = false;
+    processCommand = false;
 
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
+
+    websocketServer = new WebsocketServer(8080, true);
+    connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
 }
 
 /*
@@ -271,6 +275,7 @@ void DBBDaemonGui::deviceIsReadyToInteract()
     //update multisig wallet data
     MultisigUpdateWallets();
     SingleWalletUpdateWallets();
+    deviceReadyToInteract = true;
 }
 
 void DBBDaemonGui::changeConnectedState(bool state)
@@ -355,6 +360,11 @@ void DBBDaemonGui::uiUpdateDeviceState()
         sessionPassword.clear();
         hideSessionPasswordView();
         setTabbarEnabled(false);
+        deviceReadyToInteract = false;
+        //hide modal dialog and abort possible ecdh pairing
+        hideModalInfo();
+        if (websocketServer)
+            websocketServer->abortECDHPairing();
     } else {
         walletsAction->setEnabled(true);
         settingsAction->setEnabled(true);
@@ -521,6 +531,38 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start();
 }
 
+void DBBDaemonGui::showModalInfo(const QString &info)
+{
+    ui->modalInfoLabel->setText(info);
+    this->ui->modalBlockerView->setVisible(true);
+    QWidget* slide = this->ui->modalBlockerView;
+    // setup slide
+    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    // then a animation:
+    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(0, 0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
+}
+
+void DBBDaemonGui::hideModalInfo()
+{
+    QWidget* slide = this->ui->modalBlockerView;
+
+    // then a animation:
+    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(-slide->width(), 0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start();
+}
+
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
     this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
@@ -548,7 +590,7 @@ void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable,
 
 bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
 {
-    if (processComnand)
+    if (processCommand)
         return false;
 
     if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON) {
@@ -556,7 +598,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
     }
 
     setLoading(true);
-    processComnand = true;
+    processCommand = true;
     executeCommand(cmd, sessionPassword, cmdFinished);
 
     return true;
@@ -744,7 +786,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 
 void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag)
 {
-    processComnand = false;
+    processCommand = false;
     setLoading(false);
 
     if (response.isObject()) {
@@ -951,6 +993,16 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             resetInfos();
             getInfo();
         } else {
+        }
+
+        //no else if because we want to hide the blocker view in case of an error
+        if (tag == DBB_RESPONSE_TYPE_VERIFYPASS_ECDH)
+        {
+            if (errorObj.isObject()) {
+                showAlert(tr("Error"), tr("Verification Device Pairing Failed"));
+            }
+            hideModalInfo();
+            websocketServer->sendDataToClientInECDHParingState(response);
         }
     }
 }
@@ -1364,7 +1416,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     bool ret = false;
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
-        processComnand = false;
+        processCommand = false;
         setLoading(false);
 
         printf("cmd back: %s\n", cmdOut.c_str());
@@ -1427,4 +1479,19 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
 
         thread->completed();
     });
+}
+
+#pragma mark - WebSocket Stack (ECDH)
+
+void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
+{
+    if (!deviceReadyToInteract)
+        return;
+    
+    executeCommandWrapper("{\"verifypass\": {\"ecdh\" : \"" + pubkey + "\"}}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFYPASS_ECDH);
+    });
+    showModalInfo("Pairing Verification Device");
 }
