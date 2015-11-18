@@ -23,6 +23,10 @@
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
 
+#define WEBSOCKET_PORT 8888
+
+class BonjourServiceRegister;
+
 namespace Ui
 {
 class MainWindow;
@@ -91,6 +95,7 @@ private:
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
     WebsocketServer *websocketServer;
+    BonjourServiceRegister *bonjourRegister;
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;

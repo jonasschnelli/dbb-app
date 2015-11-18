@@ -15,12 +15,14 @@
 #include <QToolBar>
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
+#include <QtNetwork/QHostInfo>
 
 #include "ui/ui_overview.h"
 #include <dbb.h>
 
 #include "dbb_util.h"
 #include "dbb_netthread.h"
+#include "bonjourserviceregister.h"
 
 #include <cstdio>
 #include <ctime>
@@ -37,6 +39,15 @@ extern void executeCommand(const std::string& cmd, const std::string& password, 
 
 DBBDaemonGui::~DBBDaemonGui()
 {
+    delete bonjourRegister;
+}
+
+void testfunc(DNSServiceRef, DNSServiceFlags,
+              DNSServiceErrorType errorCode, const char *name,
+              const char *regtype, const char *domain,
+              void *data)
+{
+
 }
 
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
@@ -259,8 +270,13 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
 
-    websocketServer = new WebsocketServer(8080, true);
+    //create a local websocket server
+    websocketServer = new WebsocketServer(WEBSOCKET_PORT, true);
     connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
+
+    //announce service over mDNS
+    bonjourRegister = new BonjourServiceRegister(this);
+    bonjourRegister->registerService(BonjourRecord(tr("Digital Bitbox App Websocket %1").arg(QHostInfo::localHostName()), QLatin1String("_dbb._tcp"), QString()), WEBSOCKET_PORT);
 }
 
 /*
