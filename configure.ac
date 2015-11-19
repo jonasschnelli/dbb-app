@@ -78,9 +78,6 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support], [
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 
-
-AX_CHECK_OPENSSL
-
 use_pkgconfig=yes
 
 
@@ -126,7 +123,7 @@ case $host in
        AC_MSG_ERROR("windres not found")
      fi
 
-     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB"
+     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS"
      LEVELDB_TARGET_FLAGS="TARGET_OS=OS_WINDOWS_CROSSCOMPILE"
      if test "x$CXXFLAGS_overridden" = "xno"; then
        CXXFLAGS="$CXXFLAGS -w"
@@ -220,8 +217,6 @@ if test x$use_reduce_exports = xyes; then
     AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]], [RELDFLAGS="-Wl,--exclude-libs,ALL"])
 fi
 
-BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB"
-
 #######################################################################
 # we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
 # so we can copy upstreams m4 directly without merging                #
@@ -246,7 +241,6 @@ AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
 fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
-AC_SUBST(BOOST_LIBS)
 
 BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], [have_qrencode=no])])
 BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, have_qrencode=no)])
