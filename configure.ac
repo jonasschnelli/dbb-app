@@ -70,14 +70,18 @@ fi
 
 
 # Look for dns_sd flag
-AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support], [
+AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
+
+if test x$with_dns_sd = xyes; then 
   AC_MSG_RESULT(>>Including dns_sd for mDNS support)
   HAS_DNS_SD=1
   AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
-  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))],)
-AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
+  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))
+  AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
+fi
 
-
+dnl Check for pthread compile/link requirements
+AX_PTHREAD
 
 AX_CHECK_OPENSSL
 
