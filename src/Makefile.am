@@ -63,20 +63,24 @@ QT_FORMS_UI = \
 DBB_GUI_H = \
 	qt/paymentproposal.h \
     qt/signconfirmationdialog.h \
-    qt/dbb_websocketserver.h
+    qt/dbb_websocketserver.h \
+    qt/bonjourserviceregister.h \
+    qt/bonjourrecord.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
     qt/backupdialog.cpp \
     qt/signconfirmationdialog.cpp \
-    qt/dbb_websocketserver.cpp
+    qt/dbb_websocketserver.cpp \
+    qt/bonjourserviceregister.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
 	qt/moc_paymentproposal.cpp \
     qt/moc_backupdialog.cpp \
     qt/moc_signconfirmationdialog.cpp \
-    qt/moc_dbb_websocketserver.cpp
+    qt/moc_dbb_websocketserver.cpp \
+    qt/moc_bonjourserviceregister.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
@@ -92,7 +96,7 @@ $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
 dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl $(LINUX_LIBS)
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
 

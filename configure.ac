@@ -69,8 +69,13 @@ if test "${with_hid}" != no ; then
 fi
 
 
-
-
+# Look for dns_sd flag
+AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support], [
+  AC_MSG_RESULT(>>Including dns_sd for mDNS support)
+  HAS_DNS_SD=1
+  AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
+  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))],)
+AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 
 
@@ -201,7 +206,7 @@ case $host in
      ;;
    *linux*)
      TARGET_OS=linux
-     LINUX_LIBS=-lpthread
+     LINUX_LIBS=
      AC_SUBST(LINUX_LIBS)
      ;;
    *)

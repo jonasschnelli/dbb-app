@@ -14,7 +14,7 @@ before_install:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         sudo apt-add-repository -y ppa:beineri/opt-qt55-trusty
         && sudo apt-get update -qq
-        && sudo apt-get install -qq g++-4.8 libboost-all-dev libevent-dev qt55base qt55tools qt55websockets
+        && sudo apt-get install -qq g++-4.8 libboost-all-dev libevent-dev qt55base qt55tools qt55websockets libavahi-compat-libdnssd1 libavahi-compat-libdnssd-dev
         ;
       fi
  
@@ -57,11 +57,11 @@ script:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         QTDIR="/opt/qt55" && PATH="$QTDIR/bin:$PATH" && qt55-env.sh
         && ./autogen.sh
-        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
+        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --with-dns_sd --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
         ;
      else
         ./autogen.sh
-        && ./configure --enable-daemon --with-gui=qt5 --enable-debug
+        && ./configure --with-dns_sd --enable-daemon --with-gui=qt5 --enable-debug
         ;
      fi
     - make
