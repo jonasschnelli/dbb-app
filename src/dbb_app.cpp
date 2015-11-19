@@ -58,13 +58,14 @@
 
 #include "config/_dbb-config.h"
 
+#include <btc/ecc.h>
+
 #ifdef DBB_ENABLE_QT
 #include <QApplication>
 #include <QPushButton>
 
 #include "qt/dbb_gui.h"
 
-#include <btc/ecc.h>
 
 extern void doubleSha256(char* string, unsigned char* hashOut);
 
@@ -209,6 +210,7 @@ int main(int argc, char** argv)
         }
     });
 
+    ecc_start();
 #ifdef DBB_ENABLE_QT
 #if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
@@ -229,10 +231,9 @@ int main(int argc, char** argv)
 #else
     //directly start libevents main run loop
     event_base_dispatch(base);
-    ecc_stop();
 
     DBB::closeConnection(); //clean up HID
 #endif
-
+    ecc_stop();
     exit(1);
 }

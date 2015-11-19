@@ -78,6 +78,8 @@ AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support], [
 AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 
+dnl Check for pthread compile/link requirements
+AX_PTHREAD
 
 AX_CHECK_OPENSSL
 
