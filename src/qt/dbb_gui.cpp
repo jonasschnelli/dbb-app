@@ -32,6 +32,7 @@
 #include <btc/bip32.h>
 #include <btc/tx.h>
 
+#include <qrencode.h>
 
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
@@ -161,7 +162,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&)));
 
     connect(this, SIGNAL(shouldUpdateWallet(DBBWallet*)), this, SLOT(updateWallet(DBBWallet*)));
-    connect(this, SIGNAL(walletAddressIsAvailable(DBBWallet*,const std::string &)), this, SLOT(newAddressAvailable(DBBWallet*,const std::string&)));
+    connect(this, SIGNAL(walletAddressIsAvailable(DBBWallet*,const std::string &,const std::string &)), this, SLOT(updateReceivingAddress(DBBWallet*,const std::string&,const std::string &)));
     connect(this, SIGNAL(paymentProposalUpdated(DBBWallet*,const UniValue&)), this, SLOT(reportPaymentProposalPost(DBBWallet*,const UniValue&)));
 
 
@@ -250,7 +251,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     singleWallet->client.setFilenameBase("copay_single");
     singleWallet->baseKeyPath = "m/203'";
     singleWallet->client.LoadLocalData();
-    this->ui->currentAddress->setText(QString::fromStdString(singleWallet->client.GetLastKnownAddress()));
+    std::string lastAddress, keypath;
+    singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
+    updateReceivingAddress(singleWallet, lastAddress, keypath);
 
     DBBWallet* copayWallet = new DBBWallet();
     copayWallet->client.setFilenameBase("copay_multisig");
@@ -528,6 +531,7 @@ void DBBDaemonGui::askForSessionPassword()
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start();
+    ui->passwordLineEdit->setFocus();
 }
 
 void DBBDaemonGui::hideSessionPasswordView()
@@ -581,20 +585,20 @@ void DBBDaemonGui::hideModalInfo()
 
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
-    this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
-    this->ui->walletLabel->setText(tr(walletAvailable ? "Wallet available" : "No Wallet"));
-    this->ui->createWallet->setVisible(!walletAvailable);
-
-    this->ui->lockCheckmark->setIcon(QIcon(lockAvailable ? ":/icons/okay" : ":/icons/warning"));
-    this->ui->lockLabel->setText(lockAvailable ? "Device 2FA Lock" : "No 2FA set");
-
-    if (loading) {
-        this->ui->lockLabel->setText("loading info...");
-        this->ui->walletLabel->setText("loading info...");
-
-        this->ui->walletCheckmark->setIcon(QIcon(":/icons/warning")); //TODO change to loading...
-        this->ui->lockCheckmark->setIcon(QIcon(":/icons/warning"));   //TODO change to loading...
-    }
+//    this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
+//    this->ui->walletLabel->setText(tr(walletAvailable ? "Wallet available" : "No Wallet"));
+//    this->ui->createWallet->setVisible(!walletAvailable);
+//
+//    this->ui->lockCheckmark->setIcon(QIcon(lockAvailable ? ":/icons/okay" : ":/icons/warning"));
+//    this->ui->lockLabel->setText(lockAvailable ? "Device 2FA Lock" : "No 2FA set");
+//
+//    if (loading) {
+//        this->ui->lockLabel->setText("loading info...");
+//        this->ui->walletLabel->setText("loading info...");
+//
+//        this->ui->walletCheckmark->setIcon(QIcon(":/icons/warning")); //TODO change to loading...
+//        this->ui->lockCheckmark->setIcon(QIcon(":/icons/warning"));   //TODO change to loading...
+//    }
 }
 
 /*
@@ -1047,18 +1051,47 @@ void DBBDaemonGui::getNewAddress()
             std::string walletsResponse;
 
             std::string address;
-            singleWallet->client.GetNewAddress(address);
-            emit walletAddressIsAvailable(this->singleWallet, address);
+            std::string keypath;
+            singleWallet->client.GetNewAddress(address, keypath);
+            emit walletAddressIsAvailable(this->singleWallet, address, keypath);
         });
 
         setNetLoading(true);
     }
 }
 
-void DBBDaemonGui::newAddressAvailable(DBBWallet *wallet, const std::string &newAddress)
+void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &info)
 {
     setNetLoading(false);
     this->ui->currentAddress->setText(QString::fromStdString(newAddress));
+
+    std::string uri = "bitcoin://"+newAddress;
+
+    QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    if (code)
+    {
+
+        QImage myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);
+        myImage.fill(0xffffff);
+        unsigned char *p = code->data;
+        for (int y = 0; y < code->width; y++)
+        {
+            for (int x = 0; x < code->width; x++)
+            {
+                myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));
+                p++;
+            }
+        }
+        QRcode_free(code);
+
+        QIcon qrCode;
+        QPixmap pixMap = QPixmap::fromImage(myImage).scaled(240, 240);
+        qrCode.addPixmap(pixMap, QIcon::Normal);
+        qrCode.addPixmap(pixMap, QIcon::Disabled);
+        ui->qrCode->setIcon(qrCode);
+    }
+
+    ui->qrCode->setToolTip(QString::fromStdString(info));
 }
 
 void DBBDaemonGui::createTxProposalPressed()

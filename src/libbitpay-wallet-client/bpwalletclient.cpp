@@ -242,7 +242,7 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     return true;
 }
 
-bool BitPayWalletClient::GetNewAddress(std::string& newAddress)
+bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keypath)
 {
     //form request
     UniValue jsonArgs(UniValue::VOBJ);
@@ -265,28 +265,38 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress)
     if (!addressUV.isStr())
         return false;
 
+    UniValue pathUV = find_value(responseUni, "path");
+    if (pathUV.isStr())
+        keypath = pathUV.get_str();
+
     newAddress = addressUV.get_str();
     lastKnownAddressJson = response;
     SaveLocalData();
     return true;
 }
 
-std::string BitPayWalletClient::GetLastKnownAddress()
+bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& keypath)
 {
     if (lastKnownAddressJson.size() == 0)
-        return "";
+        return false;
 
     UniValue responseUni;
     responseUni.read(lastKnownAddressJson);
 
     if (!responseUni.isObject())
-        return "";
+        return false;
 
     UniValue addressUV = find_value(responseUni, "address");
     if (!addressUV.isStr())
-        return "";
+        return false;
 
-    return addressUV.get_str();
+    address = addressUV.get_str();
+
+    UniValue keypathUV = find_value(responseUni, "path");
+    if (keypathUV.isStr())
+        keypath = keypathUV.get_str();
+
+    return true;
 }
 
 

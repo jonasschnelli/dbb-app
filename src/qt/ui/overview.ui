@@ -234,7 +234,7 @@
        </font>
       </property>
       <property name="text">
-       <string>0.00 BTC.</string>
+       <string>loading...</string>
       </property>
       <property name="alignment">
        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
@@ -1008,7 +1008,7 @@
         <number>10</number>
        </property>
        <property name="topMargin">
-        <number>100</number>
+        <number>30</number>
        </property>
        <property name="rightMargin">
         <number>10</number>
@@ -1016,6 +1016,25 @@
        <property name="bottomMargin">
         <number>10</number>
        </property>
+       <item>
+        <widget class="QPushButton" name="qrCode">
+         <property name="enabled">
+          <bool>false</bool>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="iconSize">
+          <size>
+           <width>192</width>
+           <height>192</height>
+          </size>
+         </property>
+         <property name="flat">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
        <item>
         <spacer name="verticalSpacer_2">
          <property name="orientation">
@@ -1435,6 +1454,9 @@ background-color: rgba(0,0,0, 0%)</string>
      <property name="styleSheet">
       <string notr="true">border:0;</string>
      </property>
+     <property name="echoMode">
+      <enum>QLineEdit::Password</enum>
+     </property>
      <property name="placeholderText">
       <string/>
      </property>
@@ -1461,7 +1483,8 @@ background-color: rgba(0,0,0, 0%)</string>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white;</string>
+       <string notr="true">color: white;
+background-color: rgba(0,0,0, 0%)</string>
       </property>
       <property name="text">
        <string>Password</string>
@@ -1477,7 +1500,8 @@ background-color: rgba(0,0,0, 0%)</string>
        </rect>
       </property>
       <property name="styleSheet">
-       <string notr="true">color: white;</string>
+       <string notr="true">color: white;
+background-color: rgba(0,0,0, 0%)</string>
       </property>
       <property name="text">
        <string>Unlocking Device...</string>

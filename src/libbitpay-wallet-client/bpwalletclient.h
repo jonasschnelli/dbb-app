@@ -81,10 +81,10 @@ public:
     bool CreateWallet(const std::string& walletName);
 
     //!Get a new address and writes it to &newAddress
-    bool GetNewAddress(std::string& newAddress);
+    bool GetNewAddress(std::string& newAddress, std::string& keypath);
 
     //!Return the last (disk) cached known address for receiving coins
-    std::string GetLastKnownAddress();
+    bool GetLastKnownAddress(std::string& address, std::string& keypath);
 
     bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
 
