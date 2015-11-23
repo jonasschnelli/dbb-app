@@ -122,9 +122,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->multisigWalletNameKey->setStyleSheet(labelCSS);
     ////////////// END STYLING
 
-
-    this->ui->dbbIcon->setVisible(false);
-
     ui->touchbuttonInfo->setVisible(false);
     // set light transparent background for touch button info layer
     this->ui->touchbuttonInfo->setStyleSheet("background-color: rgba(255, 255, 255, 240);");
@@ -142,7 +139,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
-    connect(ui->createWallet, SIGNAL(clicked()), this, SLOT(seedHardware()));
     connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(joinCopayWalletClicked()));
@@ -160,6 +156,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(shouldHideVerificationInfo()), this, SLOT(hideVerificationInfo()));
     connect(this, SIGNAL(signedProposalAvailable(DBBWallet*, const UniValue&, const std::vector<std::string>&)), this, SLOT(postSignaturesForPaymentProposal(DBBWallet*, const UniValue&, const std::vector<std::string>&)));
     connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&)));
+    connect(this, SIGNAL(getTransactionHistoryAvailable(DBBWallet*, bool, const UniValue&)), this, SLOT(updateTransactionTable(DBBWallet*, bool, const UniValue&)));
 
     connect(this, SIGNAL(shouldUpdateWallet(DBBWallet*)), this, SLOT(updateWallet(DBBWallet*)));
     connect(this, SIGNAL(walletAddressIsAvailable(DBBWallet*,const std::string &,const std::string &)), this, SLOT(updateReceivingAddress(DBBWallet*,const std::string&,const std::string &)));
@@ -384,6 +381,12 @@ void DBBDaemonGui::uiUpdateDeviceState()
         hideModalInfo();
         if (websocketServer)
             websocketServer->abortECDHPairing();
+
+        //clear some infos
+        ui->tableWidget->setModel(NULL);
+        this->ui->balanceLabel->setText("");
+        this->ui->singleWalletBalance->setText("");
+
     } else {
         walletsAction->setEnabled(true);
         settingsAction->setEnabled(true);
@@ -1253,11 +1256,28 @@ void DBBDaemonGui::MultisigUpdateWallets()
 void DBBDaemonGui::SingleWalletUpdateWallets()
 {
     if (!singleWallet->client.IsSeeded())
+    {
+        ui->createSingleWallet->setText("Create Wallet");
         return;
+    }
+    ui->createSingleWallet->setText("Refresh");
 
     singleWalletIsUpdating = true;
     executeNetUpdateWallet(singleWallet, [this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
+    });
+
+    DBBNetThread* thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this]() {
+        std::string txHistoryResponse;
+        bool transactionHistoryAvailable = this->singleWallet->client.GetTransactionHistory(txHistoryResponse);
+
+
+        UniValue data;
+        if (transactionHistoryAvailable)
+            data.read(txHistoryResponse);
+
+        emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
     });
 }
 
@@ -1284,6 +1304,61 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
 
     this->ui->balanceLabel->setText(tr("%1 BTC").arg(balance));
     this->ui->singleWalletBalance->setText(tr("%1 BTC").arg(balance));
+}
+
+void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue &history)
+{
+    ui->tableWidget->setModel(NULL);
+
+    if (!historyAvailable || !history.isArray())
+        return;
+
+
+    transactionTableModel = new  QStandardItemModel(history.size(),3,this);
+
+    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Type") );
+    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Amount") );
+    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Fees") );
+    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Date") );
+
+    int cnt = 0;
+    for (const UniValue &obj : history.getValues())
+    {
+        UniValue timeUV = find_value(obj, "time");
+        if (timeUV.isNum())
+        {
+            QDateTime timestamp;
+            timestamp.setTime_t(timeUV.get_int64());
+            QStandardItem *item = new QStandardItem(timestamp.toString(Qt::SystemLocaleShortDate));
+            transactionTableModel->setItem(cnt, 0, item);
+        }
+
+        UniValue actionUV = find_value(obj, "action");
+        if (actionUV.isStr())
+        {
+            QString iconName = ":/icons/tx_" + QString::fromStdString(actionUV.get_str());
+            QStandardItem *item = new QStandardItem(QIcon(iconName), QString::fromStdString(actionUV.get_str()) );
+            transactionTableModel->setItem(cnt, 1, item);
+        }
+
+        UniValue amountUV = find_value(obj, "amount");
+        if (amountUV.isNum())
+        {
+            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())) + " BTC" );
+            transactionTableModel->setItem(cnt, 2, item);
+        }
+
+        UniValue feeUV = find_value(obj, "fees");
+        if (feeUV.isNum())
+        {
+            QStandardItem *item = new QStandardItem(QString::number(feeUV.get_int64()) + " Satoshis" );
+            transactionTableModel->setItem(cnt, 3, item);
+        }
+
+        cnt++;
+    }
+
+    ui->tableWidget->setModel(transactionTableModel);
 }
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)

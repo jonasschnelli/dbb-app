@@ -64,11 +64,14 @@
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
+       <property name="spacing">
+        <number>5</number>
+       </property>
        <property name="leftMargin">
         <number>10</number>
        </property>
        <property name="topMargin">
-        <number>100</number>
+        <number>15</number>
        </property>
        <property name="rightMargin">
         <number>10</number>
@@ -77,82 +80,74 @@
         <number>10</number>
        </property>
        <item>
-        <widget class="QPushButton" name="dbbIcon">
-         <property name="enabled">
-          <bool>false</bool>
+        <layout class="QHBoxLayout" name="avalableBalanceRow">
+         <property name="bottomMargin">
+          <number>0</number>
          </property>
-         <property name="text">
-          <string/>
-         </property>
-         <property name="icon">
-          <iconset>
-           <normaloff>:/icons/dbb</normaloff>
-           <disabledoff>:/icons/dbb</disabledoff>:/icons/dbb</iconset>
-         </property>
-         <property name="iconSize">
-          <size>
-           <width>64</width>
-           <height>64</height>
-          </size>
-         </property>
-         <property name="flat">
-          <bool>true</bool>
-         </property>
-        </widget>
+         <item>
+          <spacer name="horizontalSpacer_6">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="availableBalanceOverviewKey">
+           <property name="text">
+            <string>available balance</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
-        <widget class="QPushButton" name="createSingleWallet">
-         <property name="text">
-          <string>Create Wallet</string>
+        <layout class="QHBoxLayout" name="avalableBalanceRowValue">
+         <property name="bottomMargin">
+          <number>0</number>
          </property>
-        </widget>
+         <item>
+          <spacer name="horizontalSpacer_4">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QLabel" name="balanceLabel">
+           <property name="font">
+            <font>
+             <weight>75</weight>
+             <bold>true</bold>
+            </font>
+           </property>
+           <property name="text">
+            <string>Balance</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_5">
-         <property name="topMargin">
+         <property name="bottomMargin">
           <number>0</number>
          </property>
-         <property name="bottomMargin">
-          <number>3</number>
-         </property>
          <item>
-          <widget class="QPushButton" name="walletCheckmark">
-           <property name="minimumSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
-           <property name="maximumSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
-           </property>
+          <widget class="QLabel" name="lastTransactionsTitle">
            <property name="text">
-            <string/>
-           </property>
-           <property name="icon">
-            <iconset>
-             <normaloff>:/icons/okay</normaloff>
-             <disabledoff>:/icons/okay</disabledoff>:/icons/okay</iconset>
-           </property>
-           <property name="flat">
-            <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="walletLabel">
-           <property name="text">
-            <string>Wallet available</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="createWallet">
-           <property name="text">
-            <string>Create Wallet</string>
+            <string>Last Transactions</string>
            </property>
           </widget>
          </item>
@@ -160,85 +155,70 @@
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
-         <property name="topMargin">
-          <number>0</number>
-         </property>
          <property name="bottomMargin">
-          <number>20</number>
+          <number>10</number>
          </property>
          <item>
-          <widget class="QPushButton" name="lockCheckmark">
-           <property name="minimumSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
+          <widget class="QTableView" name="tableWidget">
+           <property name="styleSheet">
+            <string notr="true">selection-background-color: rgb(15, 29, 64);</string>
            </property>
-           <property name="maximumSize">
-            <size>
-             <width>20</width>
-             <height>20</height>
-            </size>
+           <property name="editTriggers">
+            <set>QAbstractItemView::NoEditTriggers</set>
            </property>
-           <property name="text">
-            <string/>
+           <property name="selectionMode">
+            <enum>QAbstractItemView::SingleSelection</enum>
            </property>
-           <property name="icon">
-            <iconset>
-             <normaloff>:/icons/warning</normaloff>
-             <disabledoff>:/icons/warning</disabledoff>:/icons/warning</iconset>
+           <property name="selectionBehavior">
+            <enum>QAbstractItemView::SelectRows</enum>
            </property>
-           <property name="flat">
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <property name="horizontalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
+           <attribute name="horizontalHeaderVisible">
+            <bool>false</bool>
+           </attribute>
+           <attribute name="horizontalHeaderStretchLastSection">
             <bool>true</bool>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QLabel" name="lockLabel">
-           <property name="text">
-            <string>Passwort not yet set</string>
-           </property>
+           </attribute>
+           <attribute name="verticalHeaderVisible">
+            <bool>false</bool>
+           </attribute>
           </widget>
          </item>
         </layout>
        </item>
        <item>
-        <spacer name="verticalSpacer">
-         <property name="orientation">
-          <enum>Qt::Vertical</enum>
+        <layout class="QHBoxLayout" name="horizontalLayout_10">
+         <property name="bottomMargin">
+          <number>10</number>
          </property>
-         <property name="sizeHint" stdset="0">
-          <size>
-           <width>20</width>
-           <height>40</height>
-          </size>
-         </property>
-        </spacer>
+         <item>
+          <spacer name="horizontalSpacer_7">
+           <property name="orientation">
+            <enum>Qt::Horizontal</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>40</width>
+             <height>20</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="createSingleWallet">
+           <property name="text">
+            <string>Create Wallet</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
        </item>
       </layout>
-     </widget>
-     <widget class="QLabel" name="balanceLabel">
-      <property name="geometry">
-       <rect>
-        <x>200</x>
-        <y>10</y>
-        <width>270</width>
-        <height>50</height>
-       </rect>
-      </property>
-      <property name="font">
-       <font>
-        <pointsize>28</pointsize>
-        <weight>75</weight>
-        <bold>true</bold>
-       </font>
-      </property>
-      <property name="text">
-       <string>loading...</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-      </property>
      </widget>
      <widget class="QWidget" name="noDeviceWidget" native="true">
       <property name="geometry">
@@ -293,7 +273,6 @@
        </property>
       </widget>
      </widget>
-     <zorder>balanceLabel</zorder>
      <zorder>noDeviceWidget</zorder>
      <zorder>verticalLayoutWidget</zorder>
     </widget>
@@ -791,7 +770,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayoutSend">
        <property name="spacing">
-        <number>3</number>
+        <number>5</number>
        </property>
        <property name="leftMargin">
         <number>10</number>
