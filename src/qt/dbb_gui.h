@@ -87,7 +87,7 @@ signals:
     //emited when a wallet needs update
     void shouldUpdateWallet(DBBWallet*);
     //emited when a new receiving address is available
-    void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress);
+    void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress, const std::string &keypath);
     //emited when a new receiving address is available
     void paymentProposalUpdated(DBBWallet *, const UniValue &proposal);
 
@@ -216,7 +216,7 @@ private slots:
     //!get a new address
     void getNewAddress();
     //!gets called when a new address is available
-    void newAddressAvailable(DBBWallet *wallet, const std::string &newAddress);
+    void updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &keypath);
     //!check the UI values and create a payment proposal from them, sign and post them
     void createTxProposalPressed();
     //!Report about a submitted payment proposal
