@@ -148,6 +148,8 @@ public:
     //flip byte order, required to reverse a given LE hash in hex to BE
     static std::string ReversePairs(const std::string& strIn);
 
+    int CheapRandom();
+
 private:
     std::string masterPrivKey; // "m/45'"
     std::string masterPubKey;  // "m/45'"

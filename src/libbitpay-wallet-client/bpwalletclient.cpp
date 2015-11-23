@@ -15,6 +15,7 @@
 
 #include <algorithm>
 #include <assert.h>
+#include <ctime>
 #include <string.h>
 
 #include "libdbb/crypto.h"
@@ -465,7 +466,7 @@ bool BitPayWalletClient::GetWallets(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    SendRequest("get", "/v1/wallets/?r=16354", "{}", response, httpStatusCode);
+    SendRequest("get", "/v1/wallets/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode);
 
     if (httpStatusCode != 200)
         return false;
@@ -480,7 +481,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    SendRequest("get", "/v1/txhistory/?limit=50&r=16354", "{}", response, httpStatusCode);
+    SendRequest("get", "/v1/txhistory/?limit=50&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode);
 
     if (httpStatusCode != 200)
         return false;
@@ -1025,4 +1026,10 @@ void BitPayWalletClient::RemoveLocalData()
 {
     std::string dataDir = GetDefaultDBBDataDir();
     remove((dataDir + "/" + filenameBase + ".dat").c_str());
+}
+
+int BitPayWalletClient::CheapRandom()
+{
+    srand((unsigned)time(0));
+    return rand()%1000000;
 }
