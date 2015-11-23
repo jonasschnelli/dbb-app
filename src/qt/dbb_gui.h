@@ -10,6 +10,7 @@
 #include <QLabel>
 #include <QPushButton>
 #include <QPropertyAnimation>
+#include <QStandardItemModel>
 
 #include <functional>
 #include <thread>
@@ -78,6 +79,8 @@ signals:
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
     //emited when a copay getwallet response is available
     void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
+    //emited when a copay wallet history response is available
+    void getTransactionHistoryAvailable(DBBWallet* wallet, bool historyAvailable, const UniValue& historyResponse);
     //emited when a payment proposal and a given signatures should be verified
     void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const std::string& signature);
     //emited when the verification dialog shoud hide
@@ -96,6 +99,7 @@ private:
     BackupDialog* backupDialog;
     WebsocketServer *websocketServer;
     BonjourServiceRegister *bonjourRegister;
+    QStandardItemModel *transactionTableModel;
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
@@ -240,6 +244,8 @@ private slots:
     void updateUIMultisigWallets(const UniValue& walletResponse);
     //!update the singlewallet ui from a getWallets response
     void updateUISingleWallet(const UniValue& walletResponse);
+    //!update the single wallet transaction table
+    void updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue& history);
 
     //!parse single wallet wallet response
     void parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);

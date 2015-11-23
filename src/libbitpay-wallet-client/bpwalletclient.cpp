@@ -473,6 +473,21 @@ bool BitPayWalletClient::GetWallets(std::string& response)
     return true;
 }
 
+bool BitPayWalletClient::GetTransactionHistory(std::string& response)
+{
+    std::string requestPubKey;
+    if (!GetRequestPubKey(requestPubKey))
+        return false;
+
+    long httpStatusCode = 0;
+    SendRequest("get", "/v1/txhistory/?limit=50&r=16354", "{}", response, httpStatusCode);
+
+    if (httpStatusCode != 200)
+        return false;
+
+    return true;
+}
+
 void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
 {
     btc_tx* tx = btc_tx_new();
