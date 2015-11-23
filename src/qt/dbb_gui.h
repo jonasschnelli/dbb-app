@@ -106,6 +106,7 @@ private:
     QAction* overviewAction;
     QAction* walletsAction;
     QAction* settingsAction;
+    bool sdcardWarned;
     bool processCommand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
