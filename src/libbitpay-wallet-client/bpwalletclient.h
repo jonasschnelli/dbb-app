@@ -94,6 +94,9 @@ public:
     //!load available wallets over wallet server
     bool GetWallets(std::string& response);
 
+    //!load transaction history
+    bool GetTransactionHistory(std::string& response);
+
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
     void ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
 
