@@ -156,7 +156,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
     connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(joinCopayWalletWithXPubKey(int)));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)));
-    connect(this, SIGNAL(shouldVerifySigning(DBBWallet*, const UniValue&, int, const QString&)), this, SLOT(showEchoVerification(DBBWallet*, const UniValue&, int, const QString&)));
+    connect(this, SIGNAL(shouldVerifySigning(DBBWallet*, const UniValue&, int, const std::string&)), this, SLOT(showEchoVerification(DBBWallet*, const UniValue&, int, const std::string&)));
     connect(this, SIGNAL(shouldHideVerificationInfo()), this, SLOT(hideVerificationInfo()));
     connect(this, SIGNAL(signedProposalAvailable(DBBWallet*, const UniValue&, const std::vector<std::string>&)), this, SLOT(postSignaturesForPaymentProposal(DBBWallet*, const UniValue&, const std::vector<std::string>&)));
     connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&)));
@@ -466,11 +466,14 @@ void DBBDaemonGui::gotoSettingsPage()
     this->ui->stackedWidget->setCurrentIndex(2);
 }
 
-void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, QString echoStr)
+void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
     if (!signConfirmationDialog) {
         signConfirmationDialog = new SignConfirmationDialog(0);
     }
+
+    if (websocketServer)
+        websocketServer->sendStringToAllClients(echoStr);
 
     signConfirmationDialog->setData(proposalData);
     signConfirmationDialog->show();
@@ -1474,7 +1477,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
 
         UniValue echoStr = find_value(jsonOut, "echo");
         if (!echoStr.isNull() && echoStr.isStr()) {
-            emit shouldVerifySigning(wallet, paymentProposal, actionType, QString::fromStdString(echoStr.get_str()));
+            emit shouldVerifySigning(wallet, paymentProposal, actionType, echoStr.get_str());
         } else {
             UniValue errorObj = find_value(jsonOut, "error");
             if (errorObj.isObject()) {

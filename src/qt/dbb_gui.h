@@ -23,7 +23,7 @@
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
 
-#define WEBSOCKET_PORT 8888
+#define WEBSOCKET_PORT 25698
 
 class BonjourServiceRegister;
 
@@ -79,7 +79,7 @@ signals:
     //emited when a copay getwallet response is available
     void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
     //emited when a payment proposal and a given signatures should be verified
-    void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const QString& signature);
+    void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const std::string& signature);
     //emited when the verification dialog shoud hide
     void shouldHideVerificationInfo();
     //emited when signatures for a payment proposal are available
@@ -175,7 +175,7 @@ private slots:
     void gotoMultisigPage();
     void gotoSettingsPage();
     //!shows info about the smartphone verification
-    void showEchoVerification(DBBWallet*, const UniValue& response, int actionType, QString echoStr);
+    void showEchoVerification(DBBWallet*, const UniValue& response, int actionType, const std::string& echoStr);
     //!hides verification info
     void hideVerificationInfo();
     //!gets called when the user hits enter in the "enter password form"
