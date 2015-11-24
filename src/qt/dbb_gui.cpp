@@ -68,7 +68,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               currentPaymentProposalWidget(0),
                                               signConfirmationDialog(0),
                                               loginScreenIndicatorOpacityAnimation(0),
-                                              statusBarloadingIndicatorOpacityAnimation(0)
+                                              statusBarloadingIndicatorOpacityAnimation(0),
+                                              sdcardWarned(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -386,6 +387,7 @@ void DBBDaemonGui::uiUpdateDeviceState()
         ui->tableWidget->setModel(NULL);
         this->ui->balanceLabel->setText("");
         this->ui->singleWalletBalance->setText("");
+        sdcardWarned = false;
 
     } else {
         walletsAction->setEnabled(true);
@@ -852,6 +854,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue name = find_value(deviceObj, "name");
                 UniValue seeded = find_value(deviceObj, "seeded");
                 UniValue lock = find_value(deviceObj, "lock");
+                UniValue sdcard = find_value(deviceObj, "sdcard");
                 bool walletAvailable = (seeded.isBool() && seeded.isTrue());
                 bool lockAvailable = (lock.isBool() && lock.isTrue());
 
@@ -865,6 +868,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 //enable UI
                 passwordAccepted();
                 deviceIsReadyToInteract();
+
+                if (sdcard.isBool() && sdcard.isTrue() && walletAvailable && !sdcardWarned)
+                {
+                    showAlert(tr("Please remove your SDCard!"), "Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores");
+                    sdcardWarned = true;
+                }
             }
         } else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
             UniValue touchbuttonObj = find_value(response, "touchbutton");
@@ -1070,6 +1079,9 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
 {
     setNetLoading(false);
     this->ui->currentAddress->setText(QString::fromStdString(newAddress));
+
+    if (newAddress.size() <= 0)
+        return;
 
     std::string uri = "bitcoin://"+newAddress;
 
