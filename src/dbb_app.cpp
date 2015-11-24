@@ -216,7 +216,6 @@ int main(int argc, char** argv)
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
-    ecc_start();
     //create a thread for the http handling
     std::thread httpThread([&]() {
         event_base_dispatch(base);
