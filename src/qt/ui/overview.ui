@@ -1028,6 +1028,16 @@
         </spacer>
        </item>
        <item>
+        <widget class="QLabel" name="keypathLabel">
+         <property name="text">
+          <string>TextLabel</string>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignCenter</set>
+         </property>
+        </widget>
+       </item>
+       <item>
         <layout class="QVBoxLayout" name="verticalLayout_5">
          <property name="leftMargin">
           <number>5</number>
@@ -1086,6 +1096,13 @@
             </size>
            </property>
           </spacer>
+         </item>
+         <item>
+          <widget class="QPushButton" name="verifyAddressButton">
+           <property name="text">
+            <string>Verify Address</string>
+           </property>
+          </widget>
          </item>
         </layout>
        </item>

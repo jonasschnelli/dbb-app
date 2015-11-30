@@ -113,6 +113,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->deviceNameLabel->setStyleSheet(labelCSS);
     this->ui->versionKeyLabel->setStyleSheet(labelCSS);
     this->ui->versionLabel->setStyleSheet(labelCSS);
+    this->ui->keypathLabel->setStyleSheet(labelCSS);
+    
 
 
     this->ui->balanceLabel->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
@@ -142,6 +144,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
     connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
+    connect(ui->verifyAddressButton, SIGNAL(clicked()), this, SLOT(verifyAddress()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(joinCopayWalletClicked()));
     connect(ui->checkProposals, SIGNAL(clicked()), this, SLOT(MultisigUpdateWallets()));
     connect(ui->showBackups, SIGNAL(clicked()), this, SLOT(showBackupDialog()));
@@ -978,6 +981,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
+        } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
+            UniValue responseMutable = response;
+            UniValue requestXPubKeyUV = find_value(response, "xpub");
+            QString errorString;
+            if (requestXPubKeyUV.isStr()) {
+                //pass the response to the verification devices
+                if (subtag == DBB_ADDRESS_STYLE_MULTISIG_1OF1)
+                    responseMutable.pushKV("type", "p2sh_ms_1of1");
+                if (subtag == DBB_ADDRESS_STYLE_P2PKH)
+                    responseMutable.pushKV("type", "p2pkh");
+                websocketServer->sendStringToAllClients(responseMutable.write());
+            }
         } else if (tag == DBB_RESPONSE_TYPE_ERASE) {
             UniValue resetObj = find_value(response, "reset");
             if (resetObj.isStr() && resetObj.get_str() == "success") {
@@ -1068,11 +1083,22 @@ void DBBDaemonGui::getNewAddress()
             std::string address;
             std::string keypath;
             singleWallet->client.GetNewAddress(address, keypath);
+            keypath.erase(0,1);
+            keypath = singleWallet->baseKeyPath + keypath;
             emit walletAddressIsAvailable(this->singleWallet, address, keypath);
         });
 
         setNetLoading(true);
     }
+}
+
+void DBBDaemonGui::verifyAddress()
+{
+    executeCommandWrapper("{\"xpub\":\"" + ui->keypathLabel->text().toStdString() + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_MULTISIG_1OF1);
+    });
 }
 
 void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &info)
@@ -1110,6 +1136,7 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     }
 
     ui->qrCode->setToolTip(QString::fromStdString(info));
+    ui->keypathLabel->setText(QString::fromStdString(info));
 }
 
 void DBBDaemonGui::createTxProposalPressed()
