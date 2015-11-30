@@ -19,7 +19,7 @@ public:
     explicit WebsocketServer(quint16 port, bool debug = false, QObject *parent = Q_NULLPTR);
     ~WebsocketServer();
 
-    void sendStringToAllClients(const std::string &data);
+    int sendStringToAllClients(const std::string &data);
     void sendDataToClientInECDHParingState(const UniValue &data);
     void abortECDHPairing();
     

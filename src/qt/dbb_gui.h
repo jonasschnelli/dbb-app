@@ -50,8 +50,14 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_ERASE_BACKUP,
     DBB_RESPONSE_TYPE_RANDOM_NUM,
     DBB_RESPONSE_TYPE_DEVICE_LOCK,
-    DBB_RESPONSE_TYPE_VERIFYPASS_ECDH
+    DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
+    DBB_RESPONSE_TYPE_XPUB_VERIFY
 } dbb_response_type_t;
+
+typedef enum DBB_ADDRESS_STYLE {
+    DBB_ADDRESS_STYLE_MULTISIG_1OF1,
+    DBB_ADDRESS_STYLE_P2PKH
+} dbb_address_style_t;
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
@@ -220,6 +226,8 @@ private slots:
     void createSingleWallet();
     //!get a new address
     void getNewAddress();
+    //!verify a address over the smartphone
+    void verifyAddress();
     //!gets called when a new address is available
     void updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &keypath);
     //!check the UI values and create a payment proposal from them, sign and post them
