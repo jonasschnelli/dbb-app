@@ -538,7 +538,7 @@ void DBBDaemonGui::askForSessionPassword()
     animation->setEndValue(QPoint(0, 0));
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
-    animation->start();
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
     ui->passwordLineEdit->setFocus();
 }
 
@@ -556,7 +556,7 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->setEndValue(QPoint(-slide->width(), 0));
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
-    animation->start();
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void DBBDaemonGui::showModalInfo(const QString &info)
@@ -574,7 +574,7 @@ void DBBDaemonGui::showModalInfo(const QString &info)
     animation->setEndValue(QPoint(0, 0));
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
-    animation->start();
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void DBBDaemonGui::hideModalInfo()
@@ -588,7 +588,7 @@ void DBBDaemonGui::hideModalInfo()
     animation->setEndValue(QPoint(-slide->width(), 0));
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
-    animation->start();
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)

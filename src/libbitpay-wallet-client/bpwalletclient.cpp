@@ -887,6 +887,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
                 error = true;
         }
 
+        curl_slist_free_all(chunk);
         curl_easy_cleanup(curl);
     }
     curl_global_cleanup();
