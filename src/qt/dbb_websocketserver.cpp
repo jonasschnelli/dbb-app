@@ -52,13 +52,14 @@ void WebsocketServer::sendDataToClientInECDHParingState(const UniValue &data)
     }
 }
 
-void WebsocketServer::sendStringToAllClients(const std::string &data)
+int WebsocketServer::sendStringToAllClients(const std::string &data)
 {
     for( int i=0; i<m_clients.count(); ++i )
     {
         QWebSocket *pClient = m_clients[0];
         pClient->sendTextMessage(QString::fromStdString(data));
     }
+    return m_clients.count();
 }
 
 void WebsocketServer::abortECDHPairing()
