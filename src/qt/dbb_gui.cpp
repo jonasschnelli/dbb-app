@@ -1014,8 +1014,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
-            if (backupObj.isStr()) {
-                std::vector<std::string> data = DBB::split(backupObj.get_str(), ',');
+            if (backupObj.isArray()) {
+                std::vector<std::string> data;
+                for (const UniValue& obj : backupObj.getValues())
+                {
+                    data.push_back(obj.get_str());
+                }
                 backupDialog->showList(data);
             }
         } else if (tag == DBB_RESPONSE_TYPE_ADD_BACKUP && backupDialog) {
