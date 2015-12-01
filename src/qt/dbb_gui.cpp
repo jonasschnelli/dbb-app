@@ -1569,7 +1569,8 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     }
     std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
     std::string serTx;
-    wallet->client.ParseTxProposal(paymentProposal, serTx, inputHashesAndPaths);
+    UniValue changeAddressData;
+    wallet->client.ParseTxProposal(paymentProposal, changeAddressData, serTx, inputHashesAndPaths);
 
     //build sign command
     std::string hashCmd;
@@ -1581,10 +1582,32 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     hashCmd.pop_back();
     hashCmd.pop_back(); // remove ", "
 
+    //build checkpubkeys
+    UniValue checkpubObj = UniValue(UniValue::VARR);
+    if (changeAddressData.isObject())
+    {
+        UniValue keypath = find_value(changeAddressData, "path");
+        UniValue publicKeys = find_value(changeAddressData, "publicKeys");
+        if (publicKeys.isArray())
+        {
+            for (const UniValue& pkey : publicKeys.getValues())
+            {
+                if (pkey.isStr())
+                {
+                    UniValue obj = UniValue(UniValue::VOBJ);
+                    obj.pushKV("pubkey", pkey.get_str());
+                    if (keypath.isStr())
+                        obj.pushKV("keypath", keypath.get_str());
+                    checkpubObj.push_back(obj);
+                }
+            }
+        }
+    }
+
     std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0] + 32);
 
 
-    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ] } }";
+    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;

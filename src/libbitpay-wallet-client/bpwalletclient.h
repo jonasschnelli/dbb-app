@@ -98,7 +98,7 @@ public:
     bool GetTransactionHistory(std::string& response);
 
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
-    void ParseTxProposal(const UniValue& txProposal, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
+    void ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);

@@ -489,7 +489,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
     return true;
 }
 
-void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
+void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
 {
     btc_tx* tx = btc_tx_new();
 
@@ -612,9 +612,9 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::string
     }
 
     // find out change address
-    UniValue changeAddrObj = find_value(txProposal, "changeAddress");
-    keys = changeAddrObj.getKeys();
-    values = changeAddrObj.getValues();
+    changeAddressData = find_value(txProposal, "changeAddress");
+    keys = changeAddressData.getKeys();
+    values = changeAddressData.getValues();
     std::string changeAdr = "";
     for (i = 0; i < keys.size(); i++) {
         UniValue val = values[i];
