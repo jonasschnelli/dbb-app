@@ -1568,7 +1568,8 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
         return;
     }
     std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
-    wallet->client.ParseTxProposal(paymentProposal, inputHashesAndPaths);
+    std::string serTx;
+    wallet->client.ParseTxProposal(paymentProposal, serTx, inputHashesAndPaths);
 
     //build sign command
     std::string hashCmd;
@@ -1583,7 +1584,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0] + 32);
 
 
-    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \"somedata\", \"data\" : [ " + hashCmd + " ] } }";
+    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ] } }";
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;
