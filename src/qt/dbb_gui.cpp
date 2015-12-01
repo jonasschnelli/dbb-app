@@ -282,7 +282,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //announce service over mDNS
     bonjourRegister = new BonjourServiceRegister(this);
-    bonjourRegister->registerService(BonjourRecord(tr("Digital Bitbox App Websocket %1").arg(QHostInfo::localHostName()), QLatin1String("_dbb._tcp"), QString()), WEBSOCKET_PORT);
+    bonjourRegister->registerService(BonjourRecord(tr("Digital Bitbox App Websocket"), QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
 }
 
 /*
