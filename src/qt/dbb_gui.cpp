@@ -97,7 +97,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
     QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
 
-    qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:" + QString::fromStdString(stdFontSize) + "; }");
+    //qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:" + QString::fromStdString(stdFontSize) + "; }");
     this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
     QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: black; border:0; color: white; };");
     QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: #003366; border:0; color: white; };");
