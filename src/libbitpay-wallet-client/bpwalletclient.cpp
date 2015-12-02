@@ -489,7 +489,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
     return true;
 }
 
-void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
+void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
 {
     btc_tx* tx = btc_tx_new();
 
@@ -612,9 +612,9 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector
     }
 
     // find out change address
-    UniValue changeAddrObj = find_value(txProposal, "changeAddress");
-    keys = changeAddrObj.getKeys();
-    values = changeAddrObj.getValues();
+    changeAddressData = find_value(txProposal, "changeAddress");
+    keys = changeAddressData.getKeys();
+    values = changeAddressData.getValues();
     std::string changeAdr = "";
     for (i = 0; i < keys.size(); i++) {
         UniValue val = values[i];
@@ -637,8 +637,8 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, std::vector
 
     cstring* txser = cstr_new_sz(1024);
     btc_tx_serialize(txser, tx);
-    std::string txHex = DBB::HexStr((unsigned char*)txser->str, (unsigned char*)txser->str + txser->len);
-    BP_LOG_MSG("\n\nhextx: %s\n\n", txHex.c_str());
+    serTx = DBB::HexStr((unsigned char*)txser->str, (unsigned char*)txser->str + txser->len);
+    BP_LOG_MSG("\n\nhextx: %s\n\n", serTx.c_str());
     int cnt = 0;
 
     for (cnt = 0; cnt < tx->vin->len; cnt++) {
