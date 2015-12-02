@@ -58,21 +58,24 @@ QT_FORMS_UI = \
   qt/ui/overview.ui \
   qt/ui/paymentproposal.ui \
   qt/ui/backupdialog.ui \
-  qt/ui/signconfirmationdialog.ui
+  qt/ui/signconfirmationdialog.ui \
+  qt/ui/getaddressdialog.ui
 	
 DBB_GUI_H = \
 	qt/paymentproposal.h \
     qt/signconfirmationdialog.h \
     qt/dbb_websocketserver.h \
     qt/bonjourserviceregister.h \
-    qt/bonjourrecord.h
+    qt/bonjourrecord.h \
+    qt/getaddressdialog.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
     qt/backupdialog.cpp \
     qt/signconfirmationdialog.cpp \
     qt/dbb_websocketserver.cpp \
-    qt/bonjourserviceregister.cpp
+    qt/bonjourserviceregister.cpp \
+    qt/getaddressdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
@@ -80,13 +83,15 @@ QT_MOC_CPP = \
     qt/moc_backupdialog.cpp \
     qt/moc_signconfirmationdialog.cpp \
     qt/moc_dbb_websocketserver.cpp \
-    qt/moc_bonjourserviceregister.cpp
+    qt/moc_bonjourserviceregister.cpp \
+    qt/moc_getaddressdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
   qt/paymentproposal.moc \
   qt/backupdialog.moc \
-  qt/singconfirmationdialog.moc
+  qt/singconfirmationdialog.moc \
+  qt/getaddressdialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 

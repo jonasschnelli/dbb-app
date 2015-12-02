@@ -32,6 +32,8 @@ public:
 
     /* update wallet data from a getwallet json response */
     void updateData(const UniValue& walletResponse);
+
+    bool rewriteKeypath(std::string& keypath);
 };
 
 
