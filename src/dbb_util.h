@@ -59,5 +59,6 @@ std::string string_format( const std::string& format, Args ... args )
 std::string formatMoney(const int64_t &n);
 bool ParseMoney(const std::string& str, int64_t& nRet);
 bool ParseMoney(const char* pszIn, int64_t& nRet);
+void strReplace(std::string& str, const std::string& oldStr, const std::string& newStr);
 }
 #endif // LIBDBB_UTIL_H

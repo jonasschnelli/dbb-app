@@ -4,6 +4,8 @@
 
 #include "dbb_wallet.h"
 
+#include "dbb_util.h"
+
 
 void DBBWallet::broadcastPaymentProposal(const UniValue& proposal)
 {
@@ -58,4 +60,10 @@ void DBBWallet::updateData(const UniValue& walletResponse)
     UniValue pendingTxps = find_value(walletResponse, "pendingTxps");
     if (pendingTxps.isArray())
         currentPaymentProposals = pendingTxps;
+}
+
+bool DBBWallet::rewriteKeypath(std::string& keypath)
+{
+    DBB::strReplace(keypath, "m", baseKeyPath);
+    return true;
 }
