@@ -59,7 +59,9 @@ QT_FORMS_UI = \
   qt/ui/paymentproposal.ui \
   qt/ui/backupdialog.ui \
   qt/ui/signconfirmationdialog.ui \
-  qt/ui/getaddressdialog.ui
+  qt/ui/getaddressdialog.ui \
+  qt/ui/verificationdialog.ui \
+  qt/ui/qrcodesequence.ui
 	
 DBB_GUI_H = \
 	qt/paymentproposal.h \
@@ -67,7 +69,9 @@ DBB_GUI_H = \
     qt/dbb_websocketserver.h \
     qt/bonjourserviceregister.h \
     qt/bonjourrecord.h \
-    qt/getaddressdialog.h
+    qt/getaddressdialog.h \
+    qt/qrcodesequence.h \
+    qt/verificationdialog.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
@@ -75,7 +79,9 @@ DBB_GUI_CPP = \
     qt/signconfirmationdialog.cpp \
     qt/dbb_websocketserver.cpp \
     qt/bonjourserviceregister.cpp \
-    qt/getaddressdialog.cpp
+    qt/getaddressdialog.cpp \
+    qt/qrcodesequence.cpp \
+    qt/verificationdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
@@ -84,14 +90,18 @@ QT_MOC_CPP = \
     qt/moc_signconfirmationdialog.cpp \
     qt/moc_dbb_websocketserver.cpp \
     qt/moc_bonjourserviceregister.cpp \
-    qt/moc_getaddressdialog.cpp
+    qt/moc_getaddressdialog.cpp \
+    qt/moc_qrcodesequence.cpp \
+    qt/moc_verificationdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
   qt/paymentproposal.moc \
   qt/backupdialog.moc \
   qt/singconfirmationdialog.moc \
-  qt/getaddressdialog.moc
+  qt/getaddressdialog.moc \
+  qt/qrcodesequence.moc \
+  qt/verificationdialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
@@ -99,7 +109,7 @@ $(QT_MOC): $(QT_FORMS_H)
 $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
-dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) -I$(srcdir)/qt
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
 dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl $(LINUX_LIBS)
 

@@ -24,6 +24,7 @@
 #include "getaddressdialog.h"
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
+#include "verificationdialog.h"
 
 #define WEBSOCKET_PORT 25698
 
@@ -106,6 +107,7 @@ private:
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
+    VerificationDialog* verificationDialog;
     WebsocketServer *websocketServer;
     BonjourServiceRegister *bonjourRegister;
     QStandardItemModel *transactionTableModel;
