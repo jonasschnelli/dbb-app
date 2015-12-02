@@ -21,6 +21,7 @@
 #include "dbb_websocketserver.h"
 
 #include "backupdialog.h"
+#include "getaddressdialog.h"
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
 
@@ -51,7 +52,8 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_RANDOM_NUM,
     DBB_RESPONSE_TYPE_DEVICE_LOCK,
     DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
-    DBB_RESPONSE_TYPE_XPUB_VERIFY
+    DBB_RESPONSE_TYPE_XPUB_VERIFY,
+    DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -103,6 +105,7 @@ signals:
 private:
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
+    GetAddressDialog* getAddressDialog;
     WebsocketServer *websocketServer;
     BonjourServiceRegister *bonjourRegister;
     QStandardItemModel *transactionTableModel;
@@ -210,6 +213,10 @@ private slots:
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
 
+    //== ADDRESS EXPORTING ==
+    void showGetAddressDialog();
+    void getAddressGetXPub(const QString& keypath);
+
     //== DBB USB / BACKUP ==
     void showBackupDialog();
     void addBackup();
@@ -228,6 +235,8 @@ private slots:
     void getNewAddress();
     //!verify a address over the smartphone
     void verifyAddress();
+    //!get a xpubkey (generic function)
+    void getXPub(const std::string& keypath, dbb_response_type_t response_type = DBB_RESPONSE_TYPE_XPUB_VERIFY, dbb_address_style_t address_type = DBB_ADDRESS_STYLE_P2PKH);
     //!gets called when a new address is available
     void updateReceivingAddress(DBBWallet *wallet, const std::string &newAddress, const std::string &keypath);
     //!check the UI values and create a payment proposal from them, sign and post them

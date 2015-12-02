@@ -60,6 +60,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               statusBarLabelRight(0),
                                               statusBarLabelLeft(0),
                                               backupDialog(0),
+                                              getAddressDialog(0),
                                               websocketServer(0),
                                               processCommand(0),
                                               deviceConnected(0),
@@ -151,6 +152,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->getRand, SIGNAL(clicked()), this, SLOT(getRandomNumber()));
     connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
+    connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
+
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
@@ -173,6 +176,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
     connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
 
+    // create get address dialog
+    getAddressDialog = new GetAddressDialog(0);
+    connect(getAddressDialog, SIGNAL(shouldGetXPub(const QString&)), this, SLOT(getAddressGetXPub(const QString&)));
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
@@ -730,6 +736,23 @@ void DBBDaemonGui::lockDevice()
 }
 
 /*
+////////////////////////
+Address Exporting  Stack
+////////////////////////
+*/
+#pragma mark Get Address Stack
+
+void DBBDaemonGui::showGetAddressDialog()
+{
+    getAddressDialog->show();
+}
+
+void DBBDaemonGui::getAddressGetXPub(const QString& keypath)
+{
+    getXPub(keypath.toStdString(), DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS, DBB_ADDRESS_STYLE_P2PKH);
+}
+
+/*
 /////////////////
 DBB Backup Stack
 /////////////////
@@ -996,6 +1019,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (websocketServer->sendStringToAllClients(responseMutable.write()) == 0)
                     showAlert(tr("No device found"), tr("Please run the verification app on your smartphone and make sure you have paired your device"));
             }
+        } else if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {
+            UniValue requestXPubKeyUV = find_value(response, "xpub");
+            if (requestXPubKeyUV.isStr())
+                getAddressDialog->updateAddress(response);
         } else if (tag == DBB_RESPONSE_TYPE_ERASE) {
             UniValue resetObj = find_value(response, "reset");
             if (resetObj.isStr() && resetObj.get_str() == "success") {
@@ -1101,10 +1128,14 @@ void DBBDaemonGui::getNewAddress()
 
 void DBBDaemonGui::verifyAddress()
 {
-    executeCommandWrapper("{\"xpub\":\"" + ui->keypathLabel->text().toStdString() + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    getXPub(ui->keypathLabel->text().toStdString(), DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_P2PKH);
+}
+void DBBDaemonGui::getXPub(const std::string& keypath,  dbb_response_type_t response_type, dbb_address_style_t address_type)
+{
+    executeCommandWrapper("{\"xpub\":\"" + keypath + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this,response_type,address_type](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_MULTISIG_1OF1);
+        emit gotResponse(jsonOut, status, response_type, address_type);
     });
 }
 
