@@ -260,8 +260,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     singleWallet->client.LoadLocalData();
     std::string lastAddress, keypath;
     singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
-    keypath.erase(0,1);
-    keypath = singleWallet->baseKeyPath + keypath;
+    singleWallet->rewriteKeypath(keypath);
     updateReceivingAddress(singleWallet, lastAddress, keypath);
 
     DBBWallet* copayWallet = new DBBWallet();
@@ -1019,10 +1018,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (websocketServer->sendStringToAllClients(responseMutable.write()) == 0)
                     showAlert(tr("No device found"), tr("Please run the verification app on your smartphone and make sure you have paired your device"));
             }
-        } else if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {
-            UniValue requestXPubKeyUV = find_value(response, "xpub");
-            if (requestXPubKeyUV.isStr())
-                getAddressDialog->updateAddress(response);
         } else if (tag == DBB_RESPONSE_TYPE_ERASE) {
             UniValue resetObj = find_value(response, "reset");
             if (resetObj.isStr() && resetObj.get_str() == "success") {
@@ -1088,6 +1083,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             hideModalInfo();
             websocketServer->sendDataToClientInECDHParingState(response);
         }
+
+        if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {
+            getAddressDialog->updateAddress(response);
+        }
     }
 }
 
@@ -1117,8 +1116,7 @@ void DBBDaemonGui::getNewAddress()
             std::string address;
             std::string keypath;
             singleWallet->client.GetNewAddress(address, keypath);
-            keypath.erase(0,1);
-            keypath = singleWallet->baseKeyPath + keypath;
+            singleWallet->rewriteKeypath(keypath);
             emit walletAddressIsAvailable(this->singleWallet, address, keypath);
         });
 
