@@ -2,6 +2,8 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include "dbb.h"
+
 #include <assert.h>
 #include <iostream>
 #include <stdio.h>
@@ -25,7 +27,7 @@
 
 #include <btc/hash.h>
 
-#define HID_REPORT_SIZE 2048
+#define HID_MAX_BUF_SIZE 4098
 
 #ifdef DBB_ENABLE_DEBUG
 #define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
@@ -36,10 +38,15 @@
 namespace DBB
 {
 static hid_device* HID_HANDLE = NULL;
-static unsigned char HID_REPORT[HID_REPORT_SIZE] = {0};
+static unsigned int readBufSize = HID_REPORT_SIZE_DEFAULT;
+static unsigned int writeBufSize = HID_REPORT_SIZE_DEFAULT;
+static unsigned char HID_REPORT[HID_MAX_BUF_SIZE] = {0};
 
-static bool api_hid_init(void)
+static bool api_hid_init(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsigned int readBufSizeIn = HID_REPORT_SIZE_DEFAULT)
 {
+    readBufSize = readBufSizeIn;
+    writeBufSize = writeBufSizeIn;
+
     //TODO: way to handle multiple DBB
     HID_HANDLE = hid_open(0x03eb, 0x2402, NULL); //vendor-id, product-id
     if (!HID_HANDLE) {
@@ -79,9 +86,9 @@ bool isConnectionOpen()
     return found;
 }
 
-bool openConnection()
+bool openConnection(unsigned int writeBufSizeIn, unsigned int readBufSizeIn)
 {
-    return api_hid_init();
+    return api_hid_init(writeBufSizeIn, readBufSizeIn);
 }
 
 bool closeConnection()
@@ -98,16 +105,15 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
-    memset(HID_REPORT, 0, HID_REPORT_SIZE);
+    memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
     memcpy(HID_REPORT, json.c_str(), json.size());
-    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, HID_REPORT_SIZE);
+    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
 
-    memset(HID_REPORT, 0, HID_REPORT_SIZE);
+
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
-
-    memset(HID_REPORT, 0, HID_REPORT_SIZE);
-    while (cnt < HID_REPORT_SIZE) {
-        res = hid_read(HID_HANDLE, HID_REPORT + cnt, HID_REPORT_SIZE);
+    memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
+    while (cnt < readBufSize) {
+        res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
         if (res < 0) {
             throw std::runtime_error("Error: Unable to read HID(USB) report.\n");
         }
@@ -117,6 +123,72 @@ bool sendCommand(const std::string& json, std::string& resultOut)
     DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
 
     resultOut.assign((const char*)HID_REPORT);
+    return true;
+}
+
+bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, std::string& resultOut)
+{
+    int res, cnt = 0;
+
+    if (!HID_HANDLE)
+        return false;
+
+    DBB_DEBUG_INTERNAL("Sending chunk: %d\n", chunknum);
+
+    assert(data.size() <= HID_MAX_BUF_SIZE-2);
+    memset(HID_REPORT, 0xFF, HID_MAX_BUF_SIZE);
+    HID_REPORT[0] = 0x77;
+    HID_REPORT[1] = chunknum % 0xff;
+    memcpy((void *)&HID_REPORT[2], (unsigned char*)&data[0], data.size());
+
+    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
+
+    DBB_DEBUG_INTERNAL("try to read some bytes...\n");
+    memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
+    while (cnt < readBufSize) {
+        res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
+        if (res < 0) {
+            throw std::runtime_error("Error: Unable to read HID(USB) report.\n");
+        }
+        cnt += res;
+    }
+
+    DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
+    
+    resultOut.assign((const char*)HID_REPORT);
+    return true;
+}
+
+bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr)
+{
+    std::string cmdOut;
+    sendCommand("v0", cmdOut);
+    sendCommand("s0"+sigCmpStr, cmdOut);
+//    if (!(cmdOut.size() > 2 && cmdOut[0] == 's' && cmdOut[1] == '0'))
+//        return false;
+    sendCommand("e", cmdOut);
+
+    int cnt = 0;
+    size_t pos = 0;
+    while (pos+FIRMWARE_CHUNKSIZE < firmwarePadded.size())
+    {
+        std::vector<unsigned char> chunk(firmwarePadded.begin()+pos, firmwarePadded.begin()+pos+FIRMWARE_CHUNKSIZE);
+        DBB::sendChunk(cnt,chunk,cmdOut);
+        pos += FIRMWARE_CHUNKSIZE;
+        if (cmdOut != "w0")
+            return false;
+
+        if (pos >= firmwareSize)
+            break;
+        cnt++;
+    }
+
+    sendCommand("s0"+sigCmpStr, cmdOut);
+    if (cmdOut.size() < 2)
+        return false;
+    if (!(cmdOut[0] == 's' && cmdOut[1] == '0'))
+        return false;
+
     return true;
 }
 
