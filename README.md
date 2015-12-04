@@ -41,6 +41,9 @@ version
 lock
 verifypass -operation (default: create)
 aes -type (default: encrypt), -data (default: encrypt)
+bootloaderunlock 
+bootloaderlock 
+firmware -filename
 ```
 ## libdbb
 **C++ library for communicating with the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
