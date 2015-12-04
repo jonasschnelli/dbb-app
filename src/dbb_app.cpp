@@ -78,8 +78,10 @@ std::mutex cs_queue;
 //TODO: migrate tuple to a class
 typedef std::tuple<std::string, std::string, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> > t_cmdCB;
 std::queue<t_cmdCB> cmdQueue;
-std::atomic<bool> stopThread;
-std::atomic<bool> notified;
+std::atomic<bool> stopThread(false);
+std::atomic<bool> notified(false);
+
+std::atomic<bool> firmwareUpdateHID(false);
 
 //executeCommand adds a command to the thread queue and notifies the tread to work down the queue
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
@@ -190,7 +192,7 @@ int main(int argc, char** argv)
             //check devices
             if (!DBB::isConnectionOpen())
             {
-                if (DBB::openConnection())
+                if ((firmwareUpdateHID) ? DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R) : DBB::openConnection())
                 {
 #ifdef DBB_ENABLE_QT
                 //TODO, check if this requires locking

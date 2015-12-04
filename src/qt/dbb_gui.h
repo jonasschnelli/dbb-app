@@ -53,7 +53,8 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_DEVICE_LOCK,
     DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
     DBB_RESPONSE_TYPE_XPUB_VERIFY,
-    DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS
+    DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS,
+    DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -101,6 +102,10 @@ signals:
     void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress, const std::string &keypath);
     //emited when a new receiving address is available
     void paymentProposalUpdated(DBBWallet *, const UniValue &proposal);
+    //emited when the firmeware upgrade thread is done
+    void firmwareThreadDone(bool);
+    //emited when the firmeware upgrade thread is done
+    void shouldUpdateModalInfo(const QString& info);
 
 private:
     Ui::MainWindow* ui;
@@ -115,6 +120,8 @@ private:
     QAction* overviewAction;
     QAction* walletsAction;
     QAction* settingsAction;
+    bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
+    QString firmwareFileToUse;
     bool sdcardWarned;
     bool processCommand;
     bool deviceConnected;
@@ -152,9 +159,6 @@ private:
     void passwordAccepted();
     //!hides the enter password form
     void hideSessionPasswordView();
-    //!show general modal info
-    void showModalInfo(const QString &info);
-    void hideModalInfo();
     //!update overview flags (wallet / lock, etc)
     void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
 
@@ -171,6 +175,7 @@ private:
     bool singleWalletIsUpdating;
     std::vector<std::pair<std::time_t, std::thread*> > netThreads;
     std::mutex cs_vMultisigWallets;
+    std::thread *fwUpgradeThread;
 
 private slots:
     //!main callback when the device gets connected/disconnected
@@ -196,6 +201,10 @@ private slots:
     void passwordProvided();
     //!slot to ask for the current session password
     void askForSessionPassword();
+    //!show general modal info
+    void showModalInfo(const QString &info, int helpType = 0);
+    void updateModalInfo(const QString &info);
+    void hideModalInfo();
 
     //== DBB USB ==
     //!function is user whishes to erase the DBB
@@ -212,6 +221,11 @@ private slots:
     void getRandomNumber();
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
+    //!open a file chooser and unlock the bootloader
+    void upgradeFirmware();
+    //!start upgrading the firmware with a file at given location
+    void upgradeFirmwareWithFile(const QString& fileName);
+    void upgradeFirmwareDone(bool state);
 
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();

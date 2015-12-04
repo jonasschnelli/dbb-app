@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QPushButton>
 #include <QDebug>
+#include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
 #include <QSpacerItem>
@@ -27,6 +28,7 @@
 #include <cstdio>
 #include <ctime>
 #include <chrono>
+#include <fstream>
 
 #include <univalue.h>
 #include <btc/bip32.h>
@@ -37,7 +39,7 @@
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 
-
+extern std::atomic<bool> firmwareUpdateHID;
 DBBDaemonGui::~DBBDaemonGui()
 {
     delete bonjourRegister;
@@ -70,7 +72,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               signConfirmationDialog(0),
                                               loginScreenIndicatorOpacityAnimation(0),
                                               statusBarloadingIndicatorOpacityAnimation(0),
-                                              sdcardWarned(0)
+                                              sdcardWarned(0),
+                                              fwUpgradeThread(0),
+                                              upgradeFirmwareState(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -153,6 +157,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
+    connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
 
 
     // connect custom signals
@@ -168,6 +173,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(shouldUpdateWallet(DBBWallet*)), this, SLOT(updateWallet(DBBWallet*)));
     connect(this, SIGNAL(walletAddressIsAvailable(DBBWallet*,const std::string &,const std::string &)), this, SLOT(updateReceivingAddress(DBBWallet*,const std::string&,const std::string &)));
     connect(this, SIGNAL(paymentProposalUpdated(DBBWallet*,const UniValue&)), this, SLOT(reportPaymentProposalPost(DBBWallet*,const UniValue&)));
+
+    connect(this, SIGNAL(firmwareThreadDone(bool)), this, SLOT(upgradeFirmwareDone(bool)));
+    connect(this, SIGNAL(shouldUpdateModalInfo(const QString&)), this, SLOT(updateModalInfo(const QString&)));
 
 
     // create backup dialog instance
@@ -308,6 +316,18 @@ void DBBDaemonGui::deviceIsReadyToInteract()
 void DBBDaemonGui::changeConnectedState(bool state)
 {
     bool stateChanged = deviceConnected != state;
+
+    // special case for firmware upgrades
+    if (upgradeFirmwareState && stateChanged)
+    {
+        deviceConnected = state;
+        if (state)
+        {
+            upgradeFirmwareWithFile(firmwareFileToUse);
+        }
+        return;
+    }
+
     if (stateChanged) {
         if (state) {
             deviceConnected = true;
@@ -336,7 +356,10 @@ void DBBDaemonGui::setTabbarEnabled(bool status)
 void DBBDaemonGui::setLoading(bool status)
 {
     if (!status)
+    {
+        hideModalInfo();
         ui->touchbuttonInfo->setVisible(false);
+    }
 
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
 
@@ -569,13 +592,24 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-void DBBDaemonGui::showModalInfo(const QString &info)
+void DBBDaemonGui::showModalInfo(const QString &info, int helpType)
 {
     ui->modalInfoLabel->setText(info);
     this->ui->modalBlockerView->setVisible(true);
     QWidget* slide = this->ui->modalBlockerView;
     // setup slide
     slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+
+    if (helpType == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON)
+    {
+        QIcon newIcon;
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Normal);
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Disabled);
+        ui->modalIcon->setIcon(newIcon);
+
+        if (info.isNull() || info.size() == 0)
+            ui->modalInfoLabel->setText(tr(""));
+    }
 
     // then a animation:
     QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
@@ -585,6 +619,11 @@ void DBBDaemonGui::showModalInfo(const QString &info)
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void DBBDaemonGui::updateModalInfo(const QString &info)
+{
+    ui->modalInfoLabel->setText(info);
 }
 
 void DBBDaemonGui::hideModalInfo()
@@ -632,6 +671,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
         return false;
 
     if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON) {
+        showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
         ui->touchbuttonInfo->setVisible(true);
     }
 
@@ -732,6 +772,114 @@ void DBBDaemonGui::lockDevice()
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
     });
+}
+
+void DBBDaemonGui::upgradeFirmware()
+{
+    firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
+    if (firmwareFileToUse.isNull())
+        return;
+
+    executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
+    });
+}
+
+void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
+{
+    if (!fileName.isNull())
+    {
+        std::string possibleFilename = fileName.toStdString();
+        if (fwUpgradeThread)
+        {
+            fwUpgradeThread->join();
+            delete fwUpgradeThread;
+        }
+
+        showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please hold the touchbutton for serval seconds to allow upgrading your firmware.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+
+        fwUpgradeThread = new std::thread([this,possibleFilename]() {
+            bool upgradeRes = false;
+            // dummy private key to allow current testing
+            // the private key matches the pubkey on the DBB bootloader / FW
+            std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
+
+            // load the file
+            std::ifstream firmwareFile(possibleFilename, std::ios::binary | std::ios::ate);
+            std::streamsize firmwareSize = firmwareFile.tellg();
+            if (firmwareSize > 0)
+            {
+                firmwareFile.seekg(0, std::ios::beg);
+
+                std::vector<char> firmwareBuffer(DBB_APP_LENGTH);
+                unsigned int pos = 0;
+                while (true)
+                {
+                    //read into
+                    firmwareFile.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
+                    std::streamsize bytes = firmwareFile.gcount();
+                    if (bytes == 0)
+                        break;
+
+                    pos += bytes;
+                }
+                firmwareFile.close();
+
+                // append 0xff to the rest of the firmware buffer
+                memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_APP_LENGTH-pos);
+
+                // generate a double SHA256 of the firmware data
+                uint8_t hashout[32];
+                btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
+                std::string hashHex = DBB::HexStr(hashout, hashout+32);
+
+                // sign and get the compact signature
+                btc_key key;
+                btc_privkey_init(&key);
+                std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
+                memcpy(&key.privkey, &privkey[0], 32);
+
+                size_t sizeout = 64;
+                unsigned char sig[sizeout];
+                int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
+                std::string sigStr = DBB::HexStr(sig, sig+sizeout);
+
+                emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Hold down the touch button for serval seconds to allow to erase your current firmware and upload the new one.");
+                // send firmware blob to DBB
+                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr))
+                    printf("Firmware upgrade failed!\n");
+                else
+                {
+                    printf("Firmware successfully upgraded!\n");
+                    upgradeRes = true;
+                }
+            }
+            emit firmwareThreadDone(upgradeRes);
+        });
+    }
+    else
+    {
+        upgradeFirmwareState = false;
+        firmwareUpdateHID = false;
+    }
+}
+
+void DBBDaemonGui::upgradeFirmwareDone(bool status)
+{
+    firmwareUpdateHID = false;
+    upgradeFirmwareState = false;
+    hideModalInfo();
+    deviceConnected = false;
+    uiUpdateDeviceState();
+
+    if (status)
+        QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), QMessageBox::Ok);
+    else
+        showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug/plug your Digital Bitbox."));
+
+
 }
 
 /*
@@ -1071,7 +1219,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             //reload device infos
             resetInfos();
             getInfo();
-        } else {
+        } else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK) {
+            upgradeFirmwareState = true;
+            firmwareUpdateHID = true;
+            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+        }
+        else {
         }
 
         //no else if because we want to hide the blocker view in case of an error

@@ -634,6 +634,20 @@
         </layout>
        </item>
        <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="upgradeFirmware">
+           <property name="text">
+            <string>Upgrade Firmware...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout3">
@@ -1402,9 +1416,9 @@
       <property name="geometry">
        <rect>
         <x>20</x>
-        <y>100</y>
+        <y>220</y>
         <width>440</width>
-        <height>170</height>
+        <height>150</height>
        </rect>
       </property>
       <property name="styleSheet">
@@ -1415,9 +1429,34 @@ background-color: rgba(0,0,0, 0%)</string>
        <string>Unlocking Device...</string>
       </property>
       <property name="alignment">
-       <set>Qt::AlignCenter</set>
+       <set>Qt::AlignHCenter|Qt::AlignTop</set>
       </property>
       <property name="wordWrap">
+       <bool>true</bool>
+      </property>
+     </widget>
+     <widget class="QPushButton" name="modalIcon">
+      <property name="enabled">
+       <bool>false</bool>
+      </property>
+      <property name="geometry">
+       <rect>
+        <x>0</x>
+        <y>0</y>
+        <width>480</width>
+        <height>200</height>
+       </rect>
+      </property>
+      <property name="text">
+       <string/>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>440</width>
+        <height>200</height>
+       </size>
+      </property>
+      <property name="flat">
        <bool>true</bool>
       </property>
      </widget>

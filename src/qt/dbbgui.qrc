@@ -13,6 +13,7 @@
         <file alias="abort">res/abort.png</file>
         <file alias="accept">res/accept.png</file>
         <file alias="finger">res/finger.png</file>
+        <file alias="touchhelp">res/touchhelp.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>
