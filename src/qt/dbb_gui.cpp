@@ -61,6 +61,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               statusBarLabelLeft(0),
                                               backupDialog(0),
                                               getAddressDialog(0),
+                                              verificationDialog(0),
                                               websocketServer(0),
                                               processCommand(0),
                                               deviceConnected(0),
@@ -1006,6 +1007,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
+            bool sentToWebsocketClients = false;
+
             UniValue responseMutable = response;
             UniValue requestXPubKeyUV = find_value(response, "xpub");
             QString errorString;
@@ -1015,8 +1018,20 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
                     responseMutable.pushKV("type", "p2pkh");
-                if (websocketServer->sendStringToAllClients(responseMutable.write()) == 0)
-                    showAlert(tr("No device found"), tr("Please run the verification app on your smartphone and make sure you have paired your device"));
+                if (websocketServer->sendStringToAllClients(responseMutable.write()))
+                    sentToWebsocketClients = true;
+
+
+
+            }
+            if (!sentToWebsocketClients)
+            {
+                if (!verificationDialog)
+                    verificationDialog = new VerificationDialog();
+
+                verificationDialog->show();
+                verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning multiple QRCodes.", response.write());
+
             }
         } else if (tag == DBB_RESPONSE_TYPE_ERASE) {
             UniValue resetObj = find_value(response, "reset");
