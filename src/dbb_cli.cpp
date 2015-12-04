@@ -83,8 +83,7 @@ static const CDBBCommand vCommands[] =
 
     { "name"            , "{\"name\" : \"%!name%\"}",                                   true},
     { "random"          , "{\"random\" : \"%mode|true%\"}",                             true},
-    { "sn"              , "{\"device\" : \"serial\"}",                                  true},
-    { "version"         , "{\"device\" : \"version\"}",                                 true},
+    { "info"            , "{\"device\" : \"info\"}",                                    true},
 
     { "lock"            , "{\"device\" : \"lock\"}",                                    true},
     { "verifypass"      , "{\"verifypass\" : \"%operation|create%\"}",                  true},
