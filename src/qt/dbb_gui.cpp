@@ -38,8 +38,8 @@
 
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+extern void setFirmwareUpdateHID(bool state);
 
-extern std::atomic<bool> firmwareUpdateHID;
 DBBDaemonGui::~DBBDaemonGui()
 {
     delete bonjourRegister;
@@ -872,13 +872,13 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
     else
     {
         upgradeFirmwareState = false;
-        firmwareUpdateHID = false;
+        setFirmwareUpdateHID(false);
     }
 }
 
 void DBBDaemonGui::upgradeFirmwareDone(bool status)
 {
-    firmwareUpdateHID = false;
+    setFirmwareUpdateHID(false);
     upgradeFirmwareState = false;
     hideModalInfo();
     deviceConnected = false;
@@ -1245,7 +1245,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK) {
             upgradeFirmwareState = true;
             shouldLockBootloaderState = true;
-            firmwareUpdateHID = true;
+            setFirmwareUpdateHID(true);
             showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
         }
         else {

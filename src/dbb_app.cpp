@@ -83,6 +83,11 @@ std::atomic<bool> notified(false);
 
 std::atomic<bool> firmwareUpdateHID(false);
 
+void setFirmwareUpdateHID(bool state)
+{
+    firmwareUpdateHID = state;
+}
+
 //executeCommand adds a command to the thread queue and notifies the tread to work down the queue
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
 {
