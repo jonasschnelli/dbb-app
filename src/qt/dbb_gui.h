@@ -54,7 +54,8 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
     DBB_RESPONSE_TYPE_XPUB_VERIFY,
     DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS,
-    DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK
+    DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK,
+    DBB_RESPONSE_TYPE_BOOTLOADER_LOCK
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -121,6 +122,7 @@ private:
     QAction* walletsAction;
     QAction* settingsAction;
     bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
+    bool shouldLockBootloaderState; //set to true if we expect a firmware upgrade
     QString firmwareFileToUse;
     bool sdcardWarned;
     bool processCommand;
@@ -221,6 +223,8 @@ private slots:
     void getRandomNumber();
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
+    //!lock the bootloader to protect from unecpected firmware upgrades
+    void lockBootloader();
     //!open a file chooser and unlock the bootloader
     void upgradeFirmware();
     //!start upgrading the firmware with a file at given location

@@ -74,7 +74,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               statusBarloadingIndicatorOpacityAnimation(0),
                                               sdcardWarned(0),
                                               fwUpgradeThread(0),
-                                              upgradeFirmwareState(0)
+                                              upgradeFirmwareState(0),
+                                              shouldLockBootloaderState(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -774,6 +775,15 @@ void DBBDaemonGui::lockDevice()
     });
 }
 
+void DBBDaemonGui::lockBootloader()
+{
+    executeCommandWrapper("{\"bootloader\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_LOCK);
+    });
+}
+
 void DBBDaemonGui::upgradeFirmware()
 {
     firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
@@ -873,6 +883,8 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     hideModalInfo();
     deviceConnected = false;
     uiUpdateDeviceState();
+
+    shouldLockBootloaderState = false;
 
     if (status)
         QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), QMessageBox::Ok);
@@ -1030,8 +1042,9 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue seeded = find_value(deviceObj, "seeded");
                 UniValue lock = find_value(deviceObj, "lock");
                 UniValue sdcard = find_value(deviceObj, "sdcard");
-                bool walletAvailable = (seeded.isBool() && seeded.isTrue());
-                bool lockAvailable = (lock.isBool() && lock.isTrue());
+                UniValue bootlock = find_value(deviceObj, "bootlock");
+                bool walletAvailable = seeded.isTrue();
+                bool lockAvailable = lock.isTrue();
 
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
@@ -1049,6 +1062,16 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     showAlert(tr("Please remove your SDCard!"), "Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores");
                     sdcardWarned = true;
                 }
+
+                // special case for post firmware upgrades (lock bootloader)
+                if (shouldLockBootloaderState && bootlock.isTrue())
+                {
+                    // unlock bootloader
+                    lockBootloader();
+                    shouldLockBootloaderState = false;
+                    return;
+                }
+
             }
         } else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
             UniValue touchbuttonObj = find_value(response, "touchbutton");
@@ -1221,6 +1244,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             getInfo();
         } else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK) {
             upgradeFirmwareState = true;
+            shouldLockBootloaderState = true;
             firmwareUpdateHID = true;
             showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
         }
