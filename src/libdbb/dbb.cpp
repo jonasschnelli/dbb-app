@@ -163,6 +163,8 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
 {
     std::string cmdOut;
     sendCommand("v0", cmdOut);
+    if (cmdOut.size() != 1 || cmdOut[0] != 'v')
+        return false;
     sendCommand("s0"+sigCmpStr, cmdOut);
 //    if (!(cmdOut.size() > 2 && cmdOut[0] == 's' && cmdOut[1] == '0'))
 //        return false;
