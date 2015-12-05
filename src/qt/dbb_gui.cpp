@@ -282,13 +282,13 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     resetInfos();
     //set status bar connection status
     uiUpdateDeviceState();
-    changeConnectedState(DBB::isConnectionOpen());
+    changeConnectedState(DBB::isConnectionOpen(), DBB::deviceAvailable());
 
 
     processCommand = false;
 
     //connect the device status update at very last point in init
-    connect(this, SIGNAL(deviceStateHasChanged(bool)), this, SLOT(changeConnectedState(bool)));
+    connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
     //create a local websocket server
     websocketServer = new WebsocketServer(WEBSOCKET_PORT, true);
@@ -314,7 +314,7 @@ void DBBDaemonGui::deviceIsReadyToInteract()
     deviceReadyToInteract = true;
 }
 
-void DBBDaemonGui::changeConnectedState(bool state)
+void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
 {
     bool stateChanged = deviceConnected != state;
 
@@ -322,15 +322,14 @@ void DBBDaemonGui::changeConnectedState(bool state)
     if (upgradeFirmwareState && stateChanged)
     {
         deviceConnected = state;
-        if (state)
-        {
-            upgradeFirmwareWithFile(firmwareFileToUse);
-        }
+
+        if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER && state)
+                upgradeFirmwareWithFile(firmwareFileToUse);
         return;
     }
 
     if (stateChanged) {
-        if (state) {
+        if (state && deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE) {
             deviceConnected = true;
             this->statusBarLabelLeft->setText("Device Connected");
             this->statusBarButton->setVisible(true);
@@ -611,6 +610,17 @@ void DBBDaemonGui::showModalInfo(const QString &info, int helpType)
         if (info.isNull() || info.size() == 0)
             ui->modalInfoLabel->setText(tr(""));
     }
+    else if (helpType == DBB_PROCESS_INFOLAYER_STYLE_REPLUG)
+    {
+        QIcon newIcon;
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp_replug"), QIcon::Normal);
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp_replug"), QIcon::Disabled);
+        ui->modalIcon->setIcon(newIcon);
+
+        if (info.isNull() || info.size() == 0)
+            ui->modalInfoLabel->setText(tr(""));
+    }
+
 
     // then a animation:
     QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
@@ -1248,7 +1258,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             upgradeFirmwareState = true;
             shouldLockBootloaderState = true;
             setFirmwareUpdateHID(true);
-            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
         }
         else {
         }

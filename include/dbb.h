@@ -14,6 +14,12 @@
 #define DBB_APP_LENGTH 229376 //flash size minus bootloader length
 
 namespace DBB {
+
+enum dbb_device_mode {
+    DBB_DEVICE_NO_DEVICE = 0,
+    DBB_DEVICE_MODE_BOOTLOADER,
+    DBB_DEVICE_MODE_FIRMWARE
+};
 //!open a connection to the digital bitbox device
 // retruns false if no connection could be made, keeps connection handling
 // internal
@@ -21,6 +27,9 @@ bool openConnection(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsig
 
 //!close the connection to the dbb device
 bool closeConnection();
+
+//!check if a DBB device is available
+enum dbb_device_mode deviceAvailable();
 
 //!return true if a USBHID connection is open
 bool isConnectionOpen();

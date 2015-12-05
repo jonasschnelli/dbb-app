@@ -68,23 +68,30 @@ static bool api_hid_close(void)
     return false;
 }
 
-bool isConnectionOpen()
+enum dbb_device_mode deviceAvailable()
 {
-    if (!HID_HANDLE)
-        return false;
-
     struct hid_device_info* devs, *cur_dev;
 
     devs = hid_enumerate(0x03eb, 0x2402);
     cur_dev = devs;
-    bool found = false;
+    enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
-        found = true;
+        std::wstring ws(cur_dev->manufacturer_string);
+        std::string str( ws.begin(), ws.end() );
+        if (str == "Digital Bitbox")
+            foundType = DBB_DEVICE_MODE_BOOTLOADER;
+        else
+            foundType = DBB_DEVICE_MODE_FIRMWARE;
         break;
     }
     hid_free_enumeration(devs);
+    
+    return foundType;
+}
 
-    return found;
+bool isConnectionOpen()
+{
+    return (HID_HANDLE != NULL);
 }
 
 bool openConnection(unsigned int writeBufSizeIn, unsigned int readBufSizeIn)

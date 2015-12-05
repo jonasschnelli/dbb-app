@@ -65,7 +65,8 @@ typedef enum DBB_ADDRESS_STYLE {
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
-    DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON
+    DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON,
+    DBB_PROCESS_INFOLAYER_STYLE_REPLUG
 } dbb_process_infolayer_style_t;
 
 class DBBDaemonGui : public QMainWindow
@@ -80,7 +81,7 @@ public slots:
 
 signals:
     //emited when the device state has chaned (connected / disconnected)
-    void deviceStateHasChanged(bool state);
+    void deviceStateHasChanged(bool state, int deviceType);
     //emited when the DBB could generate a xpub
     void XPubForCopayWalletIsAvailable(int walletIndex);
     //emited when the request xpub key is available
@@ -181,7 +182,7 @@ private:
 
 private slots:
     //!main callback when the device gets connected/disconnected
-    void changeConnectedState(bool state);
+    void changeConnectedState(bool state, int deviceType);
 
     //== UI ==
     //general proxy function to show an alert;
