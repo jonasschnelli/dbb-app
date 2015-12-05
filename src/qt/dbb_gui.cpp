@@ -858,7 +858,9 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
 
                 emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Hold down the touch button for serval seconds to allow to erase your current firmware and upload the new one.");
                 // send firmware blob to DBB
-                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr))
+                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [this](const std::string& infotext, float progress) {
+                    emit shouldUpdateModalInfo(tr("<strong>Upgrading Firmware...</strong><br/><br/>%1% complete").arg(QString::number(progress*100, 'f', 1)));
+                }))
                     printf("Firmware upgrade failed!\n");
                 else
                 {

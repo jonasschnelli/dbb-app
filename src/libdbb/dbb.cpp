@@ -5,6 +5,7 @@
 #include "dbb.h"
 
 #include <assert.h>
+#include <cmath>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -159,7 +160,7 @@ bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, st
     return true;
 }
 
-bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr)
+bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float progress)> progressCallback)
 {
     std::string cmdOut;
     sendCommand("v0", cmdOut);
@@ -172,10 +173,13 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
 
     int cnt = 0;
     size_t pos = 0;
+    int nChunks = ceil(firmwareSize / (float)FIRMWARE_CHUNKSIZE);
+    progressCallback("", 0.0);
     while (pos+FIRMWARE_CHUNKSIZE < firmwarePadded.size())
     {
         std::vector<unsigned char> chunk(firmwarePadded.begin()+pos, firmwarePadded.begin()+pos+FIRMWARE_CHUNKSIZE);
         DBB::sendChunk(cnt,chunk,cmdOut);
+        progressCallback("", 1.0/nChunks*cnt);
         pos += FIRMWARE_CHUNKSIZE;
         if (cmdOut != "w0")
             return false;
@@ -190,6 +194,8 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
         return false;
     if (!(cmdOut[0] == 's' && cmdOut[1] == '0'))
         return false;
+
+    progressCallback("", 1.0);
 
     return true;
 }

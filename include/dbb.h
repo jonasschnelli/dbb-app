@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <functional>
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -31,7 +32,7 @@ bool sendCommand(const std::string &json, std::string &resultOut);
 bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, std::string& resultOut);
 
 //!send firmware
-bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, const std::string& sigCmpStr);
+bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float)> progressCallback);
 
 //!decrypt a json result
 bool decryptAndDecodeCommand(const std::string &cmdIn,

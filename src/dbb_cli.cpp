@@ -235,7 +235,7 @@ int main(int argc, char* argv[])
                 std::string sigStr = DBB::HexStr(sig, sig+sizeout);
 
                 // send firmware blob to DBB
-                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr))
+                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](const std::string& infotext, float progress) {}))
                     printf("Firmware upgrade failed!\n");
                 else
                     printf("Firmware successfully upgraded!\n");
