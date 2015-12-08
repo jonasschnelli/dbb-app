@@ -147,7 +147,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
         cnt += res;
     }
 
-    DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
+    DBB_DEBUG_INTERNAL(" OK, read %d bytes (%s).\n", res, (const char*)HID_REPORT);
 
     resultOut.assign((const char*)HID_REPORT);
     return true;
