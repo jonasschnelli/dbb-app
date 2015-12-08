@@ -85,7 +85,7 @@ enum dbb_device_mode deviceAvailable()
         std::string strSN( wsSN.begin(), wsSN.end() );
 
 
-        if (strSN.size() > 0)
+        if (strSN != "none")
         {
             if (strSN == "firmware")
                 foundType = DBB_DEVICE_MODE_FIRMWARE;
