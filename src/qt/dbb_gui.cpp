@@ -1058,18 +1058,20 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 updateOverviewFlags(walletAvailable, lockAvailable, false);
 
-                if (walletIDUV.isStr())
+                if (walletAvailable && walletIDUV.isStr())
                 {
                     //initializes wallets (filename, get address, etc.)
                     if (singleWallet->client.getFilenameBase().empty())
                     {
                         singleWallet->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
                         singleWallet->client.LoadLocalData();
-
                         std::string lastAddress, keypath;
                         singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
                         singleWallet->rewriteKeypath(keypath);
                         updateReceivingAddress(singleWallet, lastAddress, keypath);
+
+                        if (singleWallet->client.GetXPubKey().size() <= 0)
+                            createSingleWallet();
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
