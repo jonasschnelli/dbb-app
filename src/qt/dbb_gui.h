@@ -125,7 +125,7 @@ private:
     QAction* walletsAction;
     QAction* settingsAction;
     bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
-    bool shouldLockBootloaderState; //set to true if we expect a firmware upgrade
+    bool shouldKeepBootloaderState; //set to true if we expect a firmware upgrade
     QString firmwareFileToUse;
     bool sdcardWarned;
     bool processCommand;
