@@ -20,7 +20,7 @@ public:
     int64_t availableBalance;
     DBBWallet()
     {
-        baseKeyPath = "m/131'";
+        baseKeyPath = "m/131'/45'";
         participationName = "digitalbitbox";
     }
 
