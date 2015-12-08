@@ -171,6 +171,12 @@ int main(int argc, char* argv[])
         return 1;
     }
 
+    enum DBB::dbb_device_mode deviceMode = DBB::deviceAvailable();
+    if (userCmd == "firmware" && deviceMode != DBB::DBB_DEVICE_MODE_BOOTLOADER)
+    {
+        printf("Error: No Digital Bitbox is Bootloader-Mode detected\n");
+        return 1;
+    }
     bool connectRes = (userCmd == "firmware") ? DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R) : DBB::openConnection();
 
     if (!connectRes)
@@ -235,7 +241,7 @@ int main(int argc, char* argv[])
                 std::string sigStr = DBB::HexStr(sig, sig+sizeout);
 
                 // send firmware blob to DBB
-                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr))
+                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](const std::string& infotext, float progress) {}))
                     printf("Firmware upgrade failed!\n");
                 else
                     printf("Firmware successfully upgraded!\n");

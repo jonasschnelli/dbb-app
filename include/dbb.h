@@ -2,6 +2,7 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
+#include <functional>
 #include <stdio.h>
 #include <string>
 #include <vector>
@@ -13,6 +14,12 @@
 #define DBB_APP_LENGTH 229376 //flash size minus bootloader length
 
 namespace DBB {
+
+enum dbb_device_mode {
+    DBB_DEVICE_NO_DEVICE = 0,
+    DBB_DEVICE_MODE_BOOTLOADER,
+    DBB_DEVICE_MODE_FIRMWARE
+};
 //!open a connection to the digital bitbox device
 // retruns false if no connection could be made, keeps connection handling
 // internal
@@ -20,6 +27,9 @@ bool openConnection(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsig
 
 //!close the connection to the dbb device
 bool closeConnection();
+
+//!check if a DBB device is available
+enum dbb_device_mode deviceAvailable();
 
 //!return true if a USBHID connection is open
 bool isConnectionOpen();
@@ -31,7 +41,7 @@ bool sendCommand(const std::string &json, std::string &resultOut);
 bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, std::string& resultOut);
 
 //!send firmware
-bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, const std::string& sigCmpStr);
+bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float)> progressCallback);
 
 //!decrypt a json result
 bool decryptAndDecodeCommand(const std::string &cmdIn,

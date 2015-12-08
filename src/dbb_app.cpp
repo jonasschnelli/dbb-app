@@ -78,8 +78,15 @@ std::mutex cs_queue;
 //TODO: migrate tuple to a class
 typedef std::tuple<std::string, std::string, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> > t_cmdCB;
 std::queue<t_cmdCB> cmdQueue;
-std::atomic<bool> stopThread;
-std::atomic<bool> notified;
+std::atomic<bool> stopThread(false);
+std::atomic<bool> notified(false);
+
+std::atomic<bool> firmwareUpdateHID(false);
+
+void setFirmwareUpdateHID(bool state)
+{
+    firmwareUpdateHID = state;
+}
 
 //executeCommand adds a command to the thread queue and notifies the tread to work down the queue
 void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
@@ -188,21 +195,28 @@ int main(int argc, char** argv)
         while(1)
         {
             //check devices
-            if (!DBB::isConnectionOpen())
+            if (!DBB::isConnectionOpen() || DBB::deviceAvailable() == DBB::DBB_DEVICE_NO_DEVICE)
             {
-                if (DBB::openConnection())
+                bool openSuccess = false;
+                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
+                if (DBB::deviceAvailable() == DBB::DBB_DEVICE_MODE_BOOTLOADER)
+                    openSuccess = DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R);
+                else
+                    openSuccess = DBB::openConnection();
+
+                if (openSuccess)
                 {
 #ifdef DBB_ENABLE_QT
                 //TODO, check if this requires locking
                 if (widget)
-                    widget->deviceStateHasChanged(true);
+                    widget->deviceStateHasChanged(true, deviceType);
 #endif
                 }
                 else
                 {
 #ifdef DBB_ENABLE_QT
                 if (widget)
-                    widget->deviceStateHasChanged(false);
+                    widget->deviceStateHasChanged(false, DBB::DBB_DEVICE_NO_DEVICE);
 #endif
                 }
             }

@@ -5,6 +5,7 @@
 #include "dbb.h"
 
 #include <assert.h>
+#include <cmath>
 #include <iostream>
 #include <stdio.h>
 #include <stdlib.h>
@@ -67,23 +68,49 @@ static bool api_hid_close(void)
     return false;
 }
 
-bool isConnectionOpen()
+enum dbb_device_mode deviceAvailable()
 {
-    if (!HID_HANDLE)
-        return false;
-
     struct hid_device_info* devs, *cur_dev;
 
     devs = hid_enumerate(0x03eb, 0x2402);
     cur_dev = devs;
-    bool found = false;
+    enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
-        found = true;
+        // get the manufacturer wide string
+        std::wstring wsMF(cur_dev->manufacturer_string);
+        std::string strMF( wsMF.begin(), wsMF.end() );
+
+        // get the setial number wide string
+        std::wstring wsSN(cur_dev->serial_number);
+        std::string strSN( wsSN.begin(), wsSN.end() );
+
+
+        if (strSN.size() > 0)
+        {
+            if (strSN == "firmware")
+                foundType = DBB_DEVICE_MODE_FIRMWARE;
+            else
+                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+        }
+        else
+        {
+            //TODO: legacy. Needs to be removed before releasing
+            //currently mixed up
+            if (strMF == "Digital Bitbox")
+                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+            else
+                foundType = DBB_DEVICE_MODE_FIRMWARE;
+        }
         break;
     }
     hid_free_enumeration(devs);
+    
+    return foundType;
+}
 
-    return found;
+bool isConnectionOpen()
+{
+    return (HID_HANDLE != NULL);
 }
 
 bool openConnection(unsigned int writeBufSizeIn, unsigned int readBufSizeIn)
@@ -159,10 +186,12 @@ bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, st
     return true;
 }
 
-bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr)
+bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float progress)> progressCallback)
 {
     std::string cmdOut;
     sendCommand("v0", cmdOut);
+    if (cmdOut.size() != 1 || cmdOut[0] != 'v')
+        return false;
     sendCommand("s0"+sigCmpStr, cmdOut);
 //    if (!(cmdOut.size() > 2 && cmdOut[0] == 's' && cmdOut[1] == '0'))
 //        return false;
@@ -170,10 +199,13 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
 
     int cnt = 0;
     size_t pos = 0;
+    int nChunks = ceil(firmwareSize / (float)FIRMWARE_CHUNKSIZE);
+    progressCallback("", 0.0);
     while (pos+FIRMWARE_CHUNKSIZE < firmwarePadded.size())
     {
         std::vector<unsigned char> chunk(firmwarePadded.begin()+pos, firmwarePadded.begin()+pos+FIRMWARE_CHUNKSIZE);
         DBB::sendChunk(cnt,chunk,cmdOut);
+        progressCallback("", 1.0/nChunks*cnt);
         pos += FIRMWARE_CHUNKSIZE;
         if (cmdOut != "w0")
             return false;
@@ -188,6 +220,8 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
         return false;
     if (!(cmdOut[0] == 's' && cmdOut[1] == '0'))
         return false;
+
+    progressCallback("", 1.0);
 
     return true;
 }

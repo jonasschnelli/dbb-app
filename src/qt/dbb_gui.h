@@ -54,7 +54,9 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_DEVICE_LOCK,
     DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
     DBB_RESPONSE_TYPE_XPUB_VERIFY,
-    DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS
+    DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS,
+    DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK,
+    DBB_RESPONSE_TYPE_BOOTLOADER_LOCK
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -64,7 +66,8 @@ typedef enum DBB_ADDRESS_STYLE {
 
 typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
-    DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON
+    DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON,
+    DBB_PROCESS_INFOLAYER_STYLE_REPLUG
 } dbb_process_infolayer_style_t;
 
 class DBBDaemonGui : public QMainWindow
@@ -79,7 +82,7 @@ public slots:
 
 signals:
     //emited when the device state has chaned (connected / disconnected)
-    void deviceStateHasChanged(bool state);
+    void deviceStateHasChanged(bool state, int deviceType);
     //emited when the DBB could generate a xpub
     void XPubForCopayWalletIsAvailable(int walletIndex);
     //emited when the request xpub key is available
@@ -102,6 +105,10 @@ signals:
     void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress, const std::string &keypath);
     //emited when a new receiving address is available
     void paymentProposalUpdated(DBBWallet *, const UniValue &proposal);
+    //emited when the firmeware upgrade thread is done
+    void firmwareThreadDone(bool);
+    //emited when the firmeware upgrade thread is done
+    void shouldUpdateModalInfo(const QString& info);
 
 private:
     Ui::MainWindow* ui;
@@ -117,6 +124,9 @@ private:
     QAction* overviewAction;
     QAction* walletsAction;
     QAction* settingsAction;
+    bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
+    bool shouldLockBootloaderState; //set to true if we expect a firmware upgrade
+    QString firmwareFileToUse;
     bool sdcardWarned;
     bool processCommand;
     bool deviceConnected;
@@ -154,9 +164,6 @@ private:
     void passwordAccepted();
     //!hides the enter password form
     void hideSessionPasswordView();
-    //!show general modal info
-    void showModalInfo(const QString &info);
-    void hideModalInfo();
     //!update overview flags (wallet / lock, etc)
     void updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading);
 
@@ -173,10 +180,11 @@ private:
     bool singleWalletIsUpdating;
     std::vector<std::pair<std::time_t, std::thread*> > netThreads;
     std::mutex cs_vMultisigWallets;
+    std::thread *fwUpgradeThread;
 
 private slots:
     //!main callback when the device gets connected/disconnected
-    void changeConnectedState(bool state);
+    void changeConnectedState(bool state, int deviceType);
 
     //== UI ==
     //general proxy function to show an alert;
@@ -198,6 +206,10 @@ private slots:
     void passwordProvided();
     //!slot to ask for the current session password
     void askForSessionPassword();
+    //!show general modal info
+    void showModalInfo(const QString &info, int helpType = 0);
+    void updateModalInfo(const QString &info);
+    void hideModalInfo();
 
     //== DBB USB ==
     //!function is user whishes to erase the DBB
@@ -214,6 +226,13 @@ private slots:
     void getRandomNumber();
     //!lock the device, disabled "backup", "verifypass" and "seed" command
     void lockDevice();
+    //!lock the bootloader to protect from unecpected firmware upgrades
+    void lockBootloader();
+    //!open a file chooser and unlock the bootloader
+    void upgradeFirmware();
+    //!start upgrading the firmware with a file at given location
+    void upgradeFirmwareWithFile(const QString& fileName);
+    void upgradeFirmwareDone(bool state);
 
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();
