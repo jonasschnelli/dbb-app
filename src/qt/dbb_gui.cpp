@@ -263,19 +263,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->blockerView->setVisible(false);
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
-    //load local pubkeys
+    //create the single and multisig wallet
     singleWallet = new DBBWallet();
-    singleWallet->client.setFilenameBase("copay_single");
     singleWallet->baseKeyPath = "m/203'/45'";
-    singleWallet->client.LoadLocalData();
-    std::string lastAddress, keypath;
-    singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
-    singleWallet->rewriteKeypath(keypath);
-    updateReceivingAddress(singleWallet, lastAddress, keypath);
-
     DBBWallet* copayWallet = new DBBWallet();
-    copayWallet->client.setFilenameBase("copay_multisig");
-    copayWallet->client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
 
 
@@ -1056,6 +1047,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue lock = find_value(deviceObj, "lock");
                 UniValue sdcard = find_value(deviceObj, "sdcard");
                 UniValue bootlock = find_value(deviceObj, "bootlock");
+                UniValue walletIDUV = find_value(deviceObj, "id");
                 bool walletAvailable = seeded.isTrue();
                 bool lockAvailable = lock.isTrue();
 
@@ -1065,6 +1057,26 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
                 updateOverviewFlags(walletAvailable, lockAvailable, false);
+
+                if (walletIDUV.isStr())
+                {
+                    //initializes wallets (filename, get address, etc.)
+                    if (singleWallet->client.getFilenameBase().empty())
+                    {
+                        singleWallet->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
+                        singleWallet->client.LoadLocalData();
+
+                        std::string lastAddress, keypath;
+                        singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
+                        singleWallet->rewriteKeypath(keypath);
+                        updateReceivingAddress(singleWallet, lastAddress, keypath);
+                    }
+                    if (vMultisigWallets[0]->client.getFilenameBase().empty())
+                    {
+                        vMultisigWallets[0]->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
+                        vMultisigWallets[0]->client.LoadLocalData();
+                    }
+                }
 
                 //enable UI
                 passwordAccepted();
@@ -1084,7 +1096,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     shouldLockBootloaderState = false;
                     return;
                 }
-
             }
         } else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
             UniValue touchbuttonObj = find_value(response, "touchbutton");
