@@ -257,7 +257,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //load local pubkeys
     singleWallet = new DBBWallet();
     singleWallet->client.setFilenameBase("copay_single");
-    singleWallet->baseKeyPath = "m/203'";
+    singleWallet->baseKeyPath = "m/203'/45'";
     singleWallet->client.LoadLocalData();
     std::string lastAddress, keypath;
     singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
@@ -1273,7 +1273,7 @@ void DBBDaemonGui::getXPubKeyForCopay(int walletIndex)
         baseKeyPath = wallet->baseKeyPath;
     }
 
-    executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "/45'\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER, walletIndex);
@@ -1621,7 +1621,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
         std::string hexHash = DBB::HexStr((unsigned char*)&hashAndPathPair.second[0], (unsigned char*)&hashAndPathPair.second[0] + 32);
 
-        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeyPath + "/45'/" + hashAndPathPair.first + "\" }, ";
+        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeyPath + "/" + hashAndPathPair.first + "\" }, ";
     }
     hashCmd.pop_back();
     hashCmd.pop_back(); // remove ", "
