@@ -11,7 +11,7 @@
 #define HID_BL_BUF_SIZE_W 4098
 #define HID_BL_BUF_SIZE_R 256
 #define FIRMWARE_CHUNKSIZE 4096
-#define DBB_APP_LENGTH 229376 //flash size minus bootloader length
+#define DBB_APP_LENGTH 225280 //flash size minus bootloader length
 
 namespace DBB {
 

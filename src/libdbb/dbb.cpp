@@ -85,7 +85,7 @@ enum dbb_device_mode deviceAvailable()
         std::string strSN( wsSN.begin(), wsSN.end() );
 
 
-        if (strSN.size() > 0)
+        if (strSN != "none")
         {
             if (strSN == "firmware")
                 foundType = DBB_DEVICE_MODE_FIRMWARE;
@@ -147,7 +147,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
         cnt += res;
     }
 
-    DBB_DEBUG_INTERNAL(" OK, read %d bytes.\n", res);
+    DBB_DEBUG_INTERNAL(" OK, read %d bytes (%s).\n", res, (const char*)HID_REPORT);
 
     resultOut.assign((const char*)HID_REPORT);
     return true;

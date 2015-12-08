@@ -76,7 +76,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               sdcardWarned(0),
                                               fwUpgradeThread(0),
                                               upgradeFirmwareState(0),
-                                              shouldLockBootloaderState(0)
+                                              shouldKeepBootloaderState(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -263,19 +263,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->blockerView->setVisible(false);
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
-    //load local pubkeys
+    //create the single and multisig wallet
     singleWallet = new DBBWallet();
-    singleWallet->client.setFilenameBase("copay_single");
     singleWallet->baseKeyPath = "m/203'/45'";
-    singleWallet->client.LoadLocalData();
-    std::string lastAddress, keypath;
-    singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
-    singleWallet->rewriteKeypath(keypath);
-    updateReceivingAddress(singleWallet, lastAddress, keypath);
-
     DBBWallet* copayWallet = new DBBWallet();
-    copayWallet->client.setFilenameBase("copay_multisig");
-    copayWallet->client.LoadLocalData();
     vMultisigWallets.push_back(copayWallet);
 
 
@@ -621,6 +612,10 @@ void DBBDaemonGui::showModalInfo(const QString &info, int helpType)
         if (info.isNull() || info.size() == 0)
             ui->modalInfoLabel->setText(tr(""));
     }
+    else
+    {
+        ui->modalIcon->setIcon(QIcon());
+    }
 
 
     // then a animation:
@@ -819,7 +814,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             delete fwUpgradeThread;
         }
 
-        showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please hold the touchbutton for serval seconds to allow upgrading your firmware.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+        showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by...", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
 
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
             bool upgradeRes = false;
@@ -897,10 +892,10 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     deviceConnected = false;
     uiUpdateDeviceState();
 
-    shouldLockBootloaderState = false;
+    shouldKeepBootloaderState = false;
 
     if (status)
-        QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), QMessageBox::Ok);
+        showModalInfo("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     else
         showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug/plug your Digital Bitbox."));
 
@@ -1056,6 +1051,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue lock = find_value(deviceObj, "lock");
                 UniValue sdcard = find_value(deviceObj, "sdcard");
                 UniValue bootlock = find_value(deviceObj, "bootlock");
+                UniValue walletIDUV = find_value(deviceObj, "id");
                 bool walletAvailable = seeded.isTrue();
                 bool lockAvailable = lock.isTrue();
 
@@ -1066,8 +1062,38 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 updateOverviewFlags(walletAvailable, lockAvailable, false);
 
+                if (walletAvailable && walletIDUV.isStr())
+                {
+                    //initializes wallets (filename, get address, etc.)
+                    if (singleWallet->client.getFilenameBase().empty())
+                    {
+                        singleWallet->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
+                        singleWallet->client.LoadLocalData();
+                        std::string lastAddress, keypath;
+                        singleWallet->client.GetLastKnownAddress(lastAddress, keypath);
+                        singleWallet->rewriteKeypath(keypath);
+                        updateReceivingAddress(singleWallet, lastAddress, keypath);
+
+                        if (singleWallet->client.GetXPubKey().size() <= 0)
+                            createSingleWallet();
+                    }
+                    if (vMultisigWallets[0]->client.getFilenameBase().empty())
+                    {
+                        vMultisigWallets[0]->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
+                        vMultisigWallets[0]->client.LoadLocalData();
+                    }
+                }
+
                 //enable UI
                 passwordAccepted();
+                
+                if (!walletAvailable)
+                {
+                    showModalInfo("Creating New Wallet");
+                    seedHardware();
+                    return;
+                }
+
                 deviceIsReadyToInteract();
 
                 if (sdcard.isBool() && sdcard.isTrue() && walletAvailable && !sdcardWarned)
@@ -1077,16 +1103,17 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 }
 
                 // special case for post firmware upgrades (lock bootloader)
-                if (shouldLockBootloaderState && bootlock.isTrue())
+                if (!shouldKeepBootloaderState && bootlock.isFalse())
                 {
                     // unlock bootloader
+                    showModalInfo("<strong>Lock Firmware...</strong><br/><br/>You need to lock your Digital Bitbox to protect from further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
                     lockBootloader();
-                    shouldLockBootloaderState = false;
+                    shouldKeepBootloaderState = false;
                     return;
                 }
-
             }
         } else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
+            hideModalInfo();
             UniValue touchbuttonObj = find_value(response, "touchbutton");
             UniValue seedObj = find_value(response, "seed");
             UniValue errorObj = find_value(response, "error");
@@ -1104,8 +1131,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
                 QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
-                //maybe kick of a getinfo here.
-                createSingleWallet();
+                getInfo(); 
             } else {
                 if (!touchErrorShowed)
                     showAlert(tr("Wallet Error"), errorString);
@@ -1272,9 +1298,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             getInfo();
         } else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK) {
             upgradeFirmwareState = true;
-            shouldLockBootloaderState = true;
+            shouldKeepBootloaderState = true;
             setFirmwareUpdateHID(true);
-            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Hold the touchbutton for serval seconds after you have pluged in your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Briefly hold the touchbutton to allow upgrading to a new Firmware.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+        }
+        else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
+            hideModalInfo();
         }
         else {
         }

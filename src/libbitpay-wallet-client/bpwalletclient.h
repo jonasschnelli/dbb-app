@@ -59,8 +59,11 @@ public:
     BitPayWalletClient();
     ~BitPayWalletClient();
 
-    //!set the filename base to store local data
+    //!set the filename-base to store local data
     void setFilenameBase(const std::string& filenameBaseIn);
+
+    //!get the filename-base to store local data
+    const std::string& getFilenameBase();
 
     //!parse a wallet invitation code
     bool ParseWalletInvitation(const std::string& walletInvitation, BitpayWalletInvitation& invitationOut);

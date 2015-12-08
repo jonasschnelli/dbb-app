@@ -53,13 +53,18 @@ BitPayWalletClient::BitPayWalletClient()
 {
     //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
-    filenameBase = "copay_multisig";
+    filenameBase.clear();
 }
 
 void BitPayWalletClient::setFilenameBase(const std::string& filenameBaseIn)
 {
-    if (filenameBase.size() > 0)
+    if (filenameBaseIn.size() > 0)
         filenameBase = filenameBaseIn;
+}
+
+const std::string& BitPayWalletClient::getFilenameBase()
+{
+    return filenameBase;
 }
 
 BitPayWalletClient::~BitPayWalletClient()
