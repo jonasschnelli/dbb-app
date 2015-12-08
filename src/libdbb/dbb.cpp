@@ -76,12 +76,31 @@ enum dbb_device_mode deviceAvailable()
     cur_dev = devs;
     enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
-        std::wstring ws(cur_dev->manufacturer_string);
-        std::string str( ws.begin(), ws.end() );
-        if (str == "Digital Bitbox")
-            foundType = DBB_DEVICE_MODE_BOOTLOADER;
+        // get the manufacturer wide string
+        std::wstring wsMF(cur_dev->manufacturer_string);
+        std::string strMF( wsMF.begin(), wsMF.end() );
+
+        // get the setial number wide string
+        std::wstring wsSN(cur_dev->serial_number);
+        std::string strSN( wsSN.begin(), wsSN.end() );
+
+
+        if (strSN.size() > 0)
+        {
+            if (strSN == "firmware")
+                foundType = DBB_DEVICE_MODE_FIRMWARE;
+            else
+                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+        }
         else
-            foundType = DBB_DEVICE_MODE_FIRMWARE;
+        {
+            //TODO: legacy. Needs to be removed before releasing
+            //currently mixed up
+            if (strMF == "Digital Bitbox")
+                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+            else
+                foundType = DBB_DEVICE_MODE_FIRMWARE;
+        }
         break;
     }
     hid_free_enumeration(devs);
