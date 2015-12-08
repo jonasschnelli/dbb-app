@@ -109,6 +109,8 @@ signals:
     void firmwareThreadDone(bool);
     //emited when the firmeware upgrade thread is done
     void shouldUpdateModalInfo(const QString& info);
+    //emited when the modal view should be hidden from another thread
+    void shouldHideModalInfo();
 
 private:
     Ui::MainWindow* ui;
@@ -132,6 +134,7 @@ private:
     bool deviceConnected;
     bool cachedWalletAvailableState;
     bool deviceReadyToInteract;
+    bool touchButtonInfo;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
     QPropertyAnimation* statusBarloadingIndicatorOpacityAnimation;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
@@ -154,7 +157,7 @@ private:
     //!resets device infos (in case of a disconnect)
     void resetInfos();
     //! updates the ui after the current device state
-    void uiUpdateDeviceState();
+    void uiUpdateDeviceState(int deviceType=-1);
 
     //== UI ==
     //general proxy function to show an alert;
@@ -210,6 +213,11 @@ private slots:
     void showModalInfo(const QString &info, int helpType = 0);
     void updateModalInfo(const QString &info);
     void hideModalInfo();
+    //!show set passworf form
+    void showSetPasswordInfo(bool showCleanInfo = false);
+    //!gets called when the user hits enter (or presses button) in the "set password form"
+    void setPasswordProvided();
+    void cleanseLoginAndSetPassword();
 
     //== DBB USB ==
     //!function is user whishes to erase the DBB
@@ -217,7 +225,6 @@ private slots:
     void ledClicked();
     //!get basic informations about the connected DBB
     void getInfo();
-    void setPasswordClicked(bool showInfo = true);
     //!seed the wallet, flush everything and create a new bip32 entropy
     void seedHardware();
 
