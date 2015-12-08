@@ -921,7 +921,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
                 QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
-                getInfo();
+                //maybe kick of a getinfo here.
+                createSingleWallet();
             } else {
                 if (!touchErrorShowed)
                     showAlert(tr("Wallet Error"), errorString);
@@ -1306,6 +1307,8 @@ void DBBDaemonGui::joinCopayWalletWithXPubKey(int walletIndex)
     if (walletIndex == 0) {
         //single wallet, create wallet first
         wallet->client.CreateWallet(wallet->participationName);
+        getNewAddress();
+        updateWallet(wallet);
     } else {
         //set the keys and try to join the wallet
         joinMultisigWalletInitiate(wallet);
