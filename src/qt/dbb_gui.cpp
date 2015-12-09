@@ -76,7 +76,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               sdcardWarned(0),
                                               fwUpgradeThread(0),
                                               upgradeFirmwareState(0),
-                                              shouldKeepBootloaderState(0)
+                                              shouldKeepBootloaderState(0),
+                                              touchButtonInfo(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -132,10 +133,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->multisigWalletNameKey->setStyleSheet(labelCSS);
     ////////////// END STYLING
 
-    ui->touchbuttonInfo->setVisible(false);
-    // set light transparent background for touch button info layer
-    this->ui->touchbuttonInfo->setStyleSheet("background-color: rgba(255, 255, 255, 240);");
-
     // allow serval signaling data types
     qRegisterMetaType<UniValue>("UniValue");
     qRegisterMetaType<std::string>("std::string");
@@ -147,7 +144,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
-    connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(setPasswordClicked()));
+    connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(showSetPasswordInfo()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
     connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
@@ -178,6 +175,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this, SIGNAL(firmwareThreadDone(bool)), this, SLOT(upgradeFirmwareDone(bool)));
     connect(this, SIGNAL(shouldUpdateModalInfo(const QString&)), this, SLOT(updateModalInfo(const QString&)));
+    connect(this, SIGNAL(shouldHideModalInfo()), this, SLOT(hideModalInfo()));
 
 
     // create backup dialog instance
@@ -263,6 +261,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->blockerView->setVisible(false);
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
+    //set password screen
+    connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
+    connect(this->ui->setPassword0, SIGNAL(returnPressed()), this->ui->setPassword1, SLOT(setFocus()));
+    connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
+
     //create the single and multisig wallet
     singleWallet = new DBBWallet();
     singleWallet->baseKeyPath = "m/203'/45'";
@@ -331,7 +334,7 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
             this->statusBarButton->setVisible(false);
         }
 
-        uiUpdateDeviceState();
+        uiUpdateDeviceState(deviceType);
     }
 }
 
@@ -347,10 +350,10 @@ void DBBDaemonGui::setTabbarEnabled(bool status)
 
 void DBBDaemonGui::setLoading(bool status)
 {
-    if (!status)
+    if (!status && touchButtonInfo)
     {
         hideModalInfo();
-        ui->touchbuttonInfo->setVisible(false);
+        touchButtonInfo = false;
     }
 
     this->statusBarLabelRight->setText((status) ? "processing..." : "");
@@ -386,7 +389,7 @@ void DBBDaemonGui::resetInfos()
     updateOverviewFlags(false, false, true);
 }
 
-void DBBDaemonGui::uiUpdateDeviceState()
+void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
 {
     this->ui->verticalLayoutWidget->setVisible(deviceConnected);
     this->ui->balanceLabel->setVisible(deviceConnected);
@@ -415,9 +418,13 @@ void DBBDaemonGui::uiUpdateDeviceState()
         sdcardWarned = false;
 
     } else {
-        walletsAction->setEnabled(true);
-        settingsAction->setEnabled(true);
-        askForSessionPassword();
+        if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE)
+        {
+            walletsAction->setEnabled(true);
+            settingsAction->setEnabled(true);
+            hideModalInfo();
+            askForSessionPassword();
+        }
     }
 }
 
@@ -584,8 +591,60 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
+void DBBDaemonGui::showSetPasswordInfo(bool showCleanInfo)
+{
+    ui->setPasswordWidget->setVisible(true);
+    ui->passwordInfo->setVisible(showCleanInfo);
+    ui->modalInfoLabel->setText("");
+    this->ui->modalBlockerView->setVisible(true);
+    QWidget* slide = this->ui->modalBlockerView;
+    // setup slide
+    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
+    ui->modalIcon->setIcon(QIcon());
+
+    // then a animation:
+    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
+    animation->setDuration(300);
+    animation->setStartValue(slide->pos());
+    animation->setEndValue(QPoint(0, 0));
+    animation->setEasingCurve(QEasingCurve::OutQuad);
+    // to slide in call
+    animation->start(QAbstractAnimation::DeleteWhenStopped);
+
+    ui->setPassword0->setFocus();
+}
+
+void DBBDaemonGui::setPasswordProvided()
+{
+    if (ui->setPassword0->text() != ui->setPassword1->text())
+    {
+        showAlert("Error", "Passwords not identical");
+        return;
+    }
+
+    bool TBIRequired = !ui->passwordInfo->isVisible();
+
+    if (executeCommandWrapper("{\"password\" : \"" + ui->setPassword0->text().toStdString() + "\"}", TBIRequired ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
+    }))
+    {
+        sessionPasswordDuringChangeProcess = sessionPassword;
+        sessionPassword = ui->setPassword0->text().toStdString();
+    }
+}
+
+void DBBDaemonGui::cleanseLoginAndSetPassword()
+{
+    ui->setPassword0->clear();
+    ui->setPassword1->clear();
+    this->ui->passwordLineEdit->clear();
+}
+
 void DBBDaemonGui::showModalInfo(const QString &info, int helpType)
 {
+    ui->setPasswordWidget->setVisible(false);
     ui->modalInfoLabel->setText(info);
     this->ui->modalBlockerView->setVisible(true);
     QWidget* slide = this->ui->modalBlockerView;
@@ -679,7 +738,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
 
     if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON) {
         showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
-        ui->touchbuttonInfo->setVisible(true);
+        touchButtonInfo = true;
     }
 
     setLoading(true);
@@ -723,24 +782,6 @@ void DBBDaemonGui::getInfo()
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_INFO);
     });
-}
-
-void DBBDaemonGui::setPasswordClicked(bool showInfo)
-{
-    bool ok;
-    QString text = QInputDialog::getText(this, tr("Set New Password"), tr("Password"), QLineEdit::Normal, "0000", &ok);
-    if (ok && !text.isEmpty()) {
-        std::string command = "{\"password\" : \"" + text.toStdString() + "\"}";
-
-        if (executeCommandWrapper(command, (showInfo) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-                UniValue jsonOut;
-                jsonOut.read(cmdOut);
-                emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
-            })) {
-            sessionPasswordDuringChangeProcess = sessionPassword;
-            sessionPassword = text.toStdString();
-        }
-    }
 }
 
 void DBBDaemonGui::seedHardware()
@@ -1034,10 +1075,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110) {
                 showAlert(tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), true);
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101) {
-                showAlert(tr("Password Error"), QString::fromStdString(errorMessageObj.get_str()));
-
                 sessionPassword.clear();
-                setPasswordClicked(false);
+                showSetPasswordInfo(true);
             } else {
                 //password wrong
                 showAlert(tr("Error"), QString::fromStdString(errorMessageObj.get_str()));
@@ -1075,7 +1114,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         updateReceivingAddress(singleWallet, lastAddress, keypath);
 
                         if (singleWallet->client.GetXPubKey().size() <= 0)
+                        {
+                            showModalInfo(tr("Creating Copay Wallet"));
                             createSingleWallet();
+                        }
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
@@ -1089,7 +1131,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 
                 if (!walletAvailable)
                 {
-                    showModalInfo("Creating New Wallet");
+                    showModalInfo(tr("Creating New Wallet"));
                     seedHardware();
                     return;
                 }
@@ -1140,9 +1182,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             UniValue passwordObj = find_value(response, "password");
             if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success")) {
                 sessionPasswordDuringChangeProcess.clear();
-
+                cleanseLoginAndSetPassword(); //remove text from set password fields
                 //could not decrypt, password was changed successfully
-                QMessageBox::information(this, tr("Password Set"), tr("Password has been set successfully!"), QMessageBox::Ok);
                 getInfo();
             } else {
                 QString errorString;
@@ -1589,6 +1630,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets()
             data.read(txHistoryResponse);
 
         emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
+        emit shouldHideModalInfo();
     });
 }
 
