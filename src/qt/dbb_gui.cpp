@@ -1121,7 +1121,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
-                        vMultisigWallets[0]->client.setFilenameBase(walletIDUV.get_str()+"_copay_single");
+                        vMultisigWallets[0]->client.setFilenameBase(walletIDUV.get_str()+"_copay_multisig_0");
                         vMultisigWallets[0]->client.LoadLocalData();
                     }
                 }
