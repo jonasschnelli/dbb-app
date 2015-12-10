@@ -1154,30 +1154,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     return;
                 }
             }
-        } else if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
-            hideModalInfo();
-            UniValue touchbuttonObj = find_value(response, "touchbutton");
-            UniValue seedObj = find_value(response, "seed");
-            UniValue errorObj = find_value(response, "error");
-            QString errorString;
-
-            if (errorObj.isObject()) {
-                UniValue errorMsgObj = find_value(errorObj, "message");
-                if (errorMsgObj.isStr())
-                    errorString = QString::fromStdString(errorMsgObj.get_str());
-            }
-            if (!touchbuttonObj.isNull() && touchbuttonObj.isObject()) {
-                UniValue errorObj = find_value(touchbuttonObj, "error");
-                if (!errorObj.isNull() && errorObj.isStr())
-                    errorString = QString::fromStdString(errorObj.get_str());
-            }
-            if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
-                QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
-                getInfo(); 
-            } else {
-                if (!touchErrorShowed)
-                    showAlert(tr("Wallet Error"), errorString);
-            }
         } else if (tag == DBB_RESPONSE_TYPE_PASSWORD) {
             UniValue passwordObj = find_value(response, "password");
             if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success")) {
@@ -1357,6 +1333,36 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             }
             hideModalInfo();
             websocketServer->sendDataToClientInECDHParingState(response);
+        }
+
+        if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
+            hideModalInfo();
+            UniValue touchbuttonObj = find_value(response, "touchbutton");
+            UniValue seedObj = find_value(response, "seed");
+            UniValue errorObj = find_value(response, "error");
+            QString errorString;
+
+            if (errorObj.isObject()) {
+                UniValue errorMsgObj = find_value(errorObj, "message");
+                if (errorMsgObj.isStr())
+                    errorString = QString::fromStdString(errorMsgObj.get_str());
+            }
+            if (!touchbuttonObj.isNull() && touchbuttonObj.isObject()) {
+                UniValue errorObj = find_value(touchbuttonObj, "error");
+                if (!errorObj.isNull() && errorObj.isStr())
+                    errorString = QString::fromStdString(errorObj.get_str());
+            }
+            if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
+                //: translation: confirmation text when the DBB wallet was seeded successfully
+                QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
+                getInfo();
+            } else {
+                if (!touchErrorShowed)
+                {
+                    //: translation: titel for an error that happened during DBB/seed
+                    showAlert(tr("Wallet Error"), errorString);
+                }
+            }
         }
 
         if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {

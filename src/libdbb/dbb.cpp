@@ -84,13 +84,15 @@ enum dbb_device_mode deviceAvailable()
         std::wstring wsSN(cur_dev->serial_number);
         std::string strSN( wsSN.begin(), wsSN.end() );
 
+        std::vector<std::string> vSNParts = DBB::split(strSN, ':');
 
-        if (strSN != "none")
+        if (vSNParts.size() == 2 && vSNParts[0] == "dbb.fw" || strSN == "firmware")
         {
-            if (strSN == "firmware")
-                foundType = DBB_DEVICE_MODE_FIRMWARE;
-            else
-                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+            foundType = DBB_DEVICE_MODE_FIRMWARE;
+        }
+        else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
+        {
+            foundType = DBB_DEVICE_MODE_BOOTLOADER;
         }
         else
         {
