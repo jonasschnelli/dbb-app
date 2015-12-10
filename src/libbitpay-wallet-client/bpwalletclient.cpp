@@ -28,6 +28,9 @@
 #include <btc/bip32.h>
 #include <btc/tx.h>
 
+#if defined WIN32
+#include <shlobj.h>
+#endif
 
 //ignore osx depracation warning
 #pragma clang diagnostic ignored "-Wdeprecated-declarations"
@@ -906,8 +909,8 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
 
 void CreateDir(const char* dir)
 {
-#if defined _MSC_VER
-    _mkdir(dir);
+#if defined WIN32
+    mkdir(dir);
 #elif defined __GNUC__
     mkdir(dir, 0777);
 #endif
@@ -934,7 +937,7 @@ std::string GetDefaultDBBDataDir()
 // Unix: ~/.bitcoin
 #ifdef WIN32
     // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA) + "/DBB";
+    return GetSpecialFolderPath(CSIDL_APPDATA, true) + "/DBB";
 #else
     std::string pathRet;
     char* pszHome = getenv("HOME");

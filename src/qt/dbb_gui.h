@@ -16,6 +16,13 @@
 #include <thread>
 #include <mutex>
 
+#ifdef WIN32
+#include <windows.h>
+#include "mingw/mingw.mutex.h"
+#include "mingw/mingw.condition_variable.h"
+#include "mingw/mingw.thread.h"
+#endif
+
 #include "dbb_app.h"
 #include "dbb_wallet.h"
 #include "dbb_websocketserver.h"
