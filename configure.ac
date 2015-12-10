@@ -8,10 +8,46 @@ AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
+AM_MAINTAINER_MODE([enable])
+m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
 AX_CXX_COMPILE_STDCXX_11()
 
+dnl Compiler checks (here before libtool).
+if test "x${CXXFLAGS+set}" = "xset"; then
+  CXXFLAGS_overridden=yes
+else
+  CXXFLAGS_overridden=no
+fi
+AC_PROG_CXX
+m4_ifdef([AC_PROG_OBJCXX],[AC_PROG_OBJCXX])
+
+dnl By default, libtool for mingw refuses to link static libs into a dll for
+dnl fear of mixing pic/non-pic objects, and import/export complications. Since
+dnl we have those under control, re-enable that functionality.
+case $host in
+  *mingw*)
+     lt_cv_deplibs_check_method="pass_all"
+  ;;
+esac
+
 LT_INIT([pic-only])
+
+AC_PATH_TOOL(AR, ar)
+AC_PATH_TOOL(RANLIB, ranlib)
+AC_PATH_TOOL(STRIP, strip)
+AC_PATH_PROG(PYTHON, python)
+AC_PATH_PROG([GIT], [git])
+
+dnl pkg-config check.
+PKG_PROG_PKG_CONFIG
+
+if test "x$CXXFLAGS_overridden" = "xno"; then
+  CXXFLAGS="$CXXFLAGS -Wall -Wextra -Wformat -Wformat-security -Wno-unused-parameter -Wno-self-assign"
+fi
+CPPFLAGS="$CPPFLAGS -DHAVE_BUILD_INFO -D__STDC_FORMAT_MACROS"
+
+AC_LANG_PUSH([C++])
 
 # Enable debug
 AC_ARG_ENABLE([debug],
@@ -47,47 +83,14 @@ AC_ARG_WITH(hid-includedir,
 [  --with-hid-includedir=DIR        specify exact includes dir for hid library],
 hid_includedir="$withval")
 
-if test "${with_hid}" != no ; then
-	OLD_LIBS=$LIBS
-	OLD_LDFLAGS=$LDFLAGS
-	OLD_CFLAGS=$CFLAGS
-	OLD_CPPFLAGS=$CPPFLAGS
-	if test "${hid_libdir}" ; then
-		LDFLAGS="$LDFLAGS -L${hid_libdir}"
-		AC_MSG_NOTICE([found $hid_libdir])
-	fi
-	if test "${hid_includedir}" ; then
-		CFLAGS="$CFLAGS -I${hid_includedir}"
-		CPPFLAGS="$CPPFLAGS -I${hid_includedir}"
-	fi
-	no_good=no
-	AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
-	AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
-	if test "$no_good" = yes; then
-		AC_MSG_ERROR([*** Please install libhidapi on your system ***])
-	fi
-fi
-
-
-# Look for dns_sd flag
-AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
-
-if test x$with_dns_sd = xyes; then 
-  AC_MSG_RESULT(>>Including dns_sd for mDNS support)
-  HAS_DNS_SD=1
-  AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
-  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))
-  AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
-fi
-
 dnl Check for pthread compile/link requirements
 AX_PTHREAD
 
 use_pkgconfig=yes
-
 case $host in
   *mingw*)
 
+     AC_MSG_NOTICE([------- USING MINGW])
      #pkgconfig does more harm than good with MinGW
      use_pkgconfig=no
 
@@ -111,7 +114,10 @@ case $host in
      AC_CHECK_LIB([shlwapi],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([iphlpapi],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([crypt32],      [main],, AC_MSG_ERROR(lib missing))
-
+     AC_CHECK_LIB([setupapi],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([hidapi],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([curl],      [main],, AC_MSG_ERROR(lib missing))
+     
      # -static is interpreted by libtool, where it has a different meaning.
      # In libtool-speak, it's -all-static.
      AX_CHECK_LINK_FLAG([[-static]],[LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static"])
@@ -126,11 +132,8 @@ case $host in
        AC_MSG_ERROR("windres not found")
      fi
 
-     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS"
-     LEVELDB_TARGET_FLAGS="TARGET_OS=OS_WINDOWS_CROSSCOMPILE"
-     if test "x$CXXFLAGS_overridden" = "xno"; then
-       CXXFLAGS="$CXXFLAGS -w"
-     fi
+     CPPFLAGS+="-D_MT -DWIN32 -D_WINDOWS -static -static-libgcc -static-libstdc++ -DCURL_STATICLIB -lcurl"
+
      case $host in
        i?86-*) WINDOWS_BITS=32 ;;
        x86_64-*) WINDOWS_BITS=64 ;;
@@ -212,6 +215,39 @@ case $host in
    *)
      ;;
 esac
+
+if test "${with_hid}" != no ; then
+	OLD_LIBS=$LIBS
+	OLD_LDFLAGS=$LDFLAGS
+	OLD_CFLAGS=$CFLAGS
+	OLD_CPPFLAGS=$CPPFLAGS
+	if test "${hid_libdir}" ; then
+		LDFLAGS="$LDFLAGS -L${hid_libdir}"
+		AC_MSG_NOTICE([found $hid_libdir])
+	fi
+	if test "${hid_includedir}" ; then
+		CFLAGS="$CFLAGS -I${hid_includedir}"
+		CPPFLAGS="$CPPFLAGS -I${hid_includedir}"
+	fi
+	no_good=no
+	AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
+	AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
+	if test "$no_good" = yes; then
+		AC_MSG_ERROR([*** Please install libhidapi on your system ***])
+	fi
+fi
+
+
+# Look for dns_sd flag
+AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
+
+if test x$with_dns_sd = xyes; then 
+  AC_MSG_RESULT(>>Including dns_sd for mDNS support)
+  HAS_DNS_SD=1
+  AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
+  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))
+fi
+AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 LIBCURL_CHECK_CONFIG(, 7.15.2, , [AC_MSG_ERROR([Missing required libcurl >= 7.15.2])])
 
