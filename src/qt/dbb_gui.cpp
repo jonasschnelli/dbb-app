@@ -1935,7 +1935,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
 
         UniValue echoStr = find_value(jsonOut, "echo");
         if (!echoStr.isNull() && echoStr.isStr()) {
-            emit shouldVerifySigning(wallet, paymentProposal, actionType, echoStr.get_str());
+            emit shouldVerifySigning(wallet, paymentProposal, actionType, cmdOut);
         } else {
             UniValue errorObj = find_value(jsonOut, "error");
             if (errorObj.isObject()) {
