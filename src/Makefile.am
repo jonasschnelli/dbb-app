@@ -1,28 +1,44 @@
-AM_CPPFLAGS = -I$(top_srcdir)/include -I../vendor/bitcoin/src -I../vendor/bitcoin/src/config
+DIST_SUBDIRS = libbtc univalue
+AM_CPPFLAGS = -I$(top_srcdir)/include
+AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) -static
 
-libunival_CONFIG_INCLUDES=-I$(builddir)/config
-libunival_INCLUDES=-I$(builddir) -I$(builddir)/obj univalue/univalue_escapes.h ../include/univalue.h
+DBB_INCLUDES = 
 
-noinst_LIBRARIES = libunival.a libdbb.a libbpwalletclient.a
+LIBBTC=libbtc/libbtc.la
+UNIVALUE=univalue/libunivalue.la
 
-libunival_a_SOURCES = univalue/univalue.cpp univalue/univalue_read.cpp univalue/univalue_write.cpp
+$(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
-libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h
+LIBBTC_INCLUDES = -I$(srcdir)/libbtc/include -I$(srcdir)/libbtc/src
+
+$(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+DBB_INCLUDES += -I$(srcdir)/univalue/include $(LIBBTC_INCLUDES)
+
+
+noinst_LIBRARIES = libdbb.a libbpwalletclient.a
+
+libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
+libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(LIBBTC_INCLUDES)
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
 libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
 libbpwalletclient_a_SOURCES = libbitpay-wallet-client/bpwalletclient.cpp
-
+libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
+libbpwalletclient_a_LIBADD = $(LIBBTC)
+ 
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
 
 bin_PROGRAMS = dbb-cli
 
 dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
-dbb_cli_CPPFLAGS = $(AM_CPPFLAGS)
+dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_cli_LDADD = libunival.a libdbb.a $(CRYPTO_LIBS)
+dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC)
 
 
 #check if we should build the dbb app
@@ -30,32 +46,62 @@ if ENABLE_DBB_APP
 bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp
-dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS)
+dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp dbb_wallet.h dbb_wallet.cpp dbb_netthread.h dbb_netthread.cpp
+dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBEVENT_LIBS) $(CRYPTO_LIBS) $(LINUX_LIBS) ../vendor/bitcoin/src/libbitcoin_common.a ../vendor/bitcoin/src/libbitcoin_util.a ../vendor/bitcoin/src/crypto/libbitcoin_crypto.a ../vendor/bitcoin/src/univalue/libbitcoin_univalue.a ../vendor/bitcoin/src/secp256k1/libsecp256k1.la $(BOOST_LIBS)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(UNIVALUE) $(LIBCURL)
 
 if ENABLE_QT
 
 QT_FORMS_UI = \
   qt/ui/overview.ui \
-	qt/ui/seeddialog.ui \
-	qt/ui/transactiondialog.ui
+  qt/ui/paymentproposal.ui \
+  qt/ui/backupdialog.ui \
+  qt/ui/signconfirmationdialog.ui \
+  qt/ui/getaddressdialog.ui \
+  qt/ui/verificationdialog.ui \
+  qt/ui/qrcodesequence.ui
 	
 DBB_GUI_H = \
-	qt/seeddialog.h
+	qt/paymentproposal.h \
+    qt/signconfirmationdialog.h \
+    qt/dbb_websocketserver.h \
+    qt/bonjourserviceregister.h \
+    qt/bonjourrecord.h \
+    qt/getaddressdialog.h \
+    qt/qrcodesequence.h \
+    qt/verificationdialog.h
 
 DBB_GUI_CPP = \
-	qt/seeddialog.cpp
+	qt/paymentproposal.cpp \
+    qt/backupdialog.cpp \
+    qt/signconfirmationdialog.cpp \
+    qt/dbb_websocketserver.cpp \
+    qt/bonjourserviceregister.cpp \
+    qt/getaddressdialog.cpp \
+    qt/qrcodesequence.cpp \
+    qt/verificationdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
-	qt/moc_seeddialog.cpp
+	qt/moc_paymentproposal.cpp \
+    qt/moc_backupdialog.cpp \
+    qt/moc_signconfirmationdialog.cpp \
+    qt/moc_dbb_websocketserver.cpp \
+    qt/moc_bonjourserviceregister.cpp \
+    qt/moc_getaddressdialog.cpp \
+    qt/moc_qrcodesequence.cpp \
+    qt/moc_verificationdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
-	qt/seeddialog.moc
+  qt/paymentproposal.moc \
+  qt/backupdialog.moc \
+  qt/singconfirmationdialog.moc \
+  qt/getaddressdialog.moc \
+  qt/qrcodesequence.moc \
+  qt/verificationdialog.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
@@ -63,9 +109,9 @@ $(QT_MOC): $(QT_FORMS_H)
 $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
-dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES)
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) -I$(srcdir)/qt
 dbb_app_LDFLAGS += $(QT_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl $(LINUX_LIBS)
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
 
@@ -73,6 +119,9 @@ CLEANFILES = $(CLEAN_QT)
 
 dbb_app_clean: FORCE
 	rm -f $(CLEAN_QT) dbb-app$(EXEEXT)
+
+clean-local:
+	-$(MAKE) -C libbtc clean
 
 ui_%.h: %.ui
 	@test -f $(UIC)

@@ -1,5 +1,5 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
-AC_PREREQ([2.69])
+AC_PREREQ([2.68])
 AC_INIT([Digital Bitbox CLI],[0.1],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
 AC_CONFIG_SRCDIR([src/config])
 AC_CONFIG_HEADERS([src/config/dbb-config.h])
@@ -69,16 +69,21 @@ if test "${with_hid}" != no ; then
 fi
 
 
+# Look for dns_sd flag
+AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
 
+if test x$with_dns_sd = xyes; then 
+  AC_MSG_RESULT(>>Including dns_sd for mDNS support)
+  HAS_DNS_SD=1
+  AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
+  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))
+  AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
+fi
 
-
-
-
-AX_CHECK_OPENSSL
+dnl Check for pthread compile/link requirements
+AX_PTHREAD
 
 use_pkgconfig=yes
-
-
 
 case $host in
   *mingw*)
@@ -121,7 +126,7 @@ case $host in
        AC_MSG_ERROR("windres not found")
      fi
 
-     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS -DBOOST_THREAD_USE_LIB"
+     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS"
      LEVELDB_TARGET_FLAGS="TARGET_OS=OS_WINDOWS_CROSSCOMPILE"
      if test "x$CXXFLAGS_overridden" = "xno"; then
        CXXFLAGS="$CXXFLAGS -w"
@@ -201,71 +206,19 @@ case $host in
      ;;
    *linux*)
      TARGET_OS=linux
-     LINUX_LIBS=-lpthread
+     LINUX_LIBS=
      AC_SUBST(LINUX_LIBS)
      ;;
    *)
      ;;
 esac
 
-if test x$use_pkgconfig = xyes; then
-
-  if test x"$PKG_CONFIG" = "x"; then
-    AC_MSG_ERROR(pkg-config not found.)
-  fi
-
-  : #NOP
-  m4_ifdef(
-    [PKG_CHECK_MODULES],
-    [
-      PKG_CHECK_MODULES([SSL], [libssl],, [AC_MSG_ERROR(openssl  not found.)])
-      PKG_CHECK_MODULES([CRYPTO], [libcrypto],,[AC_MSG_ERROR(libcrypto  not found.)])
-    ]
-  )
-else
-  AC_CHECK_HEADER([openssl/crypto.h],,AC_MSG_ERROR(libcrypto headers missing))
-  AC_CHECK_LIB([crypto],      [main],CRYPTO_LIBS=-lcrypto, AC_MSG_ERROR(libcrypto missing))
-
-  AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
-  AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
-fi
-
 LIBCURL_CHECK_CONFIG(, 7.15.2, , [AC_MSG_ERROR([Missing required libcurl >= 7.15.2])])
-
-dnl Check for boost libs
-AX_BOOST_BASE
-AX_BOOST_SYSTEM
-AX_BOOST_FILESYSTEM
-AX_BOOST_PROGRAM_OPTIONS
-AX_BOOST_THREAD
-AX_BOOST_CHRONO
-
-if test x$use_reduce_exports = xyes; then
-  AC_MSG_CHECKING([for working boost reduced exports])
-  TEMP_CPPFLAGS="$CPPFLAGS"
-  CPPFLAGS="$BOOST_CPPFLAGS $CPPFLAGS"
-  AC_PREPROC_IFELSE([AC_LANG_PROGRAM([[
-      @%:@include <boost/version.hpp>
-    ]], [[
-      #if BOOST_VERSION >= 104900
-      // Everything is okay
-      #else
-      #  error Boost version is too old
-      #endif
-    ]])],[
-      AC_MSG_RESULT(yes)
-    ],[
-    AC_MSG_ERROR([boost versions < 1.49 are known to be broken with reduced exports. Use --disable-reduce-exports.])
-  ])
-  CPPFLAGS="$TEMP_CPPFLAGS"
-fi
 
 if test x$use_reduce_exports = xyes; then
     CXXFLAGS="$CXXFLAGS $RE_CXXFLAGS"
     AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]], [RELDFLAGS="-Wl,--exclude-libs,ALL"])
 fi
-
-BOOST_LIBS="$BOOST_LDFLAGS $BOOST_SYSTEM_LIB $BOOST_FILESYSTEM_LIB $BOOST_PROGRAM_OPTIONS_LIB $BOOST_THREAD_LIB $BOOST_CHRONO_LIB"
 
 #######################################################################
 # we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
@@ -291,15 +244,12 @@ AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
 fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
-AC_SUBST(BOOST_LIBS)
 
 BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], [have_qrencode=no])])
 BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, have_qrencode=no)])
+AC_SUBST(QR_LIBS)
 
-oldVars = ${ac_configure_args};
-ac_configure_args="--with-daemon=no --with-gui=no --enable-wallet=no --with-libs=yes --enable-tests=no --enable-static=yes"
-AC_CONFIG_SUBDIRS([vendor/bitcoin])
-ac_configure_args = ${oldVars}
+AC_CONFIG_SUBDIRS([src/libbtc src/univalue])
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])

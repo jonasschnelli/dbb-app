@@ -1,29 +1,8 @@
 [![License](http://img.shields.io/:License-MIT-yellow.svg)](LICENSE)
-
+[![Build Status](https://travis-ci.org/digitalbitbox/dbb-app.svg?branch=master)](https://travis-ci.org/digitalbitbox/dbb-app)
 
 ## DBB-APP
 A QT based application for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet. The application support managing your dbb device (create new wallet, backup, set 2FA key, etc.). It also supports co-signing together with a [Bitpay Copay Wallet](http://copay.io).
-
-## Example
-
-```cpp
-    std::string base64str;
-    std::string cmdOut;
-    std::string password = "0000";
-    std::string jsonIn = "{\"led\" : \"toggle\"}";
-    DBB::encryptAndEncodeCommand(jsonIn, password, base64str);
-
-    DBB::sendCommand(base64str, cmdOut);
-
-    std::string decryptedJson;
-    DBB::decryptAndDecodeCommand(cmdOut, password, decryptedJson);
-
-    //example json en/decode
-    UniValue json;
-    json.read(decryptedJson);
-    std::string jsonFlat = json.write(2);
-    printf("result: %s\n", jsonFlat.c_str());
-```
 
 
 ## dbb-app
@@ -62,9 +41,33 @@ version
 lock
 verifypass -operation (default: create)
 aes -type (default: encrypt), -data (default: encrypt)
+bootloaderunlock 
+bootloaderlock 
+firmware -filename
 ```
 ## libdbb
 **C++ library for communicating with the [Digital Bitbox](https://digitalbitbox.com) hardware wallet.**
+
+### Example
+
+```cpp
+    std::string base64str;
+    std::string cmdOut;
+    std::string password = "0000";
+    std::string jsonIn = "{\"led\" : \"toggle\"}";
+    DBB::encryptAndEncodeCommand(jsonIn, password, base64str);
+
+    DBB::sendCommand(base64str, cmdOut);
+
+    std::string decryptedJson;
+    DBB::decryptAndDecodeCommand(cmdOut, password, decryptedJson);
+
+    //example json en/decode
+    UniValue json;
+    json.read(decryptedJson);
+    std::string jsonFlat = json.write(2);
+    printf("result: %s\n", jsonFlat.c_str());
+```
 
 ## Current Status
 Libdbb is at an early stage of development.
@@ -78,20 +81,18 @@ Libdbb is at an early stage of development.
 ## Build Instructions
 Dependencies:
 
-dbb-cli and dbb-app depend on bitcoin-core for key generation, signing, hashing, crypto, etc.
-bitcoin-core is has proven to manage 4 billion USD and is therefore very stable.
-During the compile process dbb compiles the common and util classes.
+dbb-cli and dbb-app depend on libbtc (https://github.com/libbtc/libbtc) for key generation, signing, hashing, crypto, etc.
+Libbtc is included as git subtree and will be compiled during the normal build process
 
-- bitcoin-core (included as git submodule)
-- openssl
+- libbtc (included as git subtree) (https://github.com/libbtc/libbtc)
 - https://github.com/signal11/hidapi
-- [boost](http://www.boost.org/)
 - libevent2 (if daemon enabled)
+- libavahi (for mDNS; linux only, libavahi-compat-libdnssd-dev)
 - qt5 (if UI enabled)
 
 OSX:
 
-    brew install hidapi libevent qt5 boost
+    brew install hidapi libevent qt5
 
 Linux (Ubuntu 15.04):
 
@@ -106,7 +107,7 @@ For the daemon
 
 For QT UI
 
-    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools
+    sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libqt5websockets5-dev libavahi-compat-libdnssd-dev
 
 
 Linux (Fedora 21/22):
@@ -139,8 +140,8 @@ if libhidapi is not available, compile it yourself
 
 Basic build steps:
 
-    git submodule update --init --recursive
     ./autogen.sh
-    ./configure --enable-debug --enable-daemon --with-gui=qt5
+    ./configure --enable-debug --with-gui=qt5
     make
     sudo make install
+    

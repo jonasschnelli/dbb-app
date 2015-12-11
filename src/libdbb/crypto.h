@@ -13,11 +13,8 @@
 
 std::string base64_encode(unsigned char const* bytes_to_encode, unsigned int in_len);
 std::string base64_decode(std::string const& encoded_string);
-bool aesDecrypt(unsigned char* aesKey, unsigned char* aesIV, unsigned char* encMsg, size_t encMsgLen, unsigned char** decMsg, int* outlen);
-int aesEncrypt(unsigned char* aesKey, unsigned char* aesIV, const unsigned char* msg, size_t msgLen, unsigned char** encMsg);
-
-//generate a two round sha256 hash
-void doubleSha256(char* string, unsigned char* hashOut);
+void aesDecrypt(unsigned char* aesKey, unsigned char* aesIV, unsigned char* encMsg, size_t encMsgLen, unsigned char* decMsg);
+void aesEncrypt(unsigned char* aesKey, unsigned char* aesIV, const unsigned char* msg, size_t msgLen, unsigned char* encMsg);
 
 //get random aes IV (16 bytes)
 void getRandIV(unsigned char* ivOut);
