@@ -74,6 +74,35 @@ if test "x$enable_daemon" = xyes; then
 	AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
+if test x$use_pkgconfig = xyes; then
+
+  if test x"$PKG_CONFIG" = "x"; then
+    AC_MSG_ERROR(pkg-config not found.)
+  fi
+
+  : #NOP
+  m4_ifdef(
+    [PKG_CHECK_MODULES],
+    [
+      PKG_CHECK_MODULES([SSL], [libssl],, [AC_MSG_ERROR(openssl  not found.)])
+      PKG_CHECK_MODULES([CRYPTO], [libcrypto],,[AC_MSG_ERROR(libcrypto  not found.)])
+    ]
+  )
+else
+  AC_CHECK_HEADER([openssl/crypto.h],,AC_MSG_ERROR(libcrypto headers missing))
+  AC_CHECK_LIB([crypto],      [main],CRYPTO_LIBS=-lcrypto, AC_MSG_ERROR(libcrypto missing))
+
+  AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
+  AC_CHECK_LIB([ssl],         [main],SSL_LIBS=-lssl, AC_MSG_ERROR(libssl missing))
+fi
+
+CXXFLAGS_TEMP="$CXXFLAGS"
+LIBS_TEMP="$LIBS"
+CXXFLAGS="$CXXFLAGS $SSL_CFLAGS $CRYPTO_CFLAGS"
+LIBS="$LIBS $SSL_LIBS $CRYPTO_LIBS"
+CXXFLAGS="$CXXFLAGS_TEMP"
+LIBS="$LIBS_TEMP"
+
 AC_ARG_WITH(hid-libdir,
 [  --with-hid-libdir=DIR        specify exact library dir for hid library
   --without-hid        disables hid usage completely],
@@ -120,7 +149,9 @@ case $host in
      
      # -static is interpreted by libtool, where it has a different meaning.
      # In libtool-speak, it's -all-static.
-     AX_CHECK_LINK_FLAG([[-static]],[LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static"])
+     AX_CHECK_LINK_FLAG([[-static]],[LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static -static-libstdc++ -static-libgcc"])
+
+     LIBTOOL_APP_LDFLAGS="$LIBTOOL_APP_LDFLAGS -all-static -static-libstdc++ -static-libgcc"
 
      AC_PATH_PROG([MAKENSIS], [makensis], none)
      if test x$MAKENSIS = xnone; then
@@ -132,8 +163,12 @@ case $host in
        AC_MSG_ERROR("windres not found")
      fi
 
-     CPPFLAGS+="-D_MT -DWIN32 -D_WINDOWS -static -static-libgcc -static-libstdc++ -DCURL_STATICLIB -lcurl"
-
+     CPPFLAGS="$CPPFLAGS -D_MT -DWIN32 -D_WINDOWS -DCURL_STATICLIB"
+     LEVELDB_TARGET_FLAGS="TARGET_OS=OS_WINDOWS_CROSSCOMPILE"
+     if test "x$CXXFLAGS_overridden" = "xno"; then
+       CXXFLAGS="$CXXFLAGS -w"
+     fi
+     
      case $host in
        i?86-*) WINDOWS_BITS=32 ;;
        x86_64-*) WINDOWS_BITS=64 ;;
@@ -216,19 +251,9 @@ case $host in
      ;;
 esac
 
+
 if test "${with_hid}" != no ; then
-	OLD_LIBS=$LIBS
-	OLD_LDFLAGS=$LDFLAGS
-	OLD_CFLAGS=$CFLAGS
-	OLD_CPPFLAGS=$CPPFLAGS
-	if test "${hid_libdir}" ; then
-		LDFLAGS="$LDFLAGS -L${hid_libdir}"
-		AC_MSG_NOTICE([found $hid_libdir])
-	fi
-	if test "${hid_includedir}" ; then
-		CFLAGS="$CFLAGS -I${hid_includedir}"
-		CPPFLAGS="$CPPFLAGS -I${hid_includedir}"
-	fi
+
 	no_good=no
 	AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
 	AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
@@ -256,6 +281,8 @@ if test x$use_reduce_exports = xyes; then
     AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]], [RELDFLAGS="-Wl,--exclude-libs,ALL"])
 fi
 
+
+
 #######################################################################
 # we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
 # so we can copy upstreams m4 directly without merging                #
@@ -263,6 +290,22 @@ fi
 BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
+
+dnl --enable-thread-safety
+AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
+ [], [enable_thread_safety=yes])
+
+if test x$enable_thread_safety = xyes; then
+        AC_CHECK_LIB([pthread], [pthread_mutex_init], [AC_SUBST([LIBPTHREAD], [-lpthread])])
+fi
+AM_CONDITIONAL([HAVE_LIBPTHREAD], [test "x$ac_cv_lib_pthread_pthread_mutex_init" = "xyes" ])
+# FIXME: isn't it able to integrate the followings to AC_CHECK_LIB?
+if test x$ac_cv_lib_pthread_pthread_mutex_init = xyes ; then
+        AC_DEFINE([HAVE_LIBPTHREAD], [1], [Define to 1 if using pthread is enabled.])
+        CFLAGS="$CFLAGS -pthread"
+        CPPFLAGS="$CPPFLAGS -pthread"
+fi
+
 
 if test x$bitcoin_enable_qt = xyes; then
 AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
@@ -290,3 +333,14 @@ AC_CONFIG_SUBDIRS([src/libbtc src/univalue])
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_OUTPUT
+
+echo ""
+echo "Options used to compile and link:"
+echo "  CC       = $CC"
+echo "  CFLAGS   = $CFLAGS"
+echo "  CPPFLAGS = $CPPFLAGS"
+echo "  CXX      = $CXX"
+echo "  CXXFLAGS = $CXXFLAGS"
+echo "  LDFLAGS  = $LDFLAGS"
+echo ""
+

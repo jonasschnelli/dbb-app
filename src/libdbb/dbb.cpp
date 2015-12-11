@@ -135,10 +135,14 @@ bool sendCommand(const std::string& json, std::string& resultOut)
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
-    memcpy(HID_REPORT, json.c_str(), json.size());
-    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
-
-
+    memcpy(HID_REPORT+1, json.c_str(), json.size());
+    int suc = hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
+    if (suc == -1)
+    {
+        std::wstring wsMF(hid_error(HID_HANDLE));
+            std::string strMF( wsMF.begin(), wsMF.end() );
+            DBB_DEBUG_INTERNAL("Sending error: %s\n", strMF.c_str());
+    }
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
     while (cnt < readBufSize) {

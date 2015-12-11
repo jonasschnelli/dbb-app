@@ -1,6 +1,8 @@
 DIST_SUBDIRS = libbtc univalue
 AM_CPPFLAGS = -I$(top_srcdir)/include
-AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) -static
+AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
+AM_CXXFLAGS = $(HARDENED_CXXFLAGS)
+AM_CPPFLAGS += $(HARDENED_CPPFLAGS)
 
 DBB_INCLUDES = 
 
@@ -27,7 +29,7 @@ libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb
 libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
 libbpwalletclient_a_SOURCES = libbitpay-wallet-client/bpwalletclient.cpp
 libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
-libbpwalletclient_a_LIBADD = $(LIBBTC)
+libbpwalletclient_a_LIBADD = $(LIBBTC) $(UNIVALUE)
  
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
@@ -47,7 +49,7 @@ bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp dbb_wallet.h dbb_wallet.cpp dbb_netthread.h dbb_netthread.cpp
-dbb_app_CPPFLAGS = -fPIC $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
+dbb_app_CPPFLAGS = $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
 dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(UNIVALUE) $(LIBCURL)
@@ -110,8 +112,11 @@ $(dbb_app_OBJECTS) $(dbb_app_OBJECTS) : | $(QT_MOC)
 
 dbb_app_SOURCES += qt/dbb_gui.h $(DBB_GUI_H) qt/dbb_gui.cpp qt/qrc_dbbgui.cpp $(QT_MOC_CPP) $(QT_MOC) $(QT_FORMS_UI) $(DBB_GUI_CPP) 
 dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) -I$(srcdir)/qt
-dbb_app_LDFLAGS += $(QT_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) -lcurl $(LINUX_LIBS)
+dbb_app_CXXFLAGS = $(AM_CXXFLAGS) $(QT_PIE_FLAGS)
+##dbb_app_LDFLAGS += -pthread $(QT_LDFLAGS) -pthread
+dbb_app_LDFLAGS += $(RELDFLAGS) $(AM_LDFLAGS) $(QT_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) -lcurl $(LINUX_LIBS)
+dbb_app_LIBTOOLFLAGS = --tag CXX
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
 

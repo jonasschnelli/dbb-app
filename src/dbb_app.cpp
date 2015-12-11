@@ -54,7 +54,15 @@
 #include <event2/buffer.h>
 #include <event2/util.h>
 #include <event2/keyvalq_struct.h>
+
+#ifdef WIN32
+#include <signal.h>
+#include "mingw/mingw.mutex.h"
+#include "mingw/mingw.condition_variable.h"
+#include "mingw/mingw.thread.h"
+#else
 #include <sys/signal.h>
+#endif
 
 #include "config/_dbb-config.h"
 
@@ -65,7 +73,27 @@
 #include <QPushButton>
 
 #include "qt/dbb_gui.h"
-
+#if defined(DBB_QT_STATICPLUGIN)
+#include <QtPlugin>
+#if QT_VERSION < 0x050000
+Q_IMPORT_PLUGIN(qcncodecs)
+Q_IMPORT_PLUGIN(qjpcodecs)
+Q_IMPORT_PLUGIN(qtwcodecs)
+Q_IMPORT_PLUGIN(qkrcodecs)
+Q_IMPORT_PLUGIN(qtaccessiblewidgets)
+#else
+#if QT_VERSION < 0x050400
+Q_IMPORT_PLUGIN(AccessibleFactory)
+#endif
+#if defined(DBB_QT_QPA_PLATFORM_XCB)
+Q_IMPORT_PLUGIN(QXcbIntegrationPlugin);
+#elif defined(DBB_QT_QPA_PLATFORM_WINDOWS)
+Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin);
+#elif defined(DBB_QT_QPA_PLATFORM_COCOA)
+Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin);
+#endif
+#endif
+#endif
 
 extern void doubleSha256(char* string, unsigned char* hashOut);
 
@@ -115,25 +143,6 @@ static void led_blink(struct evhttp_request* req, void* arg)
 char uri_root[512];
 int main(int argc, char** argv)
 {
-    struct event_base* base;
-    struct evhttp* http;
-    struct evhttp_bound_socket* handle;
-
-    unsigned short port = 15520;
-
-    if (signal(SIGPIPE, SIG_IGN) == SIG_ERR)
-        return (1);
-
-    base = event_base_new();
-    if (!base) {
-        fprintf(stderr, "Couldn't create an event_base: exiting\n");
-        return 1;
-    }
-
-    http = evhttp_new(base);
-    evhttp_set_cb(http, "/led/blink", led_blink, NULL);
-    handle = evhttp_bind_socket_with_handle(http, "0.0.0.0", port);
-
     //TODO: factor out thread
     std::thread cmdThread([&]() {
         //TODO, the locking is to broad at the moment
@@ -225,15 +234,8 @@ int main(int argc, char** argv)
     });
 
     ecc_start();
-#ifdef DBB_ENABLE_QT
-#if QT_VERSION > 0x050100
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-#endif
-    //create a thread for the http handling
-    std::thread httpThread([&]() {
-        event_base_dispatch(base);
-    });
 
     QApplication app(argc, argv);
 
@@ -241,12 +243,8 @@ int main(int argc, char** argv)
     widget->show();
     //set style sheets
     app.exec();
-#else
-    //directly start libevents main run loop
-    event_base_dispatch(base);
 
     DBB::closeConnection(); //clean up HID
-#endif
     ecc_stop();
     exit(1);
 }
