@@ -28,7 +28,7 @@
 
 #include <btc/hash.h>
 
-#define HID_MAX_BUF_SIZE 4098
+#define HID_MAX_BUF_SIZE 5120
 
 #ifdef DBB_ENABLE_DEBUG
 #define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
@@ -135,16 +135,42 @@ bool sendCommand(const std::string& json, std::string& resultOut)
     DBB_DEBUG_INTERNAL("Sending command: %s\n", json.c_str());
 
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
-    memcpy(HID_REPORT, json.c_str(), json.size());
-    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
+    if (json.size()+1 > HID_MAX_BUF_SIZE)
+    {
+        DBB_DEBUG_INTERNAL("Buffer to small for string to send");
+        return false;
+    }
+    memcpy(HID_REPORT+1, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
+    if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+1) == -1)
+    {
+        const wchar_t *error = hid_error(HID_HANDLE);
+        if (error)
+        {
+            std::wstring wsER(error);
+            std::string strER( wsER.begin(), wsER.end() );
+
+            DBB_DEBUG_INTERNAL("Error writing to the usb device: %s\n", strER.c_str());
+        }
+        return false;
+    }
 
 
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
     while (cnt < readBufSize) {
-        res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
-        if (res < 0) {
-            throw std::runtime_error("Error: Unable to read HID(USB) report.\n");
+        res = hid_read_timeout(HID_HANDLE, HID_REPORT + cnt, readBufSize, 10*1000);
+        if (res < 0 || (res == 0 && cnt < readBufSize)) {
+            std::string errorStr = "";
+            const wchar_t *error = hid_error(HID_HANDLE);
+
+            if (error)
+            {
+                std::wstring wsER(error);
+                errorStr.assign( wsER.begin(), wsER.end() );
+            }
+
+            DBB_DEBUG_INTERNAL("HID Read failed or timed out: %s\n", errorStr.c_str());
+            return false;
         }
         cnt += res;
     }
