@@ -55,9 +55,6 @@ void testfunc(DNSServiceRef, DNSServiceFlags,
 
 DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               ui(new Ui::MainWindow),
-                                              overviewAction(0),
-                                              walletsAction(0),
-                                              settingsAction(0),
                                               statusBarButton(0),
                                               statusBarLabelRight(0),
                                               statusBarLabelLeft(0),
@@ -190,6 +187,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
+    //: translation: window title
     setWindowTitle(tr("The Digital Bitbox"));
 
     //set status bar
@@ -207,6 +205,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->statusBarButton->setVisible(false);
     statusBar()->addWidget(this->statusBarButton);
 
+    //: translation: status bar info in case of no device has been found
     this->statusBarLabelLeft = new QLabel(tr("No Device Found"));
     statusBar()->addWidget(this->statusBarLabelLeft);
 
@@ -226,36 +225,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
         statusBarloadingIndicatorOpacityAnimation->setLoopCount(-1);
     }
 
-
-    // tabbar
-    QActionGroup* tabGroup = new QActionGroup(this);
-    overviewAction = new QAction(QIcon(":/icons/home").pixmap(32), tr("&Overview"), this);
-    overviewAction->setToolTip(tr("Show general overview of wallet"));
-    overviewAction->setCheckable(true);
-    overviewAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_1));
-    tabGroup->addAction(overviewAction);
-
-    walletsAction = new QAction(QIcon(":/icons/copay"), tr("&Wallets"), this);
-    walletsAction->setToolTip(tr("Show Copay wallet screen"));
-    walletsAction->setCheckable(true);
-    walletsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_2));
-    tabGroup->addAction(walletsAction);
-
-    settingsAction = new QAction(QIcon(":/icons/settings"), tr("&Experts"), this);
-    settingsAction->setToolTip(tr("Show Settings wallet screen"));
-    settingsAction->setCheckable(true);
-    settingsAction->setShortcut(QKeySequence(Qt::ALT + Qt::Key_3));
-    tabGroup->addAction(settingsAction);
-
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
     connect(this->ui->receiveButton, SIGNAL(clicked()), this, SLOT(mainReceiveButtonClicked()));
     connect(this->ui->sendButton, SIGNAL(clicked()), this, SLOT(mainSendButtonClicked()));
     connect(this->ui->mainSettingsButton, SIGNAL(clicked()), this, SLOT(mainSettingsButtonClicked()));
-
-    connect(overviewAction, SIGNAL(triggered()), this, SLOT(gotoOverviewPage()));
-    connect(walletsAction, SIGNAL(triggered()), this, SLOT(gotoMultisigPage()));
-    connect(settingsAction, SIGNAL(triggered()), this, SLOT(gotoSettingsPage()));
 
     //login screen setup
     this->ui->blockerView->setVisible(false);
@@ -291,7 +265,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //announce service over mDNS
     bonjourRegister = new BonjourServiceRegister(this);
-    bonjourRegister->registerService(BonjourRecord(tr("Digital Bitbox App Websocket"), QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
+    bonjourRegister->registerService(BonjourRecord("Digital Bitbox App Websocket", QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
 }
 
 /*
@@ -326,11 +300,12 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
     if (stateChanged) {
         if (state && deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE) {
             deviceConnected = true;
-            this->statusBarLabelLeft->setText("Device Connected");
+            //: translation: device connected status bar
+            this->statusBarLabelLeft->setText(tr("Device Connected"));
             this->statusBarButton->setVisible(true);
         } else {
             deviceConnected = false;
-            this->statusBarLabelLeft->setText("No Device Found");
+            this->statusBarLabelLeft->setText(tr("No Device Found"));
             this->statusBarButton->setVisible(false);
         }
 
@@ -356,7 +331,8 @@ void DBBDaemonGui::setLoading(bool status)
         touchButtonInfo = false;
     }
 
-    this->statusBarLabelRight->setText((status) ? "processing..." : "");
+    //: translation: status bar info text during the time of USB communication
+    this->statusBarLabelRight->setText((status) ? tr("processing...") : "");
 
     if (statusBarloadingIndicatorOpacityAnimation) {
         if (status)
@@ -365,13 +341,14 @@ void DBBDaemonGui::setLoading(bool status)
             statusBarloadingIndicatorOpacityAnimation->stop();
     }
 
-    this->ui->unlockingInfo->setText((status) ? "Unlocking Device..." : "");
-    //TODO, subclass label and make it animated
+    //: translation: login screen info text during password USB check (device info)
+    this->ui->unlockingInfo->setText((status) ? tr("Unlocking Device...") : "");
 }
 
 void DBBDaemonGui::setNetLoading(bool status)
 {
-    this->statusBarLabelRight->setText((status) ? "loading..." : "");
+    //: translation: status bar info text during network activity (copay)
+    this->statusBarLabelRight->setText((status) ? tr("loading...") : "");
 
     if (statusBarloadingIndicatorOpacityAnimation) {
         if (status)
@@ -383,8 +360,9 @@ void DBBDaemonGui::setNetLoading(bool status)
 
 void DBBDaemonGui::resetInfos()
 {
-    this->ui->versionLabel->setText("loading info...");
-    this->ui->deviceNameLabel->setText("loading info...");
+    //: translation: info text for version and device name during loading getinfo
+    this->ui->versionLabel->setText(tr("loading info..."));
+    this->ui->deviceNameLabel->setText(tr("loading info..."));
 
     updateOverviewFlags(false, false, true);
 }
@@ -396,11 +374,8 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
     this->ui->noDeviceWidget->setVisible(!deviceConnected);
 
     if (!deviceConnected) {
-        walletsAction->setEnabled(false);
-        settingsAction->setEnabled(false);
         gotoOverviewPage();
         setActiveArrow(0);
-        overviewAction->setChecked(true);
         resetInfos();
         sessionPassword.clear();
         hideSessionPasswordView();
@@ -420,8 +395,6 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
     } else {
         if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE)
         {
-            walletsAction->setEnabled(true);
-            settingsAction->setEnabled(true);
             hideModalInfo();
             askForSessionPassword();
         }
@@ -618,7 +591,8 @@ void DBBDaemonGui::setPasswordProvided()
 {
     if (ui->setPassword0->text() != ui->setPassword1->text())
     {
-        showAlert("Error", "Passwords not identical");
+        //: translation: password not identical text
+        showAlert(tr("Error"), tr("Passwords not identical"));
         return;
     }
 
@@ -833,6 +807,7 @@ void DBBDaemonGui::lockBootloader()
 
 void DBBDaemonGui::upgradeFirmware()
 {
+    //: translation: Open file dialog help text
     firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
     if (firmwareFileToUse.isNull())
         return;
@@ -855,6 +830,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             delete fwUpgradeThread;
         }
 
+        //: translation: started updating firmware info text
         showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by...", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
 
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
@@ -905,13 +881,10 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
 
                 emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Hold down the touch button for serval seconds to allow to erase your current firmware and upload the new one.");
                 // send firmware blob to DBB
-                if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [this](const std::string& infotext, float progress) {
+                if (DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [this](const std::string& infotext, float progress) {
                     emit shouldUpdateModalInfo(tr("<strong>Upgrading Firmware...</strong><br/><br/>%1% complete").arg(QString::number(progress*100, 'f', 1)));
                 }))
-                    printf("Firmware upgrade failed!\n");
-                else
                 {
-                    printf("Firmware successfully upgraded!\n");
                     upgradeRes = true;
                 }
             }
@@ -936,9 +909,15 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     shouldKeepBootloaderState = false;
 
     if (status)
-        showModalInfo("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+    {
+        //: translation: successfull firmware update text
+        showModalInfo(tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+    }
     else
+    {
+        //: translation: firmware upgrade error
         showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug/plug your Digital Bitbox."));
+    }
 
 
 }
@@ -1011,6 +990,7 @@ void DBBDaemonGui::listBackup()
 
 void DBBDaemonGui::eraseAllBackups()
 {
+    //: translation: Erase all backup warning text
     QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Erase All Backups?"), tr("Are your sure you want to erase all backups"), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::No)
         return;
@@ -1068,11 +1048,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             UniValue errorCodeObj = find_value(errorObj, "code");
             UniValue errorMessageObj = find_value(errorObj, "message");
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108) {
+                //: translation: password wrong text
                 showAlert(tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())));
 
                 //try again
                 askForSessionPassword();
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110) {
+                //: translation: password wrong device reset text
                 showAlert(tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), true);
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101) {
                 sessionPassword.clear();
@@ -1115,6 +1097,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                         if (singleWallet->client.GetXPubKey().size() <= 0)
                         {
+                            //: translation: modal info during copay wallet creation
                             showModalInfo(tr("Creating Copay Wallet"));
                             createSingleWallet();
                         }
@@ -1131,6 +1114,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 
                 if (!walletAvailable)
                 {
+                    //: translation: modal text during seed command DBB
                     showModalInfo(tr("Creating New Wallet"));
                     seedHardware();
                     return;
@@ -1140,7 +1124,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 if (sdcard.isBool() && sdcard.isTrue() && walletAvailable && !sdcardWarned)
                 {
-                    showAlert(tr("Please remove your SDCard!"), "Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores");
+                    //: translation: warning text if SDCard is insert in productive environment
+                    showAlert(tr("Please remove your SDCard!"), tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"));
                     sdcardWarned = true;
                 }
 
@@ -1148,6 +1133,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (!shouldKeepBootloaderState && bootlock.isFalse())
                 {
                     // unlock bootloader
+                    //: translation: modal infotext for guiding user to lock the bootloader
                     showModalInfo("<strong>Lock Firmware...</strong><br/><br/>You need to lock your Digital Bitbox to protect from further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
                     lockBootloader();
                     shouldKeepBootloaderState = false;
@@ -1174,6 +1160,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPassword = sessionPasswordDuringChangeProcess;
                 sessionPasswordDuringChangeProcess.clear();
 
+                //: translation: error text during password set (DBB)
                 showAlert(tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER) {

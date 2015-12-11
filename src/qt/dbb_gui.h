@@ -123,9 +123,6 @@ private:
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
-    QAction* overviewAction;
-    QAction* walletsAction;
-    QAction* settingsAction;
     bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
     bool shouldKeepBootloaderState; //set to true if we expect a firmware upgrade
     QString firmwareFileToUse;
