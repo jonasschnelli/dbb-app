@@ -243,12 +243,10 @@ LIBS="$LIBS $SSL_LIBS $CRYPTO_LIBS"
 CXXFLAGS="$CXXFLAGS_TEMP"
 LIBS="$LIBS_TEMP"
 
-no_good=no
-AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
-AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
-if test "$no_good" = yes; then
-	AC_MSG_ERROR([*** Please install libhidapi on your system ***])
-fi
+AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
+AC_SEARCH_LIBS([hid_open], [hidapi], , AC_MSG_ERROR(hiapi is required!))
+# AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
+
 
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
@@ -323,6 +321,7 @@ AC_SUBST(RELDFLAGS)
 AC_SUBST(HARDENED_CXXFLAGS)
 AC_SUBST(HARDENED_CPPFLAGS)
 AC_SUBST(HARDENED_LDFLAGS)
+AC_SUBST(LIBTOOL_APP_LDFLAGS)
 AC_SUBST(PIC_FLAGS)
 AC_SUBST(PIE_FLAGS)
 AC_SUBST(BUILD_TEST)
