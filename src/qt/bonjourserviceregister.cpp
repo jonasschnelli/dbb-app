@@ -28,7 +28,14 @@ ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
 #include "bonjourserviceregister.h"
 
+#ifndef _SRC_CONFIG__DBB_CONFIG_H
+#include "config/_dbb-config.h"
+#endif
+
+#ifdef DBB_HAVE_DNS_SD_H
 #include <dns_sd.h>
+#endif
+
 #include <QtCore/QSocketNotifier>
 
 BonjourServiceRegister::BonjourServiceRegister(QObject *parent)
@@ -38,14 +45,17 @@ BonjourServiceRegister::BonjourServiceRegister(QObject *parent)
 
 BonjourServiceRegister::~BonjourServiceRegister()
 {
+#ifdef DBB_HAVE_DNS_SD_H
     if (dnssref) {
         DNSServiceRefDeallocate(dnssref);
         dnssref = 0;
     }
+#endif
 }
 
 void BonjourServiceRegister::registerService(const BonjourRecord &record, quint16 servicePort)
 {
+#ifdef DBB_HAVE_DNS_SD_H
     if (dnssref) {
         qWarning("Warning: Already registered a service for this object, aborting new register");
         return;
@@ -73,14 +83,17 @@ void BonjourServiceRegister::registerService(const BonjourRecord &record, quint1
             connect(bonjourSocket, SIGNAL(activated(int)), this, SLOT(bonjourSocketReadyRead()));
         }
     }
+#endif
 }
 
 
 void BonjourServiceRegister::bonjourSocketReadyRead()
 {
+#ifdef DBB_HAVE_DNS_SD_H
     DNSServiceErrorType err = DNSServiceProcessResult(dnssref);
     if (err != kDNSServiceErr_NoError)
         emit error(err);
+#endif
 }
 
 
@@ -89,6 +102,7 @@ void BonjourServiceRegister::bonjourRegisterService(DNSServiceRef, DNSServiceFla
                                                    const char *regtype, const char *domain,
                                                    void *data)
 {
+#ifdef DBB_HAVE_DNS_SD_H
     BonjourServiceRegister *serviceRegister = static_cast<BonjourServiceRegister *>(data);
     if (errorCode != kDNSServiceErr_NoError) {
         emit serviceRegister->error(errorCode);
@@ -98,4 +112,5 @@ void BonjourServiceRegister::bonjourRegisterService(DNSServiceRef, DNSServiceFla
                                                 QString::fromUtf8(domain));
         emit serviceRegister->serviceRegistered(serviceRegister->finalRecord);
     }
+#endif
 }
