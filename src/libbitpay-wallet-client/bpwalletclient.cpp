@@ -571,6 +571,10 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             }
         }
 
+        cstring* script = cstr_new_sz(1024); //create P2SH, MS
+        btc_script_append_op(script, OP_0);  //multisig workaround
+
+
         vector* v_pubkeys = vector_new(3, NULL);
         int k;
         for (k = 0; k < publicKeys.size(); k++) {
@@ -584,13 +588,17 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             vector_add(v_pubkeys, pubkey);
         }
 
-        cstring* script = cstr_new_sz(1024); //create multisig script
-        btc_script_build_multisig(script, requiredSignatures, v_pubkeys);
+        cstring* msscript = cstr_new_sz(1024); //create multisig script
+        btc_script_build_multisig(msscript, requiredSignatures, v_pubkeys);
         vector_free(v_pubkeys, true);
 
+        // append script for P2SH / OP_0
+        btc_script_append_pushdata(script, (unsigned char*)msscript->str, msscript->len);
+
         // store the script for later sighash operations
-        std::vector<unsigned char> msP2SHScript(script->len);
-        msP2SHScript.assign(script->str, script->str + script->len);
+        std::vector<unsigned char> msP2SHScript(msscript->len);
+        msP2SHScript.assign(msscript->str, msscript->str + msscript->len);
+        cstr_free(msscript, true);
         path.erase(0, 2); //remove m/ from path
         inputsScriptAndPath.push_back(std::make_pair(path, msP2SHScript));
 
