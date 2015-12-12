@@ -49,7 +49,7 @@ matrix:
 before_script:
     - cd $TRAVIS_BUILD_DIR
     - git clone git://github.com/signal11/hidapi.git
-    - cd hidapi && ./bootstrap && ./configure --prefix=$TRAVIS_BUILD_DIR && make install && cd ..
+    - cd hidapi && ./bootstrap && ./configure && sudo make install && cd ..
     - git submodule init
     - git submodule update
 
@@ -57,7 +57,7 @@ script:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         QTDIR="/opt/qt55" && PATH="$QTDIR/bin:$PATH" && qt55-env.sh
         && ./autogen.sh
-        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --with-dns_sd --with-hid-libdir=$TRAVIS_BUILD_DIR/lib --with-hid-includedir=$TRAVIS_BUILD_DIR/include --enable-daemon --with-gui=qt5 --enable-debug
+        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --with-dns_sd --enable-daemon --with-gui=qt5 --enable-debug
         ;
      else
         ./autogen.sh

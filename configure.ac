@@ -74,15 +74,6 @@ if test "x$enable_daemon" = xyes; then
 	AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
-AC_ARG_WITH(hid-libdir,
-[  --with-hid-libdir=DIR        specify exact library dir for hid library
-  --without-hid        disables hid usage completely],
-hid_libdir="$withval")
-
-AC_ARG_WITH(hid-includedir,
-[  --with-hid-includedir=DIR        specify exact includes dir for hid library],
-hid_includedir="$withval")
-
 dnl Check for pthread compile/link requirements
 AX_PTHREAD
 
@@ -252,16 +243,12 @@ LIBS="$LIBS $SSL_LIBS $CRYPTO_LIBS"
 CXXFLAGS="$CXXFLAGS_TEMP"
 LIBS="$LIBS_TEMP"
 
-if test "${with_hid}" != no ; then
-
-	no_good=no
-	AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
-	AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
-	if test "$no_good" = yes; then
-		AC_MSG_ERROR([*** Please install libhidapi on your system ***])
-	fi
+no_good=no
+AC_SEARCH_LIBS([hid_open],[hidapi hidapi-hidraw],,no_good=yes)
+AC_CHECK_HEADER([hidapi/hidapi.h],,no_good=yes)
+if test "$no_good" = yes; then
+	AC_MSG_ERROR([*** Please install libhidapi on your system ***])
 fi
-
 
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
@@ -282,6 +269,11 @@ if test x$use_reduce_exports = xyes; then
 fi
 
 
+
+if test x$TARGET_OS != xwindows; then
+  # All windows code is PIC, forcing it on just adds useless compile warnings
+  AX_CHECK_COMPILE_FLAG([-fPIC],[PIC_FLAGS="-fPIC"])
+fi
 
 #######################################################################
 # we reuse bitcoin core QT m4 and don't change the prefix (BITCOIN_)  #
@@ -327,7 +319,14 @@ AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], [have_qrencode=no])])
 BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, have_qrencode=no)])
 AC_SUBST(QR_LIBS)
-
+AC_SUBST(RELDFLAGS)
+AC_SUBST(HARDENED_CXXFLAGS)
+AC_SUBST(HARDENED_CPPFLAGS)
+AC_SUBST(HARDENED_LDFLAGS)
+AC_SUBST(PIC_FLAGS)
+AC_SUBST(PIE_FLAGS)
+AC_SUBST(BUILD_TEST)
+AC_SUBST(BUILD_QT)
 AC_CONFIG_SUBDIRS([src/libbtc src/univalue])
 
 AC_PROG_CXX

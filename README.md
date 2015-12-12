@@ -85,7 +85,8 @@ dbb-cli and dbb-app depend on libbtc (https://github.com/libbtc/libbtc) for key 
 Libbtc is included as git subtree and will be compiled during the normal build process
 
 - libbtc (included as git subtree) (https://github.com/libbtc/libbtc)
-- https://github.com/signal11/hidapi
+- hidapi (https://github.com/signal11/hidapi)
+- libcurl
 - libevent2 (if daemon enabled)
 - libavahi (for mDNS; linux only, libavahi-compat-libdnssd-dev)
 - qt5 (if UI enabled)
