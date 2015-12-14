@@ -1897,7 +1897,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                     UniValue obj = UniValue(UniValue::VOBJ);
                     obj.pushKV("pubkey", pkey.get_str());
                     if (keypath.isStr())
-                        obj.pushKV("keypath", keypath.get_str());
+                        obj.pushKV("keypath", wallet->baseKeyPath + "/" + keypath.get_str().substr(2));
                     checkpubObj.push_back(obj);
                 }
             }
