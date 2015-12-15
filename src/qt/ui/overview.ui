@@ -221,7 +221,7 @@ background-color: rgba(240,240,240,255);
             <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <attribute name="horizontalHeaderVisible">
-            <bool>false</bool>
+            <bool>true</bool>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>true</bool>

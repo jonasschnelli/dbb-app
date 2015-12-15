@@ -1727,9 +1727,9 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     transactionTableModel = new  QStandardItemModel(history.size(),3,this);
 
     transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Type") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Amount") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Fees") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Date") );
+    transactionTableModel->setHeaderData( 1, Qt::Horizontal, QObject::tr("Amount") );
+    transactionTableModel->setHeaderData( 2, Qt::Horizontal, QObject::tr("Fees") );
+    transactionTableModel->setHeaderData( 3, Qt::Horizontal, QObject::tr("Date") );
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
