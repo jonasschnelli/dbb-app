@@ -34,6 +34,7 @@
 #include "verificationdialog.h"
 
 #define WEBSOCKET_PORT 25698
+#define WALLET_POLL_TIME 25000
 
 class BonjourServiceRegister;
 
@@ -130,6 +131,7 @@ private:
     GetAddressDialog* getAddressDialog;
     VerificationDialog* verificationDialog;
     WebsocketServer *websocketServer;
+    QTimer *walletUpdateTimer;
     BonjourServiceRegister *bonjourRegister;
     QStandardItemModel *transactionTableModel;
     QLabel* statusBarLabelLeft;

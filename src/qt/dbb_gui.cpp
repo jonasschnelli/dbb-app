@@ -74,7 +74,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               fwUpgradeThread(0),
                                               upgradeFirmwareState(0),
                                               shouldKeepBootloaderState(0),
-                                              touchButtonInfo(0)
+                                              touchButtonInfo(0),
+                                              walletUpdateTimer(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -271,6 +272,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //announce service over mDNS
     bonjourRegister = new BonjourServiceRegister(this);
     bonjourRegister->registerService(BonjourRecord("Digital Bitbox App Websocket", QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
+
+    walletUpdateTimer = new QTimer(this);
+    connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(SingleWalletUpdateWallets()));
 }
 
 /*
@@ -286,6 +290,11 @@ void DBBDaemonGui::deviceIsReadyToInteract()
     MultisigUpdateWallets();
     SingleWalletUpdateWallets();
     deviceReadyToInteract = true;
+
+    if (singleWallet->client.IsSeeded())
+    {
+        walletUpdateTimer->start(WALLET_POLL_TIME);
+    }
 }
 
 void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
