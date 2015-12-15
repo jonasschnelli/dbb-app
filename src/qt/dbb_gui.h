@@ -90,6 +90,8 @@ public slots:
 signals:
     //emited when the device state has chaned (connected / disconnected)
     void deviceStateHasChanged(bool state, int deviceType);
+    //emited when the network activity has changed
+    void changeNetLoading(bool state);
     //emited when the DBB could generate a xpub
     void XPubForCopayWalletIsAvailable(int walletIndex);
     //emited when the request xpub key is available
@@ -118,6 +120,9 @@ signals:
     void shouldUpdateModalInfo(const QString& info);
     //emited when the modal view should be hidden from another thread
     void shouldHideModalInfo();
+    void shouldShowAlert(const QString& title, const QString& text);
+    //emited when a tx proposal was successfully created
+    void createTxProposalDone(DBBWallet *, const UniValue &proposal);
 
 private:
     Ui::MainWindow* ui;
@@ -156,16 +161,12 @@ private:
     void setTabbarEnabled(bool status);
     //!enable or disable dbb/usb/loading indication in the UI
     void setLoading(bool status);
-    //!enable or disable net/loading indication in the UI
-    void setNetLoading(bool status);
     //!resets device infos (in case of a disconnect)
     void resetInfos();
     //! updates the ui after the current device state
     void uiUpdateDeviceState(int deviceType=-1);
 
     //== UI ==
-    //general proxy function to show an alert;
-    void showAlert(const QString& title, const QString& errorOut, bool critical = false);
     void setActiveArrow(int pos);
     //!gets called when the password was accepted by the DBB hardware
     void passwordAccepted();
@@ -192,9 +193,12 @@ private:
 private slots:
     //!main callback when the device gets connected/disconnected
     void changeConnectedState(bool state, int deviceType);
-
+    //!enable or disable net/loading indication in the UI
+    void setNetLoading(bool status);
+    
     //== UI ==
     //general proxy function to show an alert;
+    void showAlert(const QString& title, const QString& errorOut, bool critical = false);
     void mainOverviewButtonClicked();
     void mainMultisigButtonClicked();
     void mainReceiveButtonClicked();
@@ -304,7 +308,7 @@ private slots:
     //!show a single payment proposals with given id
     bool MultisigShowPaymentProposal(const UniValue& pendingTxps, const std::string& targetID);
     //!execute payment proposal action
-    void PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType);
+    void PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType = ProposalActionTypeAccept);
     //!post
     void postSignaturesForPaymentProposal(DBBWallet* wallet, const UniValue& proposal, const std::vector<std::string>& vSigs);
 

@@ -259,7 +259,8 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keyp
 
     long httpStatusCode = 0;
     std::string response;
-    SendRequest("post", "/v1/addresses/", json, response, httpStatusCode);
+    if (!SendRequest("post", "/v1/addresses/", json, response, httpStatusCode))
+        return false;
 
     if (httpStatusCode != 200)
         return false;
@@ -329,7 +330,11 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
 
     long httpStatusCode = 0;
     std::string response;
-    SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
+    if (!SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode))
+    {
+        errorOut = "Connection failed";
+        return false;
+    }
 
     if (httpStatusCode == 400) {
         UniValue responseUni;
@@ -360,8 +365,8 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
             //post again
             response.clear();
             httpStatusCode = 0;
-            SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
-            if (httpStatusCode != 200) {
+            int reqRet = SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
+            if (!reqRet || httpStatusCode != 200) {
                 errorOut = "Could not unlock funds";
                 return false;
             }
@@ -379,6 +384,8 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     }
 
     paymentProposalOut.read(response);
+    if (!paymentProposalOut.isObject())
+        return false;
 
     return true;
 }
@@ -406,7 +413,8 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
 
     long httpStatusCode = 0;
     std::string response;
-    SendRequest("post", "/v1/wallets/", json, response, httpStatusCode);
+    if (!SendRequest("post", "/v1/wallets/", json, response, httpStatusCode))
+        return false;
 
     if (httpStatusCode != 200)
         return false;
@@ -429,6 +437,8 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
 
     std::string newResponse;
     JoinWallet("digitalbitbox", inv, newResponse);
+
+    return true;
 }
 
 bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response)
@@ -456,7 +466,8 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletI
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
-    SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode);
+    if (SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode))
+        return false;
 
     std::string getWalletsResponse;
     GetWallets(getWalletsResponse);
@@ -474,7 +485,8 @@ bool BitPayWalletClient::GetWallets(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    SendRequest("get", "/v1/wallets/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode);
+    if (!SendRequest("get", "/v1/wallets/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+        return false;
 
     if (httpStatusCode != 200)
         return false;
@@ -489,7 +501,8 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    SendRequest("get", "/v1/txhistory/?limit=50&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode);
+    if (!SendRequest("get", "/v1/txhistory/?limit=50&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+        return false;
 
     if (httpStatusCode != 200)
         return false;
@@ -500,6 +513,9 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
 void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
 {
     btc_tx* tx = btc_tx_new();
+
+    if (!txProposal.isObject())
+        return;
 
     std::vector<std::string> keys = txProposal.getKeys();
     std::vector<UniValue> values = txProposal.getValues();
@@ -652,6 +668,8 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
     for (cnt = 0; cnt < tx->vin->len; cnt++) {
         std::pair<std::string, std::vector<unsigned char> > scriptAndPath = inputsScriptAndPath[cnt];
         std::vector<unsigned char> aScript = scriptAndPath.second;
+        std::string scriptHex = DBB::HexStr((unsigned char*)&aScript[0],(unsigned char*)&aScript.back()+1);
+        BP_LOG_MSG("\n\nscripthex for %d: %s\n\n", cnt, scriptHex.c_str());
 
         cstring* new_script = cstr_new_buf(&aScript[0], aScript.size());
         uint8_t hash[32];
@@ -739,8 +757,7 @@ bool BitPayWalletClient::RejectTxProposal(const UniValue& txProposal)
     rejectRequest.push_back(Pair("reason", ""));
     std::string response;
     long httpStatusCode = 0;
-    SendRequest("post", "/v1/txproposals/" + txpID + "/rejections/", rejectRequest.write(), response, httpStatusCode);
-    if (httpStatusCode != 200)
+    if (!SendRequest("post", "/v1/txproposals/" + txpID + "/rejections/", rejectRequest.write(), response, httpStatusCode) ||httpStatusCode != 200)
         return false;
 
     return true;
@@ -757,8 +774,7 @@ bool BitPayWalletClient::DeleteTxProposal(const UniValue& txProposal)
     UniValue rejectRequest = UniValue(UniValue::VOBJ);
     std::string response;
     long httpStatusCode = 0;
-    SendRequest("delete", "/v1/txproposals/" + txpID, rejectRequest.write(), response, httpStatusCode);
-    if (httpStatusCode != 200)
+    if (!SendRequest("delete", "/v1/txproposals/" + txpID, rejectRequest.write(), response, httpStatusCode) || httpStatusCode != 200)
         return false;
 
     return true;
@@ -784,8 +800,7 @@ bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal,
     signaturesRequest.push_back(Pair("signatures", sigs));
     std::string response;
     long httpStatusCode = 0;
-    SendRequest("post", "/v1/txproposals/" + txpID + "/signatures/", signaturesRequest.write(), response, httpStatusCode);
-    if (httpStatusCode != 200)
+    if (!SendRequest("post", "/v1/txproposals/" + txpID + "/signatures/", signaturesRequest.write(), response, httpStatusCode) || httpStatusCode != 200)
         return false;
 
     return true;
@@ -804,7 +819,9 @@ bool BitPayWalletClient::BroadcastProposal(const UniValue& txProposal)
 
     std::string response;
     long httpStatusCode = 0;
-    SendRequest("post", "/v1/txproposals/" + txpID + "/broadcast/", "{}", response, httpStatusCode);
+    if (!SendRequest("post", "/v1/txproposals/" + txpID + "/broadcast/", "{}", response, httpStatusCode))
+        return false;
+
     BP_LOG_MSG("Response: %s\n", response.c_str());
     if (httpStatusCode != 200)
         return false;
@@ -855,7 +872,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     CURL* curl;
     CURLcode res;
 
-    bool error = false;
+    bool success = false;
 
     curl_global_init(CURL_GLOBAL_ALL);
     curl = curl_easy_init();
@@ -888,11 +905,10 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            error = true;
+            success = false;
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
-            if (httpcodeOut != 200)
-                error = true;
+            success = true;
         }
 
         curl_slist_free_all(chunk);
@@ -904,7 +920,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     BP_LOG_MSG("response: %s", responseOut.c_str());
 #endif
 
-    return error;
+    return success;
 };
 
 void CreateDir(const char* dir)
