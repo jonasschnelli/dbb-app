@@ -397,6 +397,10 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         this->ui->singleWalletBalance->setText("");
         sdcardWarned = false;
 
+        //remove the wallets
+        singleWallet->client.setNull();
+        vMultisigWallets[0]->client.setNull();
+
     } else {
         if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE)
         {
@@ -1463,7 +1467,10 @@ void DBBDaemonGui::createTxProposalPressed()
     thread->currentThread = std::thread([this, thread, amount]() {
         UniValue proposalOut;
         std::string errorOut;
-        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, 2000, proposalOut, errorOut)) {
+
+        int fee = singleWallet->client.GetFeeForPriority(0);
+
+        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
             emit changeNetLoading(false);
             emit shouldShowAlert("Error", QString::fromStdString(errorOut));
         }
@@ -1729,9 +1736,11 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([thread, wallet, cmdFinished]() {
         std::string walletsResponse;
+        std::string feeLevelResponse;
 
         //std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
         bool walletsAvailable = wallet->client.GetWallets(walletsResponse);
+        wallet->client.GetFeeLevels();
         cmdFinished(walletsAvailable, walletsResponse);
         thread->completed();
     });

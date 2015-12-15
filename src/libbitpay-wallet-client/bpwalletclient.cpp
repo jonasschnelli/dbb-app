@@ -478,6 +478,51 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletI
     return true;
 }
 
+bool BitPayWalletClient::GetFeeLevels()
+{
+    std::string requestPubKey;
+    std::string response;
+    if (!GetRequestPubKey(requestPubKey))
+        return false;
+
+    long httpStatusCode = 0;
+    if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+        return false;
+
+    if (httpStatusCode != 200)
+        return false;
+
+    feeLevelsObject.read(response);
+    return true;
+}
+
+int BitPayWalletClient::GetFeeForPriority(int prio)
+{
+    std::string keyField = "";
+    if (prio == 1)
+        keyField = "normal";
+    else if (prio == 2)
+        keyField = "economy";
+    else
+        keyField = "priority";
+
+    if (feeLevelsObject.isArray())
+    {
+        std::vector<UniValue> values = feeLevelsObject.getValues();
+        for (const UniValue& oneObj : values)
+        {
+            UniValue levelUV = find_value(oneObj, "level");
+            UniValue feePerKBUB = find_value(oneObj, "feePerKB");
+            if (levelUV.isStr() && levelUV.get_str() == keyField)
+            {
+                return feePerKBUB.get_int();
+            }
+        }
+    }
+
+    return 2000; //default fallback feerate
+}
+
 bool BitPayWalletClient::GetWallets(std::string& response)
 {
     std::string requestPubKey;
@@ -1051,6 +1096,15 @@ void BitPayWalletClient::RemoveLocalData()
 {
     std::string dataDir = GetDefaultDBBDataDir();
     remove((dataDir + "/" + filenameBase + ".dat").c_str());
+    setNull();
+}
+
+void BitPayWalletClient::setNull()
+{
+    filenameBase.clear();
+    masterPubKey.clear();
+    masterPubKey.clear();
+    memset(requestKey.privkey,0, 32);
 }
 
 int BitPayWalletClient::CheapRandom()
