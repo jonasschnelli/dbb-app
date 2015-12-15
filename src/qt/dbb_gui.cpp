@@ -422,6 +422,10 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         this->ui->singleWalletBalance->setText("");
         sdcardWarned = false;
 
+        //remove the wallets
+        singleWallet->client.setNull();
+        vMultisigWallets[0]->client.setNull();
+
     } else {
         if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE)
         {

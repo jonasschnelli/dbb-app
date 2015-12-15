@@ -1051,6 +1051,15 @@ void BitPayWalletClient::RemoveLocalData()
 {
     std::string dataDir = GetDefaultDBBDataDir();
     remove((dataDir + "/" + filenameBase + ".dat").c_str());
+    setNull();
+}
+
+void BitPayWalletClient::setNull()
+{
+    filenameBase.clear();
+    masterPubKey.clear();
+    masterPubKey.clear();
+    memset(requestKey.privkey,0, 32);
 }
 
 int BitPayWalletClient::CheapRandom()
