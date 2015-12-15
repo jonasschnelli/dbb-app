@@ -137,6 +137,48 @@
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="refreshButton">
+           <property name="maximumSize">
+            <size>
+             <width>35</width>
+             <height>35</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>refresh</string>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">QPushButton {
+border: none;
+margin: 0px;
+padding: 0px;
+}
+QPushButton:pressed {
+background-color: rgba(240,240,240,255);
+}
+            </string>
+           </property>
+           <property name="text">
+            <string/>
+           </property>
+           <property name="icon">
+            <iconset>
+             <normaloff>:/icons/refresh</normaloff>
+             <normalon>:/icons/refresh</normalon>
+             <disabledoff>:/icons/refresh</disabledoff>:/icons/refresh</iconset>
+           </property>
+           <property name="iconSize">
+            <size>
+             <width>24</width>
+             <height>24</height>
+            </size>
+           </property>
+           <property name="flat">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>
@@ -208,13 +250,6 @@
             </size>
            </property>
           </spacer>
-         </item>
-         <item>
-          <widget class="QPushButton" name="createSingleWallet">
-           <property name="text">
-            <string>Create Wallet</string>
-           </property>
-          </widget>
          </item>
         </layout>
        </item>
@@ -1175,7 +1210,7 @@
    <widget class="Line" name="line">
     <property name="geometry">
      <rect>
-      <x>0</x>
+      <x>-480</x>
       <y>375</y>
       <width>480</width>
       <height>3</height>

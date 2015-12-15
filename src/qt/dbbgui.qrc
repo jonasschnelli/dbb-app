@@ -15,6 +15,9 @@
         <file alias="finger">res/finger.png</file>
         <file alias="touchhelp">res/touchhelp.png</file>
         <file alias="touchhelp_replug">res/touchhelp_replug.png</file>
+        <file alias="refresh">res/refresh.png</file>
+        <file alias="netactivity">res/weather-cloudy.png</file>
+        <file alias="usbactivity">res/code.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>
@@ -23,5 +26,8 @@
     <qresource prefix="/fonts">
     <file alias="AlegreyaSans-Regular">res/fonts/AlegreyaSans-Regular.otf</file>
     <file alias="AlegreyaSans-Bold">res/fonts/AlegreyaSans-Bold.otf</file>
+    <file alias="BebasNeue-Thin">res/fonts/BebasNeue-Thin.ttf</file>
+    <file alias="BebasNeue-Regular">res/fonts/BebasNeue-Regular.ttf</file>
+    <file alias="BebasKai-Regular">res/fonts/BebasKai-Regular.ttf</file>
     </qresource>
 </RCC>

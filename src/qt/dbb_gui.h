@@ -137,6 +137,8 @@ private:
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
+    QPushButton* statusBarNetIcon;
+    QPushButton* statusBarUSBIcon;
     bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
     bool shouldKeepBootloaderState; //set to true if we expect a firmware upgrade
     QString firmwareFileToUse;
@@ -147,7 +149,8 @@ private:
     bool deviceReadyToInteract;
     bool touchButtonInfo;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
-    QPropertyAnimation* statusBarloadingIndicatorOpacityAnimation;
+    QPropertyAnimation* netActivityAnimation;
+    QPropertyAnimation* usbActivityAnimation;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
