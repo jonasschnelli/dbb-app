@@ -158,7 +158,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
     while (cnt < readBufSize) {
-        res = hid_read_timeout(HID_HANDLE, HID_REPORT + cnt, readBufSize, 10*1000);
+        res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
         if (res < 0 || (res == 0 && cnt < readBufSize)) {
             std::string errorStr = "";
             const wchar_t *error = hid_error(HID_HANDLE);
