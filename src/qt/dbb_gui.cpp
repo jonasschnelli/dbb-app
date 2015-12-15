@@ -787,7 +787,7 @@ void DBBDaemonGui::getInfo()
 void DBBDaemonGui::seedHardware()
 {
     std::string command = "{\"seed\" : {\"source\" :\"create\","
-                          "\"decrypt\": \"no\","
+                          "\"decrypt\": \"yes\","
                           "\"salt\" : \"\"} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -985,7 +985,7 @@ void DBBDaemonGui::addBackup()
     std::strftime(buffer, 80, "%Y-%m-%d-%H-%M-%S", timeinfo);
     std::string timeStr(buffer);
 
-    std::string command = "{\"backup\" : {\"encrypt\" :\"no\","
+    std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
                           "\"filename\": \"backup-" +
                           timeStr + ".bak\"} }";
 
