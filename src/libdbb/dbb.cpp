@@ -154,7 +154,6 @@ bool sendCommand(const std::string& json, std::string& resultOut)
         return false;
     }
 
-
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
     while (cnt < readBufSize) {

@@ -177,6 +177,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(shouldUpdateModalInfo(const QString&)), this, SLOT(updateModalInfo(const QString&)));
     connect(this, SIGNAL(shouldHideModalInfo()), this, SLOT(hideModalInfo()));
 
+    connect(this, SIGNAL(createTxProposalDone(DBBWallet *, const UniValue&)), this, SLOT(PaymentProposalAction(DBBWallet*,const UniValue&)));
+    connect(this, SIGNAL(shouldShowAlert(const QString&,const QString&)), this, SLOT(showAlert(const QString&,const QString&)));
+    connect(this, SIGNAL(changeNetLoading(bool)), this, SLOT(setNetLoading(bool)));
+
+
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
@@ -1392,7 +1397,7 @@ void DBBDaemonGui::getNewAddress()
 {
     if (singleWallet->client.IsSeeded()) {
         DBBNetThread* thread = DBBNetThread::DetachThread();
-        thread->currentThread = std::thread([this]() {
+        thread->currentThread = std::thread([this, thread]() {
             std::string walletsResponse;
 
             std::string address;
@@ -1400,6 +1405,8 @@ void DBBDaemonGui::getNewAddress()
             singleWallet->client.GetNewAddress(address, keypath);
             singleWallet->rewriteKeypath(keypath);
             emit walletAddressIsAvailable(this->singleWallet, address, keypath);
+
+            thread->completed();
         });
 
         setNetLoading(true);
@@ -1459,20 +1466,28 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
 
 void DBBDaemonGui::createTxProposalPressed()
 {
-    UniValue proposalOut;
-    std::string errorOut;
-
     int64_t amount = 0;
-    if (!DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
+    if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
         return showAlert("Error", "Invalid amount");
 
-    if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, 2000, proposalOut, errorOut)) {
-        showAlert("Error", QString::fromStdString(errorOut));
-    } else {
-        PaymentProposalAction(singleWallet, proposalOut, ProposalActionTypeAccept);
-    }
-
-    SingleWalletUpdateWallets();
+    //TODO, check address
+    //TODO, get the feelevels
+    DBBNetThread* thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this, thread, amount]() {
+        UniValue proposalOut;
+        std::string errorOut;
+        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, 2000, proposalOut, errorOut)) {
+            emit changeNetLoading(false);
+            emit shouldShowAlert("Error", QString::fromStdString(errorOut));
+        }
+        else
+        {
+            emit changeNetLoading(false);
+            emit createTxProposalDone(singleWallet, proposalOut);
+        }
+        thread->completed();
+    });
+    setNetLoading(true);
 }
 
 void DBBDaemonGui::reportPaymentProposalPost(DBBWallet* wallet, const UniValue& proposal)
@@ -1627,7 +1642,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets()
     });
 
     DBBNetThread* thread = DBBNetThread::DetachThread();
-    thread->currentThread = std::thread([this]() {
+    thread->currentThread = std::thread([this, thread]() {
         std::string txHistoryResponse;
         bool transactionHistoryAvailable = this->singleWallet->client.GetTransactionHistory(txHistoryResponse);
 
@@ -1638,6 +1653,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets()
 
         emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
         emit shouldHideModalInfo();
+        thread->completed();
     });
 }
 
@@ -1724,12 +1740,13 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)
 {
     DBBNetThread* thread = DBBNetThread::DetachThread();
-    thread->currentThread = std::thread([wallet, cmdFinished]() {
+    thread->currentThread = std::thread([thread, wallet, cmdFinished]() {
         std::string walletsResponse;
 
         //std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
         bool walletsAvailable = wallet->client.GetWallets(walletsResponse);
         cmdFinished(walletsAvailable, walletsResponse);
+        thread->completed();
     });
 
     setNetLoading(true);
@@ -1870,6 +1887,9 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue& pendingTxps, cons
 
 void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType)
 {
+    if (!paymentProposal.isObject())
+        return;
+
     std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
 
     if (actionType == ProposalActionTypeReject) {
@@ -1943,6 +1963,8 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                 //error found
                 UniValue errorCodeObj = find_value(errorObj, "code");
                 UniValue errorMessageObj = find_value(errorObj, "message");
+                if (errorMessageObj.isStr())
+                    emit shouldShowAlert("Error", QString::fromStdString(errorMessageObj.get_str()));
 
                 emit shouldHideVerificationInfo();
             }
@@ -1963,6 +1985,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                                 //client.BroadcastProposal(values[0]);
                             }
                         }
+
 
                         emit shouldHideVerificationInfo();
                         emit signedProposalAvailable(wallet, paymentProposal, sigs);
@@ -1990,6 +2013,7 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
 
         thread->completed();
     });
+    setNetLoading(true);
 }
 
 #pragma mark - WebSocket Stack (ECDH)
