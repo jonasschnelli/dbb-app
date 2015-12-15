@@ -527,6 +527,9 @@ void DBBDaemonGui::hideVerificationInfo()
 
 void DBBDaemonGui::passwordProvided()
 {
+    if (sessionPassword.size() > 0)
+        return;
+
     if (!loginScreenIndicatorOpacityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
         this->ui->unlockingInfo->setGraphicsEffect(eff);
