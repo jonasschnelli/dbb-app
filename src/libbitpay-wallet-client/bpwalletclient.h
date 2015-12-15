@@ -94,6 +94,12 @@ public:
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
 
+    //!get the current mainnet fee levels
+    bool GetFeeLevels();
+
+    //!get the feeperkb rate for the given prio (0 = priority, 1 = normal, 2 = economy)
+    int GetFeeForPriority(int prio = 0);
+
     //!load available wallets over wallet server
     bool GetWallets(std::string& response);
 
@@ -169,6 +175,7 @@ private:
     std::vector<std::string> split(const std::string& str, std::vector<int> indexes);
     std::string _copayerHash(const std::string& name, const std::string& xPubKey, const std::string& requestPubKey);
 
+    UniValue feeLevelsObject;
     //!Wrapper for libbtcs doubla sha
     void Hash(const std::string& stringIn, uint8_t* hashout);
 };
