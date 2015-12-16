@@ -111,9 +111,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
         printf("%s\n", family.toStdString().c_str());
     }
 
-    qApp->setStyleSheet("QWidget { font-family: Bebas Kai; }");
-    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: black; border:0; color: white; };");
-    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: #003366; border:0; color: white; };");
+    qApp->setStyleSheet("QWidget { font-family: Bebas Kai; } QHeaderView::section { font-family: Bebas Kai; }");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: white; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #444444; };");
+    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: #003366; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #003366; };");
 
     QString labelCSS("QLabel { font-size: " + QString::fromStdString(smallFontSize) + "; }");
 
@@ -204,12 +204,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //: translation: window title
     setWindowTitle(tr("The Digital Bitbox"));
 
-    //set status bar
-    QWidget* spacer = new QWidget();
-    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    spacer->setMinimumWidth(3);
-    spacer->setMaximumHeight(10);
-    statusBar()->addWidget(spacer);
     statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
     this->statusBarButton->setEnabled(false);

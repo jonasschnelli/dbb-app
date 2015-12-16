@@ -18,6 +18,9 @@
         <file alias="refresh">res/refresh.png</file>
         <file alias="netactivity">res/weather-cloudy.png</file>
         <file alias="usbactivity">res/code.png</file>
+        <file alias="titlebar">res/titlebar.png</file>
+        <file alias="titlebardark">res/titlebar_d_divider.png</file>
+        <file alias="statusbar">res/statusbar.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>

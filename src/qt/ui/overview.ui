@@ -1595,8 +1595,81 @@ padding:4px;</string>
      </widget>
     </widget>
    </widget>
+   <widget class="QPushButton" name="titlebar">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>480</width>
+      <height>55</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>:/icons/titlebardark</normaloff>
+      <disabledoff>:/icons/titlebardark</disabledoff>:/icons/titlebardark</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>480</width>
+      <height>55</height>
+     </size>
+    </property>
+    <property name="flat">
+     <bool>true</bool>
+    </property>
+   </widget>
+   <zorder>titlebar</zorder>
+   <zorder>stackedWidget</zorder>
+   <zorder>overviewButton</zorder>
+   <zorder>multisigButton</zorder>
+   <zorder>receiveButton</zorder>
+   <zorder>line</zorder>
+   <zorder>sendButton</zorder>
+   <zorder>mainSettingsButton</zorder>
+   <zorder>activeArrow</zorder>
+   <zorder>blockerView</zorder>
+   <zorder>menuBlocker</zorder>
+   <zorder>modalBlockerView</zorder>
   </widget>
-  <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QStatusBar" name="statusbar">
+   <property name="enabled">
+    <bool>true</bool>
+   </property>
+   <property name="sizeGripEnabled">
+    <bool>false</bool>
+   </property>
+   <widget class="QPushButton" name="titlebar">
+    <property name="geometry">
+     <rect>
+      <x>0</x>
+      <y>0</y>
+      <width>480</width>
+      <height>24</height>
+     </rect>
+    </property>
+    <property name="text">
+     <string/>
+    </property>
+    <property name="icon">
+     <iconset>
+      <normaloff>:/icons/statusbar</normaloff>
+      <disabledoff>:/icons/statusbar</disabledoff>:/icons/statusbar</iconset>
+    </property>
+    <property name="iconSize">
+     <size>
+      <width>480</width>
+      <height>24</height>
+     </size>
+    </property>
+    <property name="flat">
+     <bool>true</bool>
+    </property>
+   </widget>
+  </widget>
  </widget>
  <resources/>
  <connections/>
