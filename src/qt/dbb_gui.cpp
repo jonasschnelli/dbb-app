@@ -69,7 +69,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               currentPaymentProposalWidget(0),
                                               signConfirmationDialog(0),
                                               loginScreenIndicatorOpacityAnimation(0),
-                                              statusBarloadingIndicatorOpacityAnimation(0),
+                                              netActivityAnimation(0),
+                                              usbActivityAnimation(0),
                                               sdcardWarned(0),
                                               fwUpgradeThread(0),
                                               upgradeFirmwareState(0),
@@ -99,13 +100,20 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     std::string smallFontSize = "10pt";
 #endif
 
-    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Regular");
-    QFontDatabase::addApplicationFont(":/fonts/AlegreyaSans-Bold");
+    QFontDatabase::addApplicationFont(":/fonts/BebasNeue-Thin");
+    QFontDatabase::addApplicationFont(":/fonts/BebasNeue-Regular");
+    QFontDatabase::addApplicationFont(":/fonts/BebasKai-Regular");
+    this->setStyleSheet("QMainWindow {background: 'white';}");
 
-    //qApp->setStyleSheet("QWidget { font-family: Alegreya Sans; font-size:" + QString::fromStdString(stdFontSize) + "; }");
-    this->setStyleSheet("DBBDaemonGui { background-image: url(:/theme/windowbackground);;  } QToolBar { background-color: white }");
-    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: black; border:0; color: white; };");
-    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: #444444; border:0; color: white; } QPushButton { font-family: Alegreya Sans; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; background-color: #003366; border:0; color: white; };");
+    QFontDatabase db;
+    QStringList fams = db.families();
+    foreach (const QString &family, fams) {
+        printf("%s\n", family.toStdString().c_str());
+    }
+
+    qApp->setStyleSheet("QWidget { font-family: Bebas Kai; } QHeaderView::section { font-family: Bebas Kai; }");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: white; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #444444; };");
+    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: #003366; } QPushButton { font-family: Bebas Kai; font-weight: bold; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #003366; };");
 
     QString labelCSS("QLabel { font-size: " + QString::fromStdString(smallFontSize) + "; }");
 
@@ -144,7 +152,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(showSetPasswordInfo()));
     connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
-    connect(ui->createSingleWallet, SIGNAL(clicked()), this, SLOT(createSingleWallet()));
+    connect(ui->refreshButton, SIGNAL(clicked()), this, SLOT(SingleWalletUpdateWallets()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
     connect(ui->verifyAddressButton, SIGNAL(clicked()), this, SLOT(verifyAddress()));
     connect(ui->joinCopayWallet, SIGNAL(clicked()), this, SLOT(joinCopayWalletClicked()));
@@ -196,12 +204,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //: translation: window title
     setWindowTitle(tr("The Digital Bitbox"));
 
-    //set status bar
-    QWidget* spacer = new QWidget();
-    spacer->setSizePolicy(QSizePolicy::Fixed, QSizePolicy::Fixed);
-    spacer->setMinimumWidth(3);
-    spacer->setMaximumHeight(10);
-    statusBar()->addWidget(spacer);
     statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
     this->statusBarButton->setEnabled(false);
@@ -211,24 +213,62 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->statusBarButton->setVisible(false);
     statusBar()->addWidget(this->statusBarButton);
 
+    QIcon netActivityIcon;
+    netActivityIcon.addPixmap(QPixmap(":/icons/netactivity"), QIcon::Normal);
+    netActivityIcon.addPixmap(QPixmap(":/icons/netactivity"), QIcon::Disabled);
+    this->statusBarNetIcon = new QPushButton(netActivityIcon, "");
+    this->statusBarNetIcon->setEnabled(false);
+    this->statusBarNetIcon->setFlat(true);
+    this->statusBarNetIcon->setMaximumWidth(18);
+    this->statusBarNetIcon->setMaximumHeight(18);
+    this->statusBarNetIcon->setVisible(false);
+    this->statusBarNetIcon->setToolTip(tr("Internet Activity Indicator"));
+
+    QIcon usbActivityIcon;
+    usbActivityIcon.addPixmap(QPixmap(":/icons/usbactivity"), QIcon::Normal);
+    usbActivityIcon.addPixmap(QPixmap(":/icons/usbactivity"), QIcon::Disabled);
+    this->statusBarUSBIcon = new QPushButton(usbActivityIcon, "");
+    this->statusBarUSBIcon->setEnabled(false);
+    this->statusBarUSBIcon->setFlat(true);
+    this->statusBarUSBIcon->setMaximumWidth(18);
+    this->statusBarUSBIcon->setMaximumHeight(18);
+    this->statusBarUSBIcon->setVisible(false);
+    this->statusBarUSBIcon->setToolTip(tr("USB Communication Activity Indicator"));
+
     //: translation: status bar info in case of no device has been found
     this->statusBarLabelLeft = new QLabel(tr("No Device Found"));
     statusBar()->addWidget(this->statusBarLabelLeft);
 
     this->statusBarLabelRight = new QLabel("");
-    statusBar()->addPermanentWidget(this->statusBarLabelRight);
-    if (!statusBarloadingIndicatorOpacityAnimation) {
+    statusBar()->addPermanentWidget(this->statusBarNetIcon);
+    statusBar()->addPermanentWidget(this->statusBarUSBIcon);
+    if (!netActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
-        this->statusBarLabelRight->setGraphicsEffect(eff);
+        this->statusBarNetIcon->setGraphicsEffect(eff);
 
-        statusBarloadingIndicatorOpacityAnimation = new QPropertyAnimation(eff, "opacity");
+        netActivityAnimation = new QPropertyAnimation(eff, "opacity");
 
-        statusBarloadingIndicatorOpacityAnimation->setDuration(500);
-        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0, 0.3);
-        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(0.5, 1.0);
-        statusBarloadingIndicatorOpacityAnimation->setKeyValueAt(1, 0.3);
-        statusBarloadingIndicatorOpacityAnimation->setEasingCurve(QEasingCurve::OutQuad);
-        statusBarloadingIndicatorOpacityAnimation->setLoopCount(-1);
+        netActivityAnimation->setDuration(1000);
+        netActivityAnimation->setKeyValueAt(0, 0.3);
+        netActivityAnimation->setKeyValueAt(0.5, 1.0);
+        netActivityAnimation->setKeyValueAt(1, 0.3);
+        netActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        netActivityAnimation->setLoopCount(-1);
+        netActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+    }
+    if (!usbActivityAnimation) {
+        QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
+        this->statusBarUSBIcon->setGraphicsEffect(eff);
+
+        usbActivityAnimation = new QPropertyAnimation(eff, "opacity");
+
+        usbActivityAnimation->setDuration(1000);
+        usbActivityAnimation->setKeyValueAt(0, 0.3);
+        usbActivityAnimation->setKeyValueAt(0.5, 1.0);
+        usbActivityAnimation->setKeyValueAt(1, 0.3);
+        usbActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
+        usbActivityAnimation->setLoopCount(-1);
+        usbActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
     }
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
@@ -348,12 +388,7 @@ void DBBDaemonGui::setLoading(bool status)
     //: translation: status bar info text during the time of USB communication
     this->statusBarLabelRight->setText((status) ? tr("processing...") : "");
 
-    if (statusBarloadingIndicatorOpacityAnimation) {
-        if (status)
-            statusBarloadingIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
-        else
-            statusBarloadingIndicatorOpacityAnimation->stop();
-    }
+    this->statusBarUSBIcon->setVisible(status);
 
     //: translation: login screen info text during password USB check (device info)
     this->ui->unlockingInfo->setText((status) ? tr("Unlocking Device...") : "");
@@ -363,13 +398,7 @@ void DBBDaemonGui::setNetLoading(bool status)
 {
     //: translation: status bar info text during network activity (copay)
     this->statusBarLabelRight->setText((status) ? tr("loading...") : "");
-
-    if (statusBarloadingIndicatorOpacityAnimation) {
-        if (status)
-            statusBarloadingIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
-        else
-            statusBarloadingIndicatorOpacityAnimation->stop();
-    }
+    this->statusBarNetIcon->setVisible(status);
 }
 
 void DBBDaemonGui::resetInfos()
@@ -1633,12 +1662,8 @@ void DBBDaemonGui::MultisigUpdateWallets()
 void DBBDaemonGui::SingleWalletUpdateWallets()
 {
     if (!singleWallet->client.IsSeeded())
-    {
-        ui->createSingleWallet->setText("Create Wallet");
         return;
-    }
-    ui->createSingleWallet->setText("Refresh");
-
+    
     singleWalletIsUpdating = true;
     executeNetUpdateWallet(singleWallet, [this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
@@ -1696,9 +1721,9 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     transactionTableModel = new  QStandardItemModel(history.size(),3,this);
 
     transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Type") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Amount") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Fees") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Date") );
+    transactionTableModel->setHeaderData( 1, Qt::Horizontal, QObject::tr("Amount") );
+    transactionTableModel->setHeaderData( 2, Qt::Horizontal, QObject::tr("Fees") );
+    transactionTableModel->setHeaderData( 3, Qt::Horizontal, QObject::tr("Date") );
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
