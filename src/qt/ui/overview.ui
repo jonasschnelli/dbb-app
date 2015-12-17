@@ -1369,14 +1369,14 @@ background-color: rgba(0,0,0, 0%)</string>
    <widget class="QWidget" name="menuBlocker" native="true">
     <property name="geometry">
      <rect>
-      <x>100</x>
+      <x>96</x>
       <y>0</y>
-      <width>380</width>
+      <width>384</width>
       <height>55</height>
      </rect>
     </property>
     <property name="styleSheet">
-     <string notr="true">background: rgba(0,0,0,240);</string>
+     <string notr="true">background: rgba(255,255,255,210);</string>
     </property>
    </widget>
    <widget class="QWidget" name="modalBlockerView" native="true">
