@@ -1068,7 +1068,7 @@ void DBBDaemonGui::eraseAllBackups()
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
     std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
-                                                                                         "\"decrypt\": \"no\" } }";
+                                                                                         "\"decrypt\": \"yes\" } }";
 
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
