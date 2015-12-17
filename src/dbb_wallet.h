@@ -8,6 +8,8 @@
 #include "univalue.h"
 #include "libbitpay-wallet-client/bpwalletclient.h"
 
+#include <atomic>
+
 class DBBWallet
 {
 public:
@@ -18,10 +20,13 @@ public:
     UniValue currentPaymentProposals;
     int64_t totalBalance;
     int64_t availableBalance;
+    std::atomic<bool> updatingWallet;
+    std::atomic<bool> shouldUpdateWalletAgain;
     DBBWallet()
     {
         baseKeyPath = "m/131'/45'";
         participationName = "digitalbitbox";
+        updatingWallet = false;
     }
 
     /* synchronous post signatures for a given paymant proposal (accepts payment proposal) */

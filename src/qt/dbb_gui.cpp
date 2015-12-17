@@ -167,7 +167,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
-    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(joinCopayWalletWithXPubKey(int)));
+    connect(this, SIGNAL(RequestXPubKeyForCopayWalletIsAvailable(int)), this, SLOT(joinCopayWallet(int)));
     connect(this, SIGNAL(gotResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)), this, SLOT(parseResponse(const UniValue&, dbb_cmd_execution_status_t, dbb_response_type_t, int)));
     connect(this, SIGNAL(shouldVerifySigning(DBBWallet*, const UniValue&, int, const std::string&)), this, SLOT(showEchoVerification(DBBWallet*, const UniValue&, int, const std::string&)));
     connect(this, SIGNAL(shouldHideVerificationInfo()), this, SLOT(hideVerificationInfo()));
@@ -186,6 +186,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(createTxProposalDone(DBBWallet *, const UniValue&)), this, SLOT(PaymentProposalAction(DBBWallet*,const UniValue&)));
     connect(this, SIGNAL(shouldShowAlert(const QString&,const QString&)), this, SLOT(showAlert(const QString&,const QString&)));
     connect(this, SIGNAL(changeNetLoading(bool)), this, SLOT(setNetLoading(bool)));
+    connect(this, SIGNAL(joinCopayWalletDone(DBBWallet*)), this, SLOT(joinCopayWalletComplete(DBBWallet*)));
 
 
 
@@ -314,7 +315,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     bonjourRegister->registerService(BonjourRecord("Digital Bitbox App Websocket", QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
 
     walletUpdateTimer = new QTimer(this);
-    connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(SingleWalletUpdateWallets()));
+    connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
 }
 
 /*
@@ -331,6 +332,7 @@ void DBBDaemonGui::deviceIsReadyToInteract()
     SingleWalletUpdateWallets();
     deviceReadyToInteract = true;
 
+    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
     if (singleWallet->client.IsSeeded())
     {
         walletUpdateTimer->start(WALLET_POLL_TIME);
@@ -424,6 +426,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         hideSessionPasswordView();
         setTabbarEnabled(false);
         deviceReadyToInteract = false;
+        cachedWalletAvailableState = false;
         //hide modal dialog and abort possible ecdh pairing
         hideModalInfo();
         if (websocketServer)
@@ -436,8 +439,13 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         sdcardWarned = false;
 
         //remove the wallets
-        singleWallet->client.setNull();
-        vMultisigWallets[0]->client.setNull();
+        {
+            std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+            singleWallet->client.setNull();
+            vMultisigWallets[0]->client.setNull();
+        }
+        if (walletUpdateTimer)
+            walletUpdateTimer->stop();
 
     } else {
         if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE)
@@ -446,6 +454,11 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
             askForSessionPassword();
         }
     }
+}
+
+void DBBDaemonGui::updateTimerFired()
+{
+    SingleWalletUpdateWallets();
 }
 
 /*
@@ -779,10 +792,7 @@ void DBBDaemonGui::eraseClicked()
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
         })) {
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-
-        singleWallet->client.RemoveLocalData();
-        vMultisigWallets[0]->client.RemoveLocalData();
+        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
 
         sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword.clear();
@@ -1121,7 +1131,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue sdcard = find_value(deviceObj, "sdcard");
                 UniValue bootlock = find_value(deviceObj, "bootlock");
                 UniValue walletIDUV = find_value(deviceObj, "id");
-                bool walletAvailable = seeded.isTrue();
+                cachedWalletAvailableState = seeded.isTrue();
+
                 bool lockAvailable = lock.isTrue();
 
                 if (version.isStr())
@@ -1129,10 +1140,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (name.isStr())
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
-                updateOverviewFlags(walletAvailable, lockAvailable, false);
+                updateOverviewFlags(cachedWalletAvailableState, lockAvailable, false);
 
-                if (walletAvailable && walletIDUV.isStr())
+                bool shouldCreateSingleWallet = false;
+                if (cachedWalletAvailableState && walletIDUV.isStr())
                 {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
                     //initializes wallets (filename, get address, etc.)
                     if (singleWallet->client.getFilenameBase().empty())
                     {
@@ -1144,11 +1157,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         updateReceivingAddress(singleWallet, lastAddress, keypath);
 
                         if (singleWallet->client.GetXPubKey().size() <= 0)
-                        {
-                            //: translation: modal info during copay wallet creation
-                            showModalInfo(tr("Creating Copay Wallet"));
-                            createSingleWallet();
-                        }
+                            shouldCreateSingleWallet = true;
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
@@ -1156,11 +1165,17 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         vMultisigWallets[0]->client.LoadLocalData();
                     }
                 }
+                if (shouldCreateSingleWallet)
+                {
+                    //: translation: modal info during copay wallet creation
+                    showModalInfo(tr("Creating Copay Wallet"));
+                    createSingleWallet();
+                }
 
                 //enable UI
                 passwordAccepted();
                 
-                if (!walletAvailable)
+                if (!cachedWalletAvailableState)
                 {
                     //: translation: modal text during seed command DBB
                     showModalInfo(tr("Creating New Wallet"));
@@ -1170,7 +1185,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 deviceIsReadyToInteract();
 
-                if (sdcard.isBool() && sdcard.isTrue() && walletAvailable && !sdcardWarned)
+                if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
                     //: translation: warning text if SDCard is insert in productive environment
                     showAlert(tr("Please remove your SDCard!"), tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"));
@@ -1224,6 +1239,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 std::string xPubKeyNew(outbuf);
 
+                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
                 //0 = singlewallet
                 if (subtag == 0)
                     singleWallet->client.setMasterPubKey(xPubKeyNew);
@@ -1253,11 +1269,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 std::string xRequestKeyNew(outbuf);
 
-                if (subtag == 0)
-                    singleWallet->client.setRequestPubKey(xRequestKeyNew);
-                else
-                    vMultisigWallets[0]->client.setRequestPubKey(xRequestKeyNew);
-
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    if (subtag == 0)
+                        singleWallet->client.setRequestPubKey(xRequestKeyNew);
+                    else
+                        vMultisigWallets[0]->client.setRequestPubKey(xRequestKeyNew);
+                }
                 emit RequestXPubKeyForCopayWalletIsAvailable(subtag);
             } else {
                 if (requestXPubKeyUV.isObject()) {
@@ -1294,22 +1312,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 verificationDialog->show();
                 verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning multiple QRCodes.", response.write());
 
-            }
-        } else if (tag == DBB_RESPONSE_TYPE_ERASE) {
-            UniValue resetObj = find_value(response, "reset");
-            if (resetObj.isStr() && resetObj.get_str() == "success") {
-                QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
-                sessionPasswordDuringChangeProcess.clear();
-
-                resetInfos();
-                getInfo();
-            } else {
-                //reset password in case of an error
-                sessionPassword = sessionPasswordDuringChangeProcess;
-                sessionPasswordDuringChangeProcess.clear();
-
-                if (!touchErrorShowed)
-                    showAlert(tr("Erase error"), tr("Could not reset device"));
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
@@ -1391,15 +1393,29 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 //: translation: confirmation text when the DBB wallet was seeded successfully
                 QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
                 getInfo();
-            } else {
-                if (!touchErrorShowed)
-                {
-                    //: translation: titel for an error that happened during DBB/seed
-                    showAlert(tr("Wallet Error"), errorString);
-                }
             }
         }
+        if (tag == DBB_RESPONSE_TYPE_ERASE) {
+            UniValue resetObj = find_value(response, "reset");
+            if (resetObj.isStr() && resetObj.get_str() == "success") {
+                QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
+                sessionPasswordDuringChangeProcess.clear();
 
+                //remove local wallets
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    singleWallet->client.RemoveLocalData();
+                    vMultisigWallets[0]->client.RemoveLocalData();
+                }
+
+                resetInfos();
+                getInfo();
+            } else {
+                //reset password in case of an error
+                sessionPassword = sessionPasswordDuringChangeProcess;
+                sessionPasswordDuringChangeProcess.clear();
+            }
+        }
         if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {
             getAddressDialog->updateAddress(response);
         }
@@ -1431,9 +1447,13 @@ void DBBDaemonGui::getNewAddress()
 
             std::string address;
             std::string keypath;
-            singleWallet->client.GetNewAddress(address, keypath);
-            singleWallet->rewriteKeypath(keypath);
-            emit walletAddressIsAvailable(this->singleWallet, address, keypath);
+
+            {
+                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                singleWallet->client.GetNewAddress(address, keypath);
+                singleWallet->rewriteKeypath(keypath);
+                emit walletAddressIsAvailable(this->singleWallet, address, keypath);
+            }
 
             thread->completed();
         });
@@ -1506,16 +1526,20 @@ void DBBDaemonGui::createTxProposalPressed()
         UniValue proposalOut;
         std::string errorOut;
 
-        int fee = singleWallet->client.GetFeeForPriority(0);
-
-        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
-            emit changeNetLoading(false);
-            emit shouldShowAlert("Error", QString::fromStdString(errorOut));
-        }
-        else
         {
-            emit changeNetLoading(false);
-            emit createTxProposalDone(singleWallet, proposalOut);
+            std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+
+            int fee = singleWallet->client.GetFeeForPriority(0);
+
+            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+                emit changeNetLoading(false);
+                emit shouldShowAlert("Error", QString::fromStdString(errorOut));
+            }
+            else
+            {
+                emit changeNetLoading(false);
+                emit createTxProposalDone(singleWallet, proposalOut);
+            }
         }
         thread->completed();
     });
@@ -1529,9 +1553,7 @@ void DBBDaemonGui::reportPaymentProposalPost(DBBWallet* wallet, const UniValue& 
 
 void DBBDaemonGui::joinCopayWalletClicked()
 {
-    bool isSeeded = vMultisigWallets[0]->client.IsSeeded();
-
-    if (!isSeeded) {
+    if (!vMultisigWallets[0]->client.IsSeeded()) {
         //if there is no xpub and request key, seed over DBB
         getXPubKeyForCopay(1);
     } else {
@@ -1548,7 +1570,7 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
         return;
 
     // parse invitation code
-    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
 
     BitpayWalletInvitation invitation;
     if (!wallet->client.ParseWalletInvitation(text.toStdString(), invitation)) {
@@ -1583,7 +1605,7 @@ void DBBDaemonGui::getXPubKeyForCopay(int walletIndex)
 
     std::string baseKeyPath;
     {
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
         baseKeyPath = wallet->baseKeyPath;
     }
 
@@ -1611,21 +1633,38 @@ void DBBDaemonGui::getRequestXPubKeyForCopay(int walletIndex)
     });
 }
 
-void DBBDaemonGui::joinCopayWalletWithXPubKey(int walletIndex)
+void DBBDaemonGui::joinCopayWallet(int walletIndex)
 {
     DBBWallet* wallet = vMultisigWallets[0];
     if (walletIndex == 0)
         wallet = singleWallet;
 
     if (walletIndex == 0) {
-        //single wallet, create wallet first
-        wallet->client.CreateWallet(wallet->participationName);
-        getNewAddress();
-        updateWallet(wallet);
+        DBBNetThread* thread = DBBNetThread::DetachThread();
+        thread->currentThread = std::thread([this, thread, wallet]() {
+
+            //single wallet, create wallet first
+            {
+                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                wallet->client.CreateWallet(wallet->participationName);
+            }
+            emit joinCopayWalletDone(wallet);
+
+            thread->completed();
+        });
+
+
     } else {
         //set the keys and try to join the wallet
         joinMultisigWalletInitiate(wallet);
     }
+}
+
+void DBBDaemonGui::joinCopayWalletComplete(DBBWallet *wallet)
+{
+    getNewAddress();
+    updateWallet(wallet);
+    hideModalInfo();
 }
 
 void DBBDaemonGui::hidePaymentProposalsWidget()
@@ -1661,6 +1700,11 @@ void DBBDaemonGui::MultisigUpdateWallets()
 
 void DBBDaemonGui::SingleWalletUpdateWallets()
 {
+    if (singleWallet->updatingWallet)
+    {
+        singleWallet->shouldUpdateWalletAgain = true;
+        return;
+    }
     if (!singleWallet->client.IsSeeded())
         return;
     
@@ -1680,7 +1724,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets()
             data.read(txHistoryResponse);
 
         emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
-        emit shouldHideModalInfo();
+        //emit shouldHideModalInfo();
         thread->completed();
     });
 }
@@ -1768,13 +1812,24 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)
 {
     DBBNetThread* thread = DBBNetThread::DetachThread();
-    thread->currentThread = std::thread([thread, wallet, cmdFinished]() {
+    thread->currentThread = std::thread([this, thread, wallet, cmdFinished]() {
         std::string walletsResponse;
         std::string feeLevelResponse;
 
-        //std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
-        bool walletsAvailable = wallet->client.GetWallets(walletsResponse);
-        wallet->client.GetFeeLevels();
+        bool walletsAvailable = false;
+        {
+            wallet->updatingWallet = true;
+
+            do
+            {
+                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                wallet->shouldUpdateWalletAgain = false;
+                walletsAvailable = wallet->client.GetWallets(walletsResponse);
+                wallet->client.GetFeeLevels();
+            }while(wallet->shouldUpdateWalletAgain);
+
+            wallet->updatingWallet = false;
+        }
         cmdFinished(walletsAvailable, walletsResponse);
         thread->completed();
     });
@@ -1814,7 +1869,7 @@ bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue& response)
     UniValue pendingTxps;
     pendingTxps = find_value(response, "pendingTxps");
     if (!pendingTxps.isNull() && pendingTxps.isArray()) {
-        std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
         vMultisigWallets[0]->currentPaymentProposals = pendingTxps;
 
         printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
@@ -1920,7 +1975,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     if (!paymentProposal.isObject())
         return;
 
-    std::unique_lock<std::mutex> lock(this->cs_vMultisigWallets);
+    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
 
     if (actionType == ProposalActionTypeReject) {
         wallet->client.RejectTxProposal(paymentProposal);
