@@ -1020,7 +1020,7 @@ std::string GetDefaultDBBDataDir()
 
 bool BitPayWalletClient::IsSeeded()
 {
-    if (masterPubKey.size() > 100)
+    if (masterPubKey.size() > 100 && btc_privkey_is_valid(&requestKey))
         return true;
     //TODO check request key
     //TODO check base58 check of masterPubKey (tpub/xpub)

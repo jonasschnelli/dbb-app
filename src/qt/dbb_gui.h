@@ -89,41 +89,43 @@ public:
 public slots:
 
 signals:
-    //emited when the device state has chaned (connected / disconnected)
+    //emitted when the device state has chaned (connected / disconnected)
     void deviceStateHasChanged(bool state, int deviceType);
-    //emited when the network activity has changed
+    //emitted when the network activity has changed
     void changeNetLoading(bool state);
-    //emited when the DBB could generate a xpub
+    //emitted when the DBB could generate a xpub
     void XPubForCopayWalletIsAvailable(int walletIndex);
-    //emited when the request xpub key is available
+    //emitted when the request xpub key is available
     void RequestXPubKeyForCopayWalletIsAvailable(int walletIndex);
-    //emited when a response from the DBB is available
+    //emitted when a response from the DBB is available
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
-    //emited when a copay getwallet response is available
+    //emitted when a copay getwallet response is available
     void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
-    //emited when a copay wallet history response is available
+    //emitted when a copay wallet history response is available
     void getTransactionHistoryAvailable(DBBWallet* wallet, bool historyAvailable, const UniValue& historyResponse);
-    //emited when a payment proposal and a given signatures should be verified
+    //emitted when a payment proposal and a given signatures should be verified
     void shouldVerifySigning(DBBWallet*, const UniValue& paymentProposal, int actionType, const std::string& signature);
-    //emited when the verification dialog shoud hide
+    //emitted when the verification dialog shoud hide
     void shouldHideVerificationInfo();
-    //emited when signatures for a payment proposal are available
+    //emitted when signatures for a payment proposal are available
     void signedProposalAvailable(DBBWallet*, const UniValue& proposal, const std::vector<std::string>& vSigs);
-    //emited when a wallet needs update
+    //emitted when a wallet needs update
     void shouldUpdateWallet(DBBWallet*);
-    //emited when a new receiving address is available
+    //emitted when a new receiving address is available
     void walletAddressIsAvailable(DBBWallet *, const std::string &newAddress, const std::string &keypath);
-    //emited when a new receiving address is available
+    //emitted when a new receiving address is available
     void paymentProposalUpdated(DBBWallet *, const UniValue &proposal);
-    //emited when the firmeware upgrade thread is done
+    //emitted when the firmeware upgrade thread is done
     void firmwareThreadDone(bool);
-    //emited when the firmeware upgrade thread is done
+    //emitted when the firmeware upgrade thread is done
     void shouldUpdateModalInfo(const QString& info);
-    //emited when the modal view should be hidden from another thread
+    //emitted when the modal view should be hidden from another thread
     void shouldHideModalInfo();
     void shouldShowAlert(const QString& title, const QString& text);
-    //emited when a tx proposal was successfully created
+    //emitted when a tx proposal was successfully created
     void createTxProposalDone(DBBWallet *, const UniValue &proposal);
+    //emitted when a wallet join process was done
+    void joinCopayWalletDone(DBBWallet *);
 
 private:
     Ui::MainWindow* ui;
@@ -192,7 +194,7 @@ private:
     bool multisigWalletIsUpdating;
     bool singleWalletIsUpdating;
     std::vector<std::pair<std::time_t, std::thread*> > netThreads;
-    std::mutex cs_vMultisigWallets;
+    std::recursive_mutex cs_walletObjects;
     std::thread *fwUpgradeThread;
 
 private slots:
@@ -200,6 +202,8 @@ private slots:
     void changeConnectedState(bool state, int deviceType);
     //!enable or disable net/loading indication in the UI
     void setNetLoading(bool status);
+    //!slot for a periodical update timer
+    void updateTimerFired();
     
     //== UI ==
     //general proxy function to show an alert;
@@ -292,7 +296,9 @@ private slots:
     //!gets a xpub key at the keypath that is used for the request private key
     void getRequestXPubKeyForCopay(int walletIndex);
     //!joins a copay wallet with given xpub key
-    void joinCopayWalletWithXPubKey(int walletIndex);
+    void joinCopayWallet(int walletIndex);
+    //!joins a copay wallet with given xpub key
+    void joinCopayWalletComplete(DBBWallet* wallet);
     //!update a given wallet object
     void updateWallet(DBBWallet* wallet);
     //!update multisig wallets
