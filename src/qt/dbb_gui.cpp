@@ -307,7 +307,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
     //create a local websocket server
-    websocketServer = new WebsocketServer(WEBSOCKET_PORT, true);
+    websocketServer = new WebsocketServer(WEBSOCKET_PORT, false);
     connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
 
     //announce service over mDNS
