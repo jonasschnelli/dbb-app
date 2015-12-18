@@ -1224,13 +1224,19 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             QString errorString;
 
             if (!xPubKeyUV.isNull() && xPubKeyUV.isStr()) {
-                btc_hdnode node;
-                bool r = btc_hdnode_deserialize(xPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
+                std::string xPubKeyNew;
+                if (DBB_USE_TESTNET)
+                {
+                    btc_hdnode node;
+                    bool r = btc_hdnode_deserialize(xPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
 
-                char outbuf[112];
-                btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
+                    char outbuf[112];
+                    btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
 
-                std::string xPubKeyNew(outbuf);
+                    xPubKeyNew.assign(outbuf);
+                }
+                else
+                    xPubKeyNew = xPubKeyUV.get_str();
 
                 //0 = singlewallet
                 if (subtag == 0)
