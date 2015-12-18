@@ -286,9 +286,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
     //set password screen
-    connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
-    connect(this->ui->setPassword0, SIGNAL(returnPressed()), this->ui->setPassword1, SLOT(setFocus()));
-    connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
+    connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, bool)));
 
     //create the single and multisig wallet
     singleWallet = new DBBWallet(DBB_USE_TESTNET);
@@ -636,118 +634,43 @@ void DBBDaemonGui::hideSessionPasswordView()
 
 void DBBDaemonGui::showSetPasswordInfo(bool showCleanInfo)
 {
-    ui->setPasswordWidget->setVisible(true);
-    ui->passwordInfo->setVisible(showCleanInfo);
-    ui->modalInfoLabel->setText("");
-    this->ui->modalBlockerView->setVisible(true);
-    QWidget* slide = this->ui->modalBlockerView;
-    // setup slide
-    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
-    ui->modalIcon->setIcon(QIcon());
-
-    // then a animation:
-    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
-    animation->setDuration(300);
-    animation->setStartValue(slide->pos());
-    animation->setEndValue(QPoint(0, 0));
-    animation->setEasingCurve(QEasingCurve::OutQuad);
-    // to slide in call
-    animation->start(QAbstractAnimation::DeleteWhenStopped);
-
-    ui->setPassword0->setFocus();
+    ui->modalBlockerView->showSetPasswordInfo(showCleanInfo);
 }
 
-void DBBDaemonGui::setPasswordProvided()
+void DBBDaemonGui::setPasswordProvided(const QString& newPassword, bool tbiRequired)
 {
-    if (ui->setPassword0->text() != ui->setPassword1->text())
-    {
-        //: translation: password not identical text
-        showAlert(tr("Error"), tr("Passwords not identical"));
-        return;
-    }
+    showModalInfo(tr("Saving Password"));
 
-    bool TBIRequired = !ui->passwordInfo->isVisible();
-
-    if (executeCommandWrapper("{\"password\" : \"" + ui->setPassword0->text().toStdString() + "\"}", TBIRequired ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    if (executeCommandWrapper("{\"password\" : \"" + newPassword.toStdString() + "\"}", tbiRequired ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
     }))
     {
         sessionPasswordDuringChangeProcess = sessionPassword;
-        sessionPassword = ui->setPassword0->text().toStdString();
+        sessionPassword = newPassword.toStdString();
     }
 }
 
 void DBBDaemonGui::cleanseLoginAndSetPassword()
 {
-    ui->setPassword0->clear();
-    ui->setPassword1->clear();
+    ui->modalBlockerView->cleanse();
     this->ui->passwordLineEdit->clear();
 }
 
 void DBBDaemonGui::showModalInfo(const QString &info, int helpType)
 {
-    ui->setPasswordWidget->setVisible(false);
-    ui->modalInfoLabel->setText(info);
-    this->ui->modalBlockerView->setVisible(true);
-    QWidget* slide = this->ui->modalBlockerView;
-    // setup slide
-    slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
-
-    if (helpType == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON)
-    {
-        QIcon newIcon;
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Normal);
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Disabled);
-        ui->modalIcon->setIcon(newIcon);
-
-        if (info.isNull() || info.size() == 0)
-            ui->modalInfoLabel->setText(tr(""));
-    }
-    else if (helpType == DBB_PROCESS_INFOLAYER_STYLE_REPLUG)
-    {
-        QIcon newIcon;
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp_replug"), QIcon::Normal);
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp_replug"), QIcon::Disabled);
-        ui->modalIcon->setIcon(newIcon);
-
-        if (info.isNull() || info.size() == 0)
-            ui->modalInfoLabel->setText(tr(""));
-    }
-    else
-    {
-        ui->modalIcon->setIcon(QIcon());
-    }
-
-
-    // then a animation:
-    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
-    animation->setDuration(300);
-    animation->setStartValue(slide->pos());
-    animation->setEndValue(QPoint(0, 0));
-    animation->setEasingCurve(QEasingCurve::OutQuad);
-    // to slide in call
-    animation->start(QAbstractAnimation::DeleteWhenStopped);
+    ui->modalBlockerView->showModalInfo(info, helpType);
 }
 
 void DBBDaemonGui::updateModalInfo(const QString &info)
 {
-    ui->modalInfoLabel->setText(info);
+    ui->modalBlockerView->setText(info);
 }
 
 void DBBDaemonGui::hideModalInfo()
 {
-    QWidget* slide = this->ui->modalBlockerView;
-
-    // then a animation:
-    QPropertyAnimation* animation = new QPropertyAnimation(slide, "pos");
-    animation->setDuration(300);
-    animation->setStartValue(slide->pos());
-    animation->setEndValue(QPoint(-slide->width(), 0));
-    animation->setEasingCurve(QEasingCurve::OutQuad);
-    // to slide in call
-    animation->start(QAbstractAnimation::DeleteWhenStopped);
+    ui->modalBlockerView->showOrHide(false);
 }
 
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
@@ -1193,7 +1116,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
                     //: translation: warning text if SDCard is insert in productive environment
-                    showAlert(tr("Please remove your SDCard!"), tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"));
+                    showModalInfo(tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+
                     sdcardWarned = true;
                 }
 
@@ -1271,13 +1195,19 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             QString errorString;
 
             if (!requestXPubKeyUV.isNull() && requestXPubKeyUV.isStr()) {
-                btc_hdnode node;
-                bool r = btc_hdnode_deserialize(requestXPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
+                std::string xRequestKeyNew;
+                if (DBB_USE_TESTNET)
+                {
+                    btc_hdnode node;
+                    bool r = btc_hdnode_deserialize(requestXPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
 
-                char outbuf[112];
-                btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
+                    char outbuf[112];
+                    btc_hdnode_serialize_public(&node, &btc_chain_test, outbuf, sizeof(outbuf));
 
-                std::string xRequestKeyNew(outbuf);
+                    xRequestKeyNew.assign(outbuf);
+                }
+                else
+                    xRequestKeyNew = requestXPubKeyUV.get_str();
 
                 if (subtag == 0)
                     singleWallet->client.setRequestPubKey(xRequestKeyNew);
@@ -1338,7 +1268,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
             UniValue randomNumObj = find_value(response, "random");
             if (randomNumObj.isStr()) {
-                QMessageBox::information(this, tr("Random Number"), QString::fromStdString(randomNumObj.get_str()), QMessageBox::Ok);
+                showModalInfo("<strong>"+tr("Random Number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -1398,15 +1328,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     errorString = QString::fromStdString(errorObj.get_str());
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
-                //: translation: confirmation text when the DBB wallet was seeded successfully
-                QMessageBox::information(this, tr("Wallet Created"), tr("Your wallet has been created successfully!"), QMessageBox::Ok);
                 getInfo();
             }
         }
         if (tag == DBB_RESPONSE_TYPE_ERASE) {
             UniValue resetObj = find_value(response, "reset");
             if (resetObj.isStr() && resetObj.get_str() == "success") {
-                QMessageBox::information(this, tr("Erase"), tr("Device was erased successfully"), QMessageBox::Ok);
                 sessionPasswordDuringChangeProcess.clear();
 
                 //remove local wallets
