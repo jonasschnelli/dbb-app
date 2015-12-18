@@ -64,6 +64,18 @@ void DBBWallet::updateData(const UniValue& walletResponse)
 
 bool DBBWallet::rewriteKeypath(std::string& keypath)
 {
-    DBB::strReplace(keypath, "m", baseKeyPath);
+    DBB::strReplace(keypath, "m", baseKeypath());
     return true;
+}
+
+void DBBWallet::setBaseKeypath(const std::string& keypath)
+{
+    std::unique_lock<std::recursive_mutex> lock(this->cs_wallet);
+    _baseKeypath = keypath;
+}
+
+const std::string& DBBWallet::baseKeypath()
+{
+    std::unique_lock<std::recursive_mutex> lock(this->cs_wallet);
+    return _baseKeypath;
 }

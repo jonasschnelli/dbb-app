@@ -100,6 +100,8 @@ std::string BitPayWalletClient::GetXPubKey()
 
 bool BitPayWalletClient::GetCopayerHash(const std::string& name, std::string& out)
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     std::string requestKeyHex;
     if (!GetRequestPubKey(requestKeyHex))
         return false;
@@ -151,8 +153,9 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
 //set the extended master pub key
 void BitPayWalletClient::setMasterPubKey(const std::string& xPubKey)
 {
-    masterPubKey = xPubKey;
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
+    masterPubKey = xPubKey;
     SaveLocalData();
 }
 
@@ -166,6 +169,8 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
     //
     //we now generate a private key by (miss)using the xpub at m/1'/0' as entropy
     //for a new private key
+
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     btc_hdnode node;
     bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), &btc_chain_test, &node);
@@ -186,7 +191,6 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
     for (i = 33; i < BTC_ECKEY_UNCOMPRESSED_LENGTH; i++)
         assert(pubkey.pubkey[i] == 0);
 
-
     assert(btc_pubkey_verify_sig(&pubkey, &hash.front(), sig, outlen) == 1);
     btc_pubkey_cleanse(&pubkey);
 
@@ -197,6 +201,8 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
 //TODO: requires caching
 bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     btc_pubkey pubkey;
     btc_pubkey_init(&pubkey);
     btc_pubkey_from_key(&requestKey, &pubkey);
@@ -211,6 +217,8 @@ bool BitPayWalletClient::GetRequestPubKey(std::string& pubKeyOut)
 //!returns to copyer ID (=single sha256 of the masterpubkey)
 std::string BitPayWalletClient::GetCopayerId()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     uint8_t hashout[32];
     //here we need a signle sha256
     btc_hash_sngl_sha256((const uint8_t*)masterPubKey.c_str(), masterPubKey.size(), hashout);
@@ -280,13 +288,19 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keyp
         keypath = pathUV.get_str();
 
     newAddress = addressUV.get_str();
-    lastKnownAddressJson = response;
-    SaveLocalData();
+    {
+        std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+        lastKnownAddressJson = response;
+        SaveLocalData();
+    }
+
     return true;
 }
 
 bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& keypath)
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+    
     if (lastKnownAddressJson.size() == 0)
         return false;
 
@@ -498,6 +512,8 @@ bool BitPayWalletClient::GetFeeLevels()
 
 int BitPayWalletClient::GetFeeForPriority(int prio)
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+    
     std::string keyField = "";
     if (prio == 1)
         keyField = "normal";
@@ -880,6 +896,8 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
                                             const std::string& args,
                                             std::string& hashOut)
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     std::string message = method + "|" + url + "|" + args;
     uint8_t hash[32];
     btc_hash((const unsigned char*)&message.front(), message.size(), hash);
@@ -1020,6 +1038,8 @@ std::string GetDefaultDBBDataDir()
 
 bool BitPayWalletClient::IsSeeded()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     if (masterPubKey.size() > 100 && btc_privkey_is_valid(&requestKey))
         return true;
     //TODO check request key
@@ -1030,6 +1050,8 @@ bool BitPayWalletClient::IsSeeded()
 
 void BitPayWalletClient::SaveLocalData()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
@@ -1051,6 +1073,8 @@ void BitPayWalletClient::SaveLocalData()
 
 void BitPayWalletClient::LoadLocalData()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
     FILE* fh = fopen((dataDir + "/" + filenameBase + ".dat").c_str(), "rb");
@@ -1094,6 +1118,8 @@ void BitPayWalletClient::LoadLocalData()
 
 void BitPayWalletClient::RemoveLocalData()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     std::string dataDir = GetDefaultDBBDataDir();
     remove((dataDir + "/" + filenameBase + ".dat").c_str());
     setNull();
@@ -1101,6 +1127,8 @@ void BitPayWalletClient::RemoveLocalData()
 
 void BitPayWalletClient::setNull()
 {
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+
     filenameBase.clear();
     masterPubKey.clear();
     masterPubKey.clear();
