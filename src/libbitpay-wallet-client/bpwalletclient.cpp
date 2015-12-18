@@ -52,7 +52,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
     return result;
 }
 
-BitPayWalletClient::BitPayWalletClient()
+BitPayWalletClient::BitPayWalletClient(bool testnetIn) : testnet(testnetIn)
 {
     //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
@@ -173,7 +173,7 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     btc_hdnode node;
-    bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), &btc_chain_test, &node);
+    bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), (testnet ? &btc_chain_test : &btc_chain_main), &node);
 
     memcpy(requestKey.privkey, node.public_key + 1, 32);
     std::vector<unsigned char> hash = DBB::ParseHex("26db47a48a10b9b0b697b793f5c0231aa35fe192c9d063d7b03a55e3c302850a");
@@ -422,7 +422,7 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
     jsonArgs.push_back(Pair("n", 1));
     jsonArgs.push_back(Pair("name", walletName));
     jsonArgs.push_back(Pair("pubKey", pubKeyHex));
-    jsonArgs.push_back(Pair("network", "testnet"));
+    jsonArgs.push_back(Pair("network", (testnet ? "testnet" : "livenet")));
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
@@ -712,11 +712,11 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
 
     // flip output order after value given by the wallet server
     if (outputOrder.size() > 0 && outputOrder[0] == 1) {
-        btc_tx_add_address_out(tx, &btc_chain_test, changeAmount, changeAdr.c_str());
-        btc_tx_add_address_out(tx, &btc_chain_test, toAmount, toAddress.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
     } else {
-        btc_tx_add_address_out(tx, &btc_chain_test, toAmount, toAddress.c_str());
-        btc_tx_add_address_out(tx, &btc_chain_test, changeAmount, changeAdr.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
     }
 
 
