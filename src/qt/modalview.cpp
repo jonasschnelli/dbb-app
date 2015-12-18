@@ -15,6 +15,7 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView)
     connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
 
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(showOrHide()));
+    visible = false;
 }
 
 ModalView::~ModalView()
@@ -58,6 +59,8 @@ void ModalView::showOrHide(bool state)
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start(QAbstractAnimation::DeleteWhenStopped);
+
+    visible = state;
 }
 
 void ModalView::showSetPasswordInfo(bool showCleanInfo)
@@ -74,7 +77,7 @@ void ModalView::showSetPasswordInfo(bool showCleanInfo)
 
 void ModalView::showModalInfo(const QString &info, int helpType)
 {
-    setVisible(true);
+    showOrHide(true);
 
     ui->setPasswordWidget->setVisible(false);
     ui->okButton->setVisible(false);
@@ -117,6 +120,7 @@ void ModalView::showModalInfo(const QString &info, int helpType)
             ui->modalIcon->setIcon(QIcon());
 
         ui->okButton->setVisible(true);
+        ui->okButton->setFocus();
     }
     else
     {
@@ -137,4 +141,10 @@ void ModalView::showModalInfo(const QString &info, int helpType)
 void ModalView::updateIcon(const QIcon& icon)
 {
     ui->modalIcon->setIcon(icon);
+}
+
+void ModalView::keyPressEvent(QKeyEvent* event){
+    if ((event->key()==Qt::Key_Return) && visible && ui->okButton->isVisible())
+        showOrHide(false);
+
 }
