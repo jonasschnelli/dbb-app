@@ -9,12 +9,22 @@
 #include "libbitpay-wallet-client/bpwalletclient.h"
 
 #include <atomic>
+#include <mutex>
+#ifdef WIN32
+#include <windows.h>
+#include "mingw/mingw.mutex.h"
+#include "mingw/mingw.condition_variable.h"
+#include "mingw/mingw.thread.h"
+#endif
 
 class DBBWallet
 {
+private:
+    std::recursive_mutex cs_wallet;
+    std::string _baseKeypath;
+
 public:
     BitPayWalletClient client;
-    std::string baseKeyPath;
     std::string participationName;
     std::string walletRemoteName;
     UniValue currentPaymentProposals;
@@ -24,7 +34,7 @@ public:
     std::atomic<bool> shouldUpdateWalletAgain;
     DBBWallet()
     {
-        baseKeyPath = "m/131'/45'";
+        _baseKeypath = "m/131'/45'";
         participationName = "digitalbitbox";
         updatingWallet = false;
     }
@@ -39,6 +49,9 @@ public:
     void updateData(const UniValue& walletResponse);
 
     bool rewriteKeypath(std::string& keypath);
+
+    void setBaseKeypath(const std::string& keypath);
+    const std::string& baseKeypath();
 };
 
 

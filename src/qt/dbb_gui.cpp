@@ -289,7 +289,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //create the single and multisig wallet
     singleWallet = new DBBWallet();
-    singleWallet->baseKeyPath = "m/203'/45'";
+    singleWallet->setBaseKeypath("m/203'/45'");
     DBBWallet* copayWallet = new DBBWallet();
     vMultisigWallets.push_back(copayWallet);
 
@@ -332,11 +332,8 @@ void DBBDaemonGui::deviceIsReadyToInteract()
     SingleWalletUpdateWallets();
     deviceReadyToInteract = true;
 
-    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
     if (singleWallet->client.IsSeeded())
-    {
         walletUpdateTimer->start(WALLET_POLL_TIME);
-    }
 }
 
 void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
@@ -439,11 +436,9 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         sdcardWarned = false;
 
         //remove the wallets
-        {
-            std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-            singleWallet->client.setNull();
-            vMultisigWallets[0]->client.setNull();
-        }
+        singleWallet->client.setNull();
+        vMultisigWallets[0]->client.setNull();
+
         if (walletUpdateTimer)
             walletUpdateTimer->stop();
 
@@ -792,7 +787,6 @@ void DBBDaemonGui::eraseClicked()
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE);
         })) {
-        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
 
         sessionPasswordDuringChangeProcess = sessionPassword;
         sessionPassword.clear();
@@ -1145,7 +1139,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 bool shouldCreateSingleWallet = false;
                 if (cachedWalletAvailableState && walletIDUV.isStr())
                 {
-                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
                     //initializes wallets (filename, get address, etc.)
                     if (singleWallet->client.getFilenameBase().empty())
                     {
@@ -1239,7 +1232,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 std::string xPubKeyNew(outbuf);
 
-                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
                 //0 = singlewallet
                 if (subtag == 0)
                     singleWallet->client.setMasterPubKey(xPubKeyNew);
@@ -1269,13 +1261,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 std::string xRequestKeyNew(outbuf);
 
-                {
-                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-                    if (subtag == 0)
-                        singleWallet->client.setRequestPubKey(xRequestKeyNew);
-                    else
-                        vMultisigWallets[0]->client.setRequestPubKey(xRequestKeyNew);
-                }
+                if (subtag == 0)
+                    singleWallet->client.setRequestPubKey(xRequestKeyNew);
+                else
+                    vMultisigWallets[0]->client.setRequestPubKey(xRequestKeyNew);
+
                 emit RequestXPubKeyForCopayWalletIsAvailable(subtag);
             } else {
                 if (requestXPubKeyUV.isObject()) {
@@ -1402,11 +1392,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
 
                 //remove local wallets
-                {
-                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-                    singleWallet->client.RemoveLocalData();
-                    vMultisigWallets[0]->client.RemoveLocalData();
-                }
+                singleWallet->client.RemoveLocalData();
+                vMultisigWallets[0]->client.RemoveLocalData();
 
                 resetInfos();
                 getInfo();
@@ -1448,12 +1435,9 @@ void DBBDaemonGui::getNewAddress()
             std::string address;
             std::string keypath;
 
-            {
-                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-                singleWallet->client.GetNewAddress(address, keypath);
-                singleWallet->rewriteKeypath(keypath);
-                emit walletAddressIsAvailable(this->singleWallet, address, keypath);
-            }
+            singleWallet->client.GetNewAddress(address, keypath);
+            singleWallet->rewriteKeypath(keypath);
+            emit walletAddressIsAvailable(this->singleWallet, address, keypath);
 
             thread->completed();
         });
@@ -1520,27 +1504,23 @@ void DBBDaemonGui::createTxProposalPressed()
         return showAlert("Error", "Invalid amount");
 
     //TODO, check address
-    //TODO, get the feelevels
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, amount]() {
         UniValue proposalOut;
         std::string errorOut;
 
-        {
-            std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+        int fee = singleWallet->client.GetFeeForPriority(0);
 
-            int fee = singleWallet->client.GetFeeForPriority(0);
-
-            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
-                emit changeNetLoading(false);
-                emit shouldShowAlert("Error", QString::fromStdString(errorOut));
-            }
-            else
-            {
-                emit changeNetLoading(false);
-                emit createTxProposalDone(singleWallet, proposalOut);
-            }
+        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+            emit changeNetLoading(false);
+            emit shouldShowAlert("Error", QString::fromStdString(errorOut));
         }
+        else
+        {
+            emit changeNetLoading(false);
+            emit createTxProposalDone(singleWallet, proposalOut);
+        }
+
         thread->completed();
     });
     setNetLoading(true);
@@ -1570,8 +1550,6 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
         return;
 
     // parse invitation code
-    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-
     BitpayWalletInvitation invitation;
     if (!wallet->client.ParseWalletInvitation(text.toStdString(), invitation)) {
         showAlert(tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"));
@@ -1603,12 +1581,7 @@ void DBBDaemonGui::getXPubKeyForCopay(int walletIndex)
     if (walletIndex == 0)
         wallet = singleWallet;
 
-    std::string baseKeyPath;
-    {
-        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-        baseKeyPath = wallet->baseKeyPath;
-    }
-
+    std::string baseKeyPath = wallet->baseKeypath();
     executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1622,7 +1595,7 @@ void DBBDaemonGui::getRequestXPubKeyForCopay(int walletIndex)
     if (walletIndex == 0)
         wallet = singleWallet;
 
-    std::string baseKeyPath = wallet->baseKeyPath;
+    std::string baseKeyPath = wallet->baseKeypath();
 
     //try to get the xpub for seeding the request private key (ugly workaround)
     //we cannot export private keys from a hardware wallet
@@ -1997,7 +1970,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
         std::string hexHash = DBB::HexStr((unsigned char*)&hashAndPathPair.second[0], (unsigned char*)&hashAndPathPair.second[0] + 32);
 
-        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeyPath + "/" + hashAndPathPair.first + "\" }, ";
+        hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeypath() + "/" + hashAndPathPair.first + "\" }, ";
     }
     hashCmd.pop_back();
     hashCmd.pop_back(); // remove ", "
@@ -2017,7 +1990,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                     UniValue obj = UniValue(UniValue::VOBJ);
                     obj.pushKV("pubkey", pkey.get_str());
                     if (keypath.isStr())
-                        obj.pushKV("keypath", wallet->baseKeyPath + "/" + keypath.get_str().substr(2));
+                        obj.pushKV("keypath", wallet->baseKeypath() + "/" + keypath.get_str().substr(2));
                     checkpubObj.push_back(obj);
                 }
             }

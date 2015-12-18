@@ -34,6 +34,13 @@
 
 #include <assert.h>
 #include <cstring>
+#include <mutex>
+#ifdef WIN32
+#include <windows.h>
+#include "mingw/mingw.mutex.h"
+#include "mingw/mingw.condition_variable.h"
+#include "mingw/mingw.thread.h"
+#endif
 #include <stdexcept>
 #include <stdint.h>
 #include <string>
@@ -164,6 +171,8 @@ public:
     int CheapRandom();
 
 private:
+    std::recursive_mutex cs_client;
+
     std::string masterPrivKey; // "m/45'"
     std::string masterPubKey;  // "m/45'"
     btc_key requestKey;        //"m/1'/0"
