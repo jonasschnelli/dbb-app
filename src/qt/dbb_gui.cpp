@@ -307,7 +307,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
     //create a local websocket server
-    websocketServer = new WebsocketServer(WEBSOCKET_PORT, true);
+    websocketServer = new WebsocketServer(WEBSOCKET_PORT, false);
     connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
 
     //announce service over mDNS
@@ -1068,7 +1068,7 @@ void DBBDaemonGui::eraseAllBackups()
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
     std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
-                                                                                         "\"decrypt\": \"no\" } }";
+                                                                                         "\"decrypt\": \"yes\" } }";
 
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
