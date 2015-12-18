@@ -6,17 +6,6 @@
 
 #include "dbb_util.h"
 
-
-void DBBWallet::broadcastPaymentProposal(const UniValue& proposal)
-{
-    client.BroadcastProposal(proposal);
-}
-
-void DBBWallet::postSignaturesForPaymentProposal(const UniValue& proposal, const std::vector<std::string>& vSigs)
-{
-    client.PostSignaturesForTxProposal(proposal, vSigs);
-}
-
 void DBBWallet::updateData(const UniValue& walletResponse)
 {
     availableBalance = 0;

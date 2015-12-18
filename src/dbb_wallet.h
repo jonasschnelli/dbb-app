@@ -39,12 +39,6 @@ public:
         updatingWallet = false;
     }
 
-    /* synchronous post signatures for a given paymant proposal (accepts payment proposal) */
-    void postSignaturesForPaymentProposal(const UniValue& proposal, const std::vector<std::string>& vSigs);
-
-    /* tells the wallet server that it should broadcast the given payment proposal */
-    void broadcastPaymentProposal(const UniValue& proposal);
-
     /* update wallet data from a getwallet json response */
     void updateData(const UniValue& walletResponse);
 

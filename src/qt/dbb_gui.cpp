@@ -411,6 +411,15 @@ void DBBDaemonGui::resetInfos()
     this->ui->deviceNameLabel->setText(tr("loading info..."));
 
     updateOverviewFlags(false, false, true);
+
+    //reset wallet
+    ui->tableWidget->setModel(NULL);
+    ui->balanceLabel->setText("");
+    ui->singleWalletBalance->setText("");
+    ui->qrCode->setIcon(QIcon());
+    ui->qrCode->setToolTip("");
+    ui->keypathLabel->setText("");
+    ui->currentAddress->setText("");
 }
 
 void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
@@ -434,9 +443,6 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
             websocketServer->abortECDHPairing();
 
         //clear some infos
-        ui->tableWidget->setModel(NULL);
-        this->ui->balanceLabel->setText("");
-        this->ui->singleWalletBalance->setText("");
         sdcardWarned = false;
 
         //remove the wallets
@@ -611,6 +617,8 @@ void DBBDaemonGui::askForSessionPassword()
 
 void DBBDaemonGui::hideSessionPasswordView()
 {
+    this->ui->passwordLineEdit->setText("");
+
     if (loginScreenIndicatorOpacityAnimation)
         loginScreenIndicatorOpacityAnimation->stop();
 
@@ -1068,7 +1076,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
     std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
                                                                                          "\"decrypt\": \"yes\" } }";
 
-    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
@@ -1509,6 +1517,9 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
 
 void DBBDaemonGui::createTxProposalPressed()
 {
+    if (!singleWallet->client.IsSeeded())
+        return;
+
     int64_t amount = 0;
     if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
         return showAlert("Error", "Invalid amount");
@@ -1745,12 +1756,12 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         return;
 
 
-    transactionTableModel = new  QStandardItemModel(history.size(),3,this);
+    transactionTableModel = new  QStandardItemModel(history.size(),4,this);
 
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Type") );
-    transactionTableModel->setHeaderData( 1, Qt::Horizontal, QObject::tr("Amount") );
-    transactionTableModel->setHeaderData( 2, Qt::Horizontal, QObject::tr("Fees") );
-    transactionTableModel->setHeaderData( 3, Qt::Horizontal, QObject::tr("Date") );
+    transactionTableModel->setHeaderData( 1, Qt::Horizontal, QObject::tr("Type") );
+    transactionTableModel->setHeaderData( 2, Qt::Horizontal, QObject::tr("Amount") );
+    transactionTableModel->setHeaderData( 3, Qt::Horizontal, QObject::tr("Fees") );
+    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Date") );
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
@@ -1785,11 +1796,18 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             QStandardItem *item = new QStandardItem(QString::number(feeUV.get_int64()) + " Satoshis" );
             transactionTableModel->setItem(cnt, 3, item);
         }
+        UniValue txidUV = find_value(obj, "txid");
+        if (txidUV.isStr())
+        {
+            QStandardItem *item = new QStandardItem(QString::fromStdString(txidUV.get_str()) );
+            transactionTableModel->setItem(cnt, 4, item);
+        }
 
         cnt++;
     }
 
     ui->tableWidget->setModel(transactionTableModel);
+    ui->tableWidget->setColumnHidden(4, true);
 }
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)
@@ -2070,14 +2088,21 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, wallet, proposal, vSigs]() {
         //thread->currentThread = ;
-        wallet->postSignaturesForPaymentProposal(proposal, vSigs);
-        wallet->broadcastPaymentProposal(proposal);
+        if (!wallet->client.PostSignaturesForTxProposal(proposal, vSigs))
+            emit shouldShowAlert("Error", tr("Could not post signatures"));
+        else
+        {
+            if (!wallet->client.BroadcastProposal(proposal))
+                emit shouldShowAlert("Error", tr("Could not broadcast transaction"));
+            else
+            {
+                //sleep 3 seconds to get time for the wallet server to process the transaction and response with the correct balance
+                std::this_thread::sleep_for(std::chrono::milliseconds(3000));
 
-        //sleep 3 seconds to get time for the wallet server to process the transaction and response with the correct balance
-        std::this_thread::sleep_for(std::chrono::milliseconds(3000));
-
-        emit shouldUpdateWallet(wallet);
-        emit paymentProposalUpdated(wallet, proposal);
+                emit shouldUpdateWallet(wallet);
+                emit paymentProposalUpdated(wallet, proposal);
+            }
+        }
 
         thread->completed();
     });
