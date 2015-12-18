@@ -76,7 +76,9 @@ typedef enum DBB_ADDRESS_STYLE {
 typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_NO_INFO,
     DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON,
-    DBB_PROCESS_INFOLAYER_STYLE_REPLUG
+    DBB_PROCESS_INFOLAYER_STYLE_REPLUG,
+    DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON,
+    DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON_WARNING
 } dbb_process_infolayer_style_t;
 
 class DBBDaemonGui : public QMainWindow
@@ -234,7 +236,7 @@ private slots:
     //!show set passworf form
     void showSetPasswordInfo(bool showCleanInfo = false);
     //!gets called when the user hits enter (or presses button) in the "set password form"
-    void setPasswordProvided();
+    void setPasswordProvided(const QString& newPassword, bool tbiRequired = false);
     void cleanseLoginAndSetPassword();
 
     //== DBB USB ==
