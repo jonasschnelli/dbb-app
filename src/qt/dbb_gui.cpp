@@ -458,7 +458,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
 
 void DBBDaemonGui::updateTimerFired()
 {
-    SingleWalletUpdateWallets();
+    SingleWalletUpdateWallets(false);
 }
 
 /*
@@ -1693,12 +1693,12 @@ void DBBDaemonGui::MultisigUpdateWallets()
         return;
 
     multisigWalletIsUpdating = true;
-    executeNetUpdateWallet(wallet, [wallet, this](bool walletsAvailable, const std::string& walletsResponse) {
+    executeNetUpdateWallet(wallet, true, [wallet, this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse);
     });
 }
 
-void DBBDaemonGui::SingleWalletUpdateWallets()
+void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
 {
     if (singleWallet->updatingWallet)
     {
@@ -1709,7 +1709,7 @@ void DBBDaemonGui::SingleWalletUpdateWallets()
         return;
     
     singleWalletIsUpdating = true;
-    executeNetUpdateWallet(singleWallet, [this](bool walletsAvailable, const std::string& walletsResponse) {
+    executeNetUpdateWallet(singleWallet, showLoading, [this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
     });
 
@@ -1809,7 +1809,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     ui->tableWidget->setModel(transactionTableModel);
 }
 
-void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished)
+void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished)
 {
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, wallet, cmdFinished]() {
@@ -1834,7 +1834,8 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, std::function<void(
         thread->completed();
     });
 
-    setNetLoading(true);
+    if (showLoading)
+        setNetLoading(true);
 }
 
 void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse)

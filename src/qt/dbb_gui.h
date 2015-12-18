@@ -188,7 +188,7 @@ private:
 
     //== Copay Wallet ==
     void hidePaymentProposalsWidget();
-    void executeNetUpdateWallet(DBBWallet* wallet, std::function<void(bool, std::string&)> cmdFinished);
+    void executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished);
 
 
     bool multisigWalletIsUpdating;
@@ -304,7 +304,7 @@ private slots:
     //!update multisig wallets
     void MultisigUpdateWallets();
     //!update single wallet
-    void SingleWalletUpdateWallets();
+    void SingleWalletUpdateWallets(bool showLoading=true);
     //!update the mutisig ui from a getWallets response
     void updateUIMultisigWallets(const UniValue& walletResponse);
     //!update the singlewallet ui from a getWallets response
