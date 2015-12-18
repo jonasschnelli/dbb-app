@@ -673,6 +673,14 @@ void DBBDaemonGui::hideModalInfo()
     ui->modalBlockerView->showOrHide(false);
 }
 
+void DBBDaemonGui::updateModalWithIconName(const QString& filename)
+{
+    QIcon newIcon;
+    newIcon.addPixmap(QPixmap(filename), QIcon::Normal);
+    newIcon.addPixmap(QPixmap(filename), QIcon::Disabled);
+    ui->modalBlockerView->updateIcon(newIcon);
+}
+
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
 //    this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
@@ -1117,6 +1125,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 {
                     //: translation: warning text if SDCard is insert in productive environment
                     showModalInfo(tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    updateModalWithIconName(":/icons/touchhelp_sdcard");
 
                     sdcardWarned = true;
                 }

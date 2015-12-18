@@ -232,6 +232,8 @@ private slots:
     //!show general modal info
     void showModalInfo(const QString &info, int helpType = 0);
     void updateModalInfo(const QString &info);
+    //!show a new Icon in the modal info
+    void updateModalWithIconName(const QString& filename);
     void hideModalInfo();
     //!show set passworf form
     void showSetPasswordInfo(bool showCleanInfo = false);
