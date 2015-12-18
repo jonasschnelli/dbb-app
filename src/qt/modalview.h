@@ -27,6 +27,7 @@ public slots:
     void setPasswordProvided();
     void cleanse();
     void setText(const QString& text);
+    void updateIcon(const QIcon& icon);
 };
 
 

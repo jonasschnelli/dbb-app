@@ -133,3 +133,8 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     // to slide in call
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
+
+void ModalView::updateIcon(const QIcon& icon)
+{
+    ui->modalIcon->setIcon(icon);
+}

@@ -1,8 +1,10 @@
 DIST_SUBDIRS = libbtc univalue
+GIT_VERSION := $(shell git describe --abbrev=6 --dirty --always --tags)
+
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
 AM_CXXFLAGS = $(HARDENED_CXXFLAGS)
-AM_CPPFLAGS += $(HARDENED_CPPFLAGS)
+AM_CPPFLAGS += $(HARDENED_CPPFLAGS) -DVERSION=\"$(GIT_VERSION)\"
 
 DBB_INCLUDES = 
 

@@ -30,6 +30,8 @@ public slots:
     void prevButton();
     void showPage(int page = 0);
 
+    static void setIconFromQRCode(QRcode *qrcode, QIcon *icon, int width = 240, int height = 240);
+
 private:
     Ui::QRCodeSequence *ui;
     std::vector<QRcode *>qrcodes;
