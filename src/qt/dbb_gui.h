@@ -43,6 +43,7 @@ namespace Ui
 class MainWindow;
 }
 
+static bool DBB_USE_TESTNET = false;
 //DBB USB response types
 typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_UNKNOWN,

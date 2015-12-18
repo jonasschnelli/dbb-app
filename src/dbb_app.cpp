@@ -143,6 +143,8 @@ static void led_blink(struct evhttp_request* req, void* arg)
 char uri_root[512];
 int main(int argc, char** argv)
 {
+    DBB::ParseParameters(argc, argv);
+
     //TODO: factor out thread
     std::thread cmdThread([&]() {
         //TODO, the locking is to broad at the moment

@@ -52,7 +52,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
     return result;
 }
 
-BitPayWalletClient::BitPayWalletClient()
+BitPayWalletClient::BitPayWalletClient(bool testnetIn) : testnet(testnetIn)
 {
     //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
@@ -173,7 +173,7 @@ void BitPayWalletClient::setRequestPubKey(const std::string& xPubKeyRequestKeyEn
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     btc_hdnode node;
-    bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), &btc_chain_test, &node);
+    bool r = btc_hdnode_deserialize(xPubKeyRequestKeyEntropy.c_str(), (testnet ? &btc_chain_test : &btc_chain_main), &node);
 
     memcpy(requestKey.privkey, node.public_key + 1, 32);
     std::vector<unsigned char> hash = DBB::ParseHex("26db47a48a10b9b0b697b793f5c0231aa35fe192c9d063d7b03a55e3c302850a");
@@ -422,7 +422,7 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
     jsonArgs.push_back(Pair("n", 1));
     jsonArgs.push_back(Pair("name", walletName));
     jsonArgs.push_back(Pair("pubKey", pubKeyHex));
-    jsonArgs.push_back(Pair("network", "testnet"));
+    jsonArgs.push_back(Pair("network", (testnet ? "testnet" : "livenet")));
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
@@ -568,6 +568,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
     if (httpStatusCode != 200)
         return false;
 
+    BP_LOG_MSG("Response: %s\n", response.c_str());
     return true;
 }
 
@@ -712,11 +713,11 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
 
     // flip output order after value given by the wallet server
     if (outputOrder.size() > 0 && outputOrder[0] == 1) {
-        btc_tx_add_address_out(tx, &btc_chain_test, changeAmount, changeAdr.c_str());
-        btc_tx_add_address_out(tx, &btc_chain_test, toAmount, toAddress.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
     } else {
-        btc_tx_add_address_out(tx, &btc_chain_test, toAmount, toAddress.c_str());
-        btc_tx_add_address_out(tx, &btc_chain_test, changeAmount, changeAdr.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
+        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
     }
 
 
@@ -1048,6 +1049,11 @@ bool BitPayWalletClient::IsSeeded()
     return false;
 }
 
+const std::string BitPayWalletClient::localDataFilename(const std::string& dataDir)
+{
+   return dataDir + "/" + (testnet ? "testnet_" : "" ) + filenameBase + ".dat";
+}
+
 void BitPayWalletClient::SaveLocalData()
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
@@ -1055,7 +1061,7 @@ void BitPayWalletClient::SaveLocalData()
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* writeFile = fopen((dataDir + "/" + filenameBase + ".dat").c_str(), "wb");
+    FILE* writeFile = fopen(localDataFilename(dataDir).c_str(), "wb");
     if (writeFile) {
         unsigned char header[2] = {0xAA, 0xF0};
         fwrite(header, 1, 2, writeFile);
@@ -1077,7 +1083,7 @@ void BitPayWalletClient::LoadLocalData()
 
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* fh = fopen((dataDir + "/" + filenameBase + ".dat").c_str(), "rb");
+    FILE* fh = fopen(localDataFilename(dataDir).c_str(), "rb");
 
     //TODO: better error handling, misses fclose!
     if (fh) {
@@ -1121,7 +1127,7 @@ void BitPayWalletClient::RemoveLocalData()
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     std::string dataDir = GetDefaultDBBDataDir();
-    remove((dataDir + "/" + filenameBase + ".dat").c_str());
+    remove(localDataFilename(dataDir).c_str());
     setNull();
 }
 
