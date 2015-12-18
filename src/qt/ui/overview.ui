@@ -221,7 +221,7 @@ background-color: rgba(240,240,240,255);
             <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <attribute name="horizontalHeaderVisible">
-            <bool>true</bool>
+            <bool>false</bool>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>true</bool>
@@ -1379,7 +1379,7 @@ background-color: rgba(0,0,0, 0%)</string>
      <string notr="true">background: rgba(255,255,255,210);</string>
     </property>
    </widget>
-   <widget class="QWidget" name="modalBlockerView" native="true">
+   <widget class="ModalView" name="modalBlockerView" native="true">
     <property name="enabled">
      <bool>true</bool>
     </property>
@@ -1391,209 +1391,6 @@ background-color: rgba(0,0,0, 0%)</string>
       <height>400</height>
      </rect>
     </property>
-    <property name="styleSheet">
-     <string notr="true"/>
-    </property>
-    <widget class="QWidget" name="modalBgWidget" native="true">
-     <property name="geometry">
-      <rect>
-       <x>0</x>
-       <y>0</y>
-       <width>480</width>
-       <height>400</height>
-      </rect>
-     </property>
-     <property name="styleSheet">
-      <string notr="true">background-color: rgba(0,0,0,240);</string>
-     </property>
-     <widget class="QLabel" name="modalInfoLabel">
-      <property name="geometry">
-       <rect>
-        <x>20</x>
-        <y>220</y>
-        <width>440</width>
-        <height>150</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">color: white;
-                       background-color: rgba(0,0,0, 0%)</string>
-      </property>
-      <property name="text">
-       <string>Unlocking Device...</string>
-      </property>
-      <property name="alignment">
-       <set>Qt::AlignHCenter|Qt::AlignTop</set>
-      </property>
-      <property name="wordWrap">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QPushButton" name="modalIcon">
-      <property name="enabled">
-       <bool>false</bool>
-      </property>
-      <property name="geometry">
-       <rect>
-        <x>0</x>
-        <y>0</y>
-        <width>480</width>
-        <height>200</height>
-       </rect>
-      </property>
-      <property name="text">
-       <string/>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>440</width>
-        <height>200</height>
-       </size>
-      </property>
-      <property name="flat">
-       <bool>true</bool>
-      </property>
-     </widget>
-     <widget class="QWidget" name="setPasswordWidget" native="true">
-      <property name="geometry">
-       <rect>
-        <x>40</x>
-        <y>40</y>
-        <width>400</width>
-        <height>300</height>
-       </rect>
-      </property>
-      <property name="styleSheet">
-       <string notr="true">background:rgba(0,0,0,0)</string>
-      </property>
-      <widget class="QWidget" name="verticalLayoutWidget_2">
-       <property name="geometry">
-        <rect>
-         <x>-1</x>
-         <y>-1</y>
-         <width>401</width>
-         <height>301</height>
-        </rect>
-       </property>
-       <layout class="QVBoxLayout" name="verticalLayout_6">
-        <property name="spacing">
-         <number>20</number>
-        </property>
-        <item>
-         <widget class="QLabel" name="passwordInfo">
-          <property name="styleSheet">
-           <string notr="true">color:white;</string>
-          </property>
-          <property name="text">
-           <string>This Digtial Bitbox is new and needs a password.</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLabel" name="setPasswordTitle">
-          <property name="font">
-           <font>
-            <pointsize>28</pointsize>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">color:white;
-                                   </string>
-          </property>
-          <property name="text">
-           <string>Choose a password</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="setPassword0">
-          <property name="font">
-           <font>
-            <pointsize>24</pointsize>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">background:white;
-                                       border:0px;
-                                       border-radius: 5px;
-                                       padding:4px;</string>
-          </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
-          </property>
-          <property name="placeholderText">
-           <string>password</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QLineEdit" name="setPassword1">
-          <property name="font">
-           <font>
-            <pointsize>24</pointsize>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">background:white;
-                                       border:0px;
-                                       border-radius: 5px;
-                                       padding:4px;</string>
-          </property>
-          <property name="echoMode">
-           <enum>QLineEdit::Password</enum>
-          </property>
-          <property name="placeholderText">
-           <string>repeate password</string>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <widget class="QPushButton" name="setPassword">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-            <horstretch>0</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="font">
-           <font>
-            <pointsize>20</pointsize>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
-          </property>
-          <property name="styleSheet">
-           <string notr="true">background:#777777;
-color:white;
-border:0px;
-border-radius: 5px;
-padding:4px;</string>
-          </property>
-          <property name="text">
-           <string>Set Password</string>
-          </property>
-          <property name="flat">
-           <bool>false</bool>
-          </property>
-         </widget>
-        </item>
-        <item>
-         <spacer name="setpasswordspacer">
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="sizeHint" stdset="0">
-           <size>
-            <width>20</width>
-            <height>40</height>
-           </size>
-          </property>
-         </spacer>
-        </item>
-       </layout>
-      </widget>
-     </widget>
-    </widget>
    </widget>
    <widget class="QPushButton" name="titlebar">
     <property name="geometry">
@@ -1671,6 +1468,13 @@ padding:4px;</string>
    </widget>
   </widget>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>ModalView</class>
+   <extends>QWidget</extends>
+   <header>modalview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
