@@ -1631,8 +1631,8 @@ padding:4px;</string>
    <zorder>sendButton</zorder>
    <zorder>mainSettingsButton</zorder>
    <zorder>activeArrow</zorder>
-   <zorder>blockerView</zorder>
    <zorder>menuBlocker</zorder>
+   <zorder>blockerView</zorder>
    <zorder>modalBlockerView</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar">
