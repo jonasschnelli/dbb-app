@@ -42,6 +42,28 @@ void QRCodeSequence::prevButton()
         showPage(currentPage-1);
 }
 
+void QRCodeSequence::setIconFromQRCode(QRcode *code, QIcon *icon, int width, int height)
+{
+    if (!icon)
+        return;
+
+    QImage myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);
+    myImage.fill(0xffffff);
+    unsigned char *p = code->data;
+    for (int y = 0; y < code->width; y++)
+    {
+        for (int x = 0; x < code->width; x++)
+        {
+            myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));
+            p++;
+        }
+    }
+
+    QPixmap pixMap = QPixmap::fromImage(myImage).scaled(width, height);
+    icon->addPixmap(pixMap, QIcon::Normal);
+    icon->addPixmap(pixMap, QIcon::Disabled);
+}
+
 void QRCodeSequence::showPage(int page)
 {
     if (page >= qrcodes.size())
@@ -50,23 +72,9 @@ void QRCodeSequence::showPage(int page)
     QRcode *code = qrcodes[page];
     if (code)
     {
-        QImage myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);
-        myImage.fill(0xffffff);
-        unsigned char *p = code->data;
-        for (int y = 0; y < code->width; y++)
-        {
-            for (int x = 0; x < code->width; x++)
-            {
-                myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));
-                p++;
-            }
-        }
-
-        QIcon qrCode;
-        QPixmap pixMap = QPixmap::fromImage(myImage).scaled(240, 240);
-        qrCode.addPixmap(pixMap, QIcon::Normal);
-        qrCode.addPixmap(pixMap, QIcon::Disabled);
-        ui->qrCode->setIcon(qrCode);
+        QIcon icon;
+        setIconFromQRCode(code, &icon);
+        ui->qrCode->setIcon(icon);
         ui->qrCode->setIconSize(QSize(ui->qrCode->width(), ui->qrCode->height()));
     }
 

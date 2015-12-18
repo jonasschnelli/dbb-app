@@ -232,6 +232,8 @@ private slots:
     //!show general modal info
     void showModalInfo(const QString &info, int helpType = 0);
     void updateModalInfo(const QString &info);
+    //!show QRCode in modal view
+    void updateModalWithQRCode(const QString& string);
     //!show a new Icon in the modal info
     void updateModalWithIconName(const QString& filename);
     void hideModalInfo();
@@ -251,6 +253,8 @@ private slots:
     void seedHardware();
 
     //== DBB USB / UTILS ==
+    //!show a QRCode of the current local IPv4 address
+    void showIPAddressQRCode();
     //!get a random number from the dbb
     void getRandomNumber();
     //!lock the device, disabled "backup", "verifypass" and "seed" command

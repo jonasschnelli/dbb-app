@@ -11,6 +11,7 @@
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
+#include <QNetworkInterface>
 #include <QSpacerItem>
 #include <QTimer>
 #include <QToolBar>
@@ -126,13 +127,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->mainSettingsButton->setStyleSheet(buttonCss);
     this->ui->multisigButton->setStyleSheet(msButtonCss);
 
-    this->ui->deviceNameKeyLabel->setStyleSheet(labelCSS);
-    this->ui->deviceNameLabel->setStyleSheet(labelCSS);
-    this->ui->versionKeyLabel->setStyleSheet(labelCSS);
-    this->ui->versionLabel->setStyleSheet(labelCSS);
-    this->ui->keypathLabel->setStyleSheet(labelCSS);
-    
-
 
     this->ui->balanceLabel->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     this->ui->singleWalletBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
@@ -166,6 +160,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
 
 
     // connect custom signals
@@ -673,6 +668,15 @@ void DBBDaemonGui::hideModalInfo()
     ui->modalBlockerView->showOrHide(false);
 }
 
+void DBBDaemonGui::updateModalWithQRCode(const QString& string)
+{
+    QRcode *code = QRcode_encodeString(string.toStdString().c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    QIcon icon;
+    QRCodeSequence::setIconFromQRCode(code, &icon, 120, 120);
+    ui->modalBlockerView->updateIcon(icon);
+    QRcode_free(code);
+}
+
 void DBBDaemonGui::updateModalWithIconName(const QString& filename)
 {
     QIcon newIcon;
@@ -683,20 +687,7 @@ void DBBDaemonGui::updateModalWithIconName(const QString& filename)
 
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
-//    this->ui->walletCheckmark->setIcon(QIcon(walletAvailable ? ":/icons/okay" : ":/icons/warning"));
-//    this->ui->walletLabel->setText(tr(walletAvailable ? "Wallet available" : "No Wallet"));
-//    this->ui->createWallet->setVisible(!walletAvailable);
-//
-//    this->ui->lockCheckmark->setIcon(QIcon(lockAvailable ? ":/icons/okay" : ":/icons/warning"));
-//    this->ui->lockLabel->setText(lockAvailable ? "Device 2FA Lock" : "No 2FA set");
-//
-//    if (loading) {
-//        this->ui->lockLabel->setText("loading info...");
-//        this->ui->walletLabel->setText("loading info...");
-//
-//        this->ui->walletCheckmark->setIcon(QIcon(":/icons/warning")); //TODO change to loading...
-//        this->ui->lockCheckmark->setIcon(QIcon(":/icons/warning"));   //TODO change to loading...
-//    }
+
 }
 
 /*
@@ -774,6 +765,16 @@ DBB Utils
 */
 #pragma mark DBB Utils
 
+void DBBDaemonGui::showIPAddressQRCode()
+{
+    QString ipAddress;
+    foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
+        if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost))
+            ipAddress = QString(address.toString());
+    }
+    showModalInfo(tr("Your IP Address:")+" "+ipAddress, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    updateModalWithQRCode(ipAddress);
+}
 void DBBDaemonGui::getRandomNumber()
 {
     executeCommandWrapper("{\"random\" : \"true\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1072,10 +1073,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 bool lockAvailable = lock.isTrue();
 
+                //update version and name
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
+
+                foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
+                    if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost))
+                        this->ui->IPAddress->setText(address.toString());
+                }
+
+                this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
                 updateOverviewFlags(cachedWalletAvailableState, lockAvailable, false);
 
