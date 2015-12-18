@@ -568,6 +568,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
     if (httpStatusCode != 200)
         return false;
 
+    BP_LOG_MSG("Response: %s\n", response.c_str());
     return true;
 }
 
@@ -1048,6 +1049,11 @@ bool BitPayWalletClient::IsSeeded()
     return false;
 }
 
+const std::string BitPayWalletClient::localDataFilename(const std::string& dataDir)
+{
+   return dataDir + "/" + (testnet ? "testnet_" : "" ) + filenameBase + ".dat";
+}
+
 void BitPayWalletClient::SaveLocalData()
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
@@ -1055,7 +1061,7 @@ void BitPayWalletClient::SaveLocalData()
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* writeFile = fopen((dataDir + "/" + filenameBase + ".dat").c_str(), "wb");
+    FILE* writeFile = fopen(localDataFilename(dataDir).c_str(), "wb");
     if (writeFile) {
         unsigned char header[2] = {0xAA, 0xF0};
         fwrite(header, 1, 2, writeFile);
@@ -1077,7 +1083,7 @@ void BitPayWalletClient::LoadLocalData()
 
     std::string dataDir = GetDefaultDBBDataDir();
     CreateDir(dataDir.c_str());
-    FILE* fh = fopen((dataDir + "/" + filenameBase + ".dat").c_str(), "rb");
+    FILE* fh = fopen(localDataFilename(dataDir).c_str(), "rb");
 
     //TODO: better error handling, misses fclose!
     if (fh) {
@@ -1121,7 +1127,7 @@ void BitPayWalletClient::RemoveLocalData()
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     std::string dataDir = GetDefaultDBBDataDir();
-    remove((dataDir + "/" + filenameBase + ".dat").c_str());
+    remove(localDataFilename(dataDir).c_str());
     setNull();
 }
 

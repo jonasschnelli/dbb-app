@@ -79,8 +79,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               walletUpdateTimer(0)
 {
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
-
     ui->setupUi(this);
+
+    //testnet/mainnet switch
+    if (DBB::mapArgs.count("-testnet"))
+        DBB_USE_TESTNET = true;
 
 /////////// UI Styling
 #if defined(Q_OS_MAC)
@@ -203,7 +206,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
     //: translation: window title
-    setWindowTitle(tr("The Digital Bitbox"));
+    setWindowTitle(tr("The Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
 
     statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
@@ -288,9 +291,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
 
     //create the single and multisig wallet
-    singleWallet = new DBBWallet();
-    singleWallet->setBaseKeypath("m/203'/45'");
-    DBBWallet* copayWallet = new DBBWallet();
+    singleWallet = new DBBWallet(DBB_USE_TESTNET);
+    singleWallet->setBaseKeypath(DBB_USE_TESTNET ? "m/100203'/45'" : "m/203'/45'");
+    DBBWallet* copayWallet = new DBBWallet(DBB_USE_TESTNET);
+    copayWallet->setBaseKeypath("m/103'/45'");
     vMultisigWallets.push_back(copayWallet);
 
 

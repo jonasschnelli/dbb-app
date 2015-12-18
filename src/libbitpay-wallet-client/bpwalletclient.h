@@ -153,6 +153,9 @@ public:
     //!returns true in case of an available xpub/request key
     bool IsSeeded();
 
+    //!local filename (absolute)
+    const std::string localDataFilename(const std::string& dataDir);
+
     //!store local data (xpub key, request key, etc.)
     void SaveLocalData();
 
@@ -173,7 +176,7 @@ public:
 private:
     std::recursive_mutex cs_client;
 
-    bool testnet;
+    const bool testnet;
     std::string masterPrivKey; // "m/45'"
     std::string masterPubKey;  // "m/45'"
     btc_key requestKey;        //"m/1'/0"
