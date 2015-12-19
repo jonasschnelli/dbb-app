@@ -5,7 +5,9 @@
 #ifndef DBB_MODALVIEW_H
 #define DBB_MODALVIEW_H
 
+#include <QKeyEvent>
 #include <QWidget>
+
 #include "ui/ui_modalview.h"
 
 class ModalView : public QWidget
@@ -28,6 +30,10 @@ public slots:
     void cleanse();
     void setText(const QString& text);
     void updateIcon(const QIcon& icon);
+protected:
+    virtual void keyPressEvent(QKeyEvent *event);
+private:
+    bool visible;
 };
 
 
