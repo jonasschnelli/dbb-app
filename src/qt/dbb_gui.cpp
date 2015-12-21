@@ -1469,7 +1469,8 @@ void DBBDaemonGui::createTxProposalPressed()
     if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
         return showAlert("Error", "Invalid amount");
 
-    //TODO, check address
+    this->ui->sendToAddress->clearFocus();
+    this->ui->sendAmount->clearFocus();
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, amount]() {
         UniValue proposalOut;
@@ -1479,22 +1480,26 @@ void DBBDaemonGui::createTxProposalPressed()
 
         if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
             emit changeNetLoading(false);
+            emit shouldHideModalInfo();
             emit shouldShowAlert("Error", QString::fromStdString(errorOut));
         }
         else
         {
             emit changeNetLoading(false);
+            emit shouldHideModalInfo();
             emit createTxProposalDone(singleWallet, proposalOut);
         }
 
         thread->completed();
     });
     setNetLoading(true);
+    showModalInfo(tr("Creating Transaction"));
 }
 
 void DBBDaemonGui::reportPaymentProposalPost(DBBWallet* wallet, const UniValue& proposal)
 {
-    QMessageBox::information(this, tr("Success"), tr("Transaction was sent successfully"), QMessageBox::Ok);
+    showModalInfo(tr("Transaction was sent successfully"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    //QMessageBox::information(this, tr("Success"), tr("Transaction was sent successfully"), QMessageBox::Ok);
 }
 
 void DBBDaemonGui::joinCopayWalletClicked()
@@ -1604,6 +1609,8 @@ void DBBDaemonGui::joinCopayWalletComplete(DBBWallet *wallet)
     getNewAddress();
     updateWallet(wallet);
     hideModalInfo();
+    if (walletUpdateTimer && !walletUpdateTimer->isActive())
+        walletUpdateTimer->start(WALLET_POLL_TIME);
 }
 
 void DBBDaemonGui::hidePaymentProposalsWidget()
@@ -1938,6 +1945,8 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     UniValue changeAddressData;
     wallet->client.ParseTxProposal(paymentProposal, changeAddressData, serTx, inputHashesAndPaths);
 
+    showModalInfo(tr("Start Signing Process"));
+
     //build sign command
     std::string hashCmd;
     for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
@@ -1998,6 +2007,7 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                 if (errorMessageObj.isStr())
                     emit shouldShowAlert("Error", QString::fromStdString(errorMessageObj.get_str()));
 
+                emit shouldHideModalInfo();
                 emit shouldHideVerificationInfo();
             }
             else
@@ -2017,7 +2027,6 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                                 //client.BroadcastProposal(values[0]);
                             }
                         }
-
 
                         emit shouldHideVerificationInfo();
                         emit signedProposalAvailable(wallet, paymentProposal, sigs);
@@ -2039,7 +2048,10 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
         else
         {
             if (!wallet->client.BroadcastProposal(proposal))
+            {
+                emit shouldHideModalInfo();
                 emit shouldShowAlert("Error", tr("Could not broadcast transaction"));
+            }
             else
             {
                 //sleep 3 seconds to get time for the wallet server to process the transaction and response with the correct balance
@@ -2052,6 +2064,7 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
 
         thread->completed();
     });
+    showModalInfo(tr("Broadcast Transaction"));
     setNetLoading(true);
 }
 
