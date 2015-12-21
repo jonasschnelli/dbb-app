@@ -176,7 +176,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 
     ui->twoFACode->setVisible(twoFAlocked);
     ui->qrCodeSequence->setData(txEcho);
-    ui->showDetailsButton->setVisible(!showQRSqeuence);
+    ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification Code"));
 
 }
