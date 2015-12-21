@@ -41,6 +41,8 @@ void WebsocketServer::onNewConnection()
     connect(pSocket, &QWebSocket::disconnected, this, &WebsocketServer::socketDisconnected);
 
     m_clients << pSocket;
+
+    emit amountOfConnectionsChanged(m_clients.count());
 }
 
 void WebsocketServer::sendDataToClientInECDHParingState(const UniValue &data)
@@ -116,5 +118,6 @@ void WebsocketServer::socketDisconnected()
     if (pClient) {
         m_clients.removeAll(pClient);
         pClient->deleteLater();
+        emit amountOfConnectionsChanged(m_clients.count());
     }
 }

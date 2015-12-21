@@ -212,6 +212,17 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->statusBarButton->setVisible(false);
     statusBar()->addWidget(this->statusBarButton);
 
+    QIcon vDeviceIcon;
+    vDeviceIcon.addPixmap(QPixmap(":/icons/devicephone"), QIcon::Normal);
+    vDeviceIcon.addPixmap(QPixmap(":/icons/devicephone"), QIcon::Disabled);
+    this->statusBarVDeviceIcon = new QPushButton(vDeviceIcon, "");
+    this->statusBarVDeviceIcon->setEnabled(false);
+    this->statusBarVDeviceIcon->setFlat(true);
+    this->statusBarVDeviceIcon->setMaximumWidth(18);
+    this->statusBarVDeviceIcon->setMaximumHeight(18);
+    this->statusBarVDeviceIcon->setVisible(false);
+    this->statusBarVDeviceIcon->setToolTip(tr("Verification Devices"));
+
     QIcon netActivityIcon;
     netActivityIcon.addPixmap(QPixmap(":/icons/netactivity"), QIcon::Normal);
     netActivityIcon.addPixmap(QPixmap(":/icons/netactivity"), QIcon::Disabled);
@@ -239,6 +250,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     statusBar()->addWidget(this->statusBarLabelLeft);
 
     this->statusBarLabelRight = new QLabel("");
+    statusBar()->addPermanentWidget(this->statusBarVDeviceIcon);
     statusBar()->addPermanentWidget(this->statusBarNetIcon);
     statusBar()->addPermanentWidget(this->statusBarUSBIcon);
     if (!netActivityAnimation) {
@@ -306,6 +318,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //create a local websocket server
     websocketServer = new WebsocketServer(WEBSOCKET_PORT, false);
     connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
+    connect(websocketServer, SIGNAL(amountOfConnectionsChanged(int)), this, SLOT(amountOfPairingDevicesChanged(int)));
 
     //announce service over mDNS
     bonjourRegister = new BonjourServiceRegister(this);
@@ -2081,4 +2094,10 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFYPASS_ECDH);
     });
     showModalInfo("Pairing Verification Device");
+}
+
+void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
+{
+    this->statusBarVDeviceIcon->setToolTip(tr("%1 Verification Device(s) Connected").arg(amountOfClients));
+    this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
 }

@@ -27,6 +27,7 @@ Q_SIGNALS:
     void closed();
     void ecdhPairingRequest(const std::string &pubkey);
     void ecdhPairingRequestAbort();
+    void amountOfConnectionsChanged(int);
     
 private Q_SLOTS:
     void onNewConnection();
