@@ -24,6 +24,7 @@
         <file alias="titlebardark">res/titlebar_d_divider.png</file>
         <file alias="statusbar">res/statusbar.png</file>
         <file alias="qrcode">res/qrcode.png</file>
+        <file alias="devicephone">res/device-phone.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>

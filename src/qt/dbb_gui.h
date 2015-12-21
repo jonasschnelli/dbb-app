@@ -142,6 +142,7 @@ private:
     QLabel* statusBarLabelLeft;
     QLabel* statusBarLabelRight;
     QPushButton* statusBarButton;
+    QPushButton* statusBarVDeviceIcon;
     QPushButton* statusBarNetIcon;
     QPushButton* statusBarUSBIcon;
     bool upgradeFirmwareState; //set to true if we expect a firmware upgrade
@@ -335,6 +336,7 @@ private slots:
     //== ECDH Pairing ==
     //!send a ecdh pairing request with pubkey to the DBB
     void sendECDHPairingRequest(const std::string &pubkey);
+    void amountOfPairingDevicesChanged(int amountOfClients);
 };
 
 #endif
