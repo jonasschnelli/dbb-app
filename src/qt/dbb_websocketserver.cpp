@@ -58,7 +58,7 @@ int WebsocketServer::sendStringToAllClients(const std::string &data)
 {
     for( int i=0; i<m_clients.count(); ++i )
     {
-        QWebSocket *pClient = m_clients[0];
+        QWebSocket *pClient = m_clients[i];
         pClient->sendTextMessage(QString::fromStdString(data));
     }
     return m_clients.count();
