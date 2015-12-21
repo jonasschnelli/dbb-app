@@ -773,7 +773,7 @@ void DBBDaemonGui::showIPAddressQRCode()
             ipAddress = QString(address.toString());
     }
     showModalInfo(tr("Your IP Address:")+" "+ipAddress, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
-    updateModalWithQRCode("{\"ip:\":\""+ipAddress+"\"}");
+    updateModalWithQRCode("{\"ip\":\""+ipAddress+"\"}");
 }
 void DBBDaemonGui::getRandomNumber()
 {
