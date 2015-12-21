@@ -4,9 +4,12 @@
 
 #include "modalview.h"
 
-#include "dbb_gui.h"
+#include <QMessageBox>
 
-ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView)
+#include "dbb_gui.h"
+#include "dbb_util.h"
+
+ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), txPointer(0)
 {
     ui->setupUi(this);
 
@@ -14,7 +17,9 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView)
     connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
     connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
 
-    connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(showOrHide()));
+    connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
+    connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
+    connect(this->ui->twoFACode, SIGNAL(returnPressed()), this, SLOT(twoFACodeReturnPressed()));
     visible = false;
 }
 
@@ -81,6 +86,9 @@ void ModalView::showModalInfo(const QString &info, int helpType)
 
     ui->setPasswordWidget->setVisible(false);
     ui->okButton->setVisible(false);
+    ui->twoFACode->setVisible(false);
+    ui->qrCodeSequence->setVisible(false);
+    ui->showDetailsButton->setVisible(false);
 
     ui->modalInfoLabel->setText(info);
     QWidget* slide = this;
@@ -136,6 +144,98 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start(QAbstractAnimation::DeleteWhenStopped);
+}
+
+void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuence)
+{
+    QString longString;
+
+    longString += "Do you want to send ";
+
+    UniValue amountUni = find_value(txData, "amount");
+    if (amountUni.isNum())
+    {
+        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+" BTC</strong>";
+    }
+
+    UniValue toAddressUni = find_value(txData, "toAddress");
+    if (toAddressUni.isStr())
+    {
+        longString += " to <strong>"+QString::fromStdString(toAddressUni.get_str())+"</strong>";
+    }
+
+
+
+    UniValue feeUni = find_value(txData, "fee");
+    if (feeUni.isNum())
+    {
+        longString += " with an additional fee of <strong>" + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()))+" BTC</strong>";
+    }
+
+    showModalInfo(longString, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+
+    ui->twoFACode->setVisible(twoFAlocked);
+    ui->qrCodeSequence->setData(txEcho);
+    ui->showDetailsButton->setVisible(!showQRSqeuence);
+    ui->showDetailsButton->setText(tr("Show Verification Code"));
+
+}
+
+void ModalView::detailButtonAction()
+{
+    if (ui->qrCodeSequence->isVisible())
+    {
+        ui->showDetailsButton->setText(tr("Show Verification Code"));
+        ui->qrCodeSequence->setVisible(false);
+
+        QIcon newIcon;
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Normal);
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Disabled);
+        ui->modalIcon->setIcon(newIcon);
+    }
+    else
+    {
+        ui->showDetailsButton->setText(tr("Hide Verification Code"));
+        ui->qrCodeSequence->setVisible(true);
+        ui->modalIcon->setIcon(QIcon());
+    }
+}
+
+void ModalView::twoFACodeReturnPressed()
+{
+    if (ui->twoFACode->text().size() == 0)
+    {
+        QMessageBox::warning(this, tr(""), tr("Enter the 2FA Code first"), QMessageBox::Ok);
+        return;
+    }
+
+    if (txPointer)
+    {
+        ui->twoFACode->setText("");
+        ui->twoFACode->setVisible(false);
+        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
+    }
+}
+
+void ModalView::okButtonAction()
+{
+    showOrHide();
+}
+
+void ModalView::setTXVerificationData(void *info, const UniValue& data, const std::string& echo, int type)
+{
+    txPointer = info;
+    txData = data;
+    txEcho = echo;
+    txType = type;
+}
+
+void ModalView::clearTXData()
+{
+    txPointer = NULL;
+    txData = UniValue(UniValue::VNULL);
+    txEcho.clear();
+    txType = 0;
 }
 
 void ModalView::updateIcon(const QIcon& icon)
