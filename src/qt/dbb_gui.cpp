@@ -67,11 +67,13 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               deviceConnected(0),
                                               deviceReadyToInteract(0),
                                               cachedWalletAvailableState(0),
+                                              cachedDeviceLock(0),
                                               currentPaymentProposalWidget(0),
                                               signConfirmationDialog(0),
                                               loginScreenIndicatorOpacityAnimation(0),
                                               netActivityAnimation(0),
                                               usbActivityAnimation(0),
+                                              verificationActivityAnimation(0),
                                               sdcardWarned(0),
                                               fwUpgradeThread(0),
                                               upgradeFirmwareState(0),
@@ -281,6 +283,19 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
         usbActivityAnimation->setLoopCount(-1);
         usbActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
     }
+    if (!verificationActivityAnimation) {
+        QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
+        this->statusBarVDeviceIcon->setGraphicsEffect(eff);
+
+        verificationActivityAnimation = new QPropertyAnimation(eff, "opacity");
+
+        verificationActivityAnimation->setDuration(150);
+        verificationActivityAnimation->setKeyValueAt(0, 1.0);
+        verificationActivityAnimation->setKeyValueAt(0.5, 0.3);
+        verificationActivityAnimation->setKeyValueAt(1, 1.0);
+        verificationActivityAnimation->setLoopCount(8);
+    }
+
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
@@ -294,6 +309,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //set password screen
     connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, bool)));
+    connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
 
     //create the single and multisig wallet
     singleWallet = new DBBWallet(DBB_USE_TESTNET);
@@ -443,6 +459,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         setTabbarEnabled(false);
         deviceReadyToInteract = false;
         cachedWalletAvailableState = false;
+        cachedDeviceLock = false;
         //hide modal dialog and abort possible ecdh pairing
         hideModalInfo();
         if (websocketServer)
@@ -549,16 +566,34 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
-    if (!signConfirmationDialog) {
-        signConfirmationDialog = new SignConfirmationDialog(0);
+
+    int amountOfClientsInformed = 0;
+    if (websocketServer)
+    {
+        amountOfClientsInformed = websocketServer->sendStringToAllClients(echoStr);
+        if (amountOfClientsInformed > 0)
+            verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
     }
 
-    if (websocketServer)
-        websocketServer->sendStringToAllClients(echoStr);
+    ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
+    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (amountOfClientsInformed == 0));
 
-    signConfirmationDialog->setData(proposalData);
-    signConfirmationDialog->show();
+    if (!cachedDeviceLock)
+    {
+        PaymentProposalAction(wallet, proposalData, actionType);
+        ui->modalBlockerView->clearTXData();
+    }
+    else
+        updateModalWithIconName(":/icons/twofahelp");
+}
+
+void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, const UniValue& proposalData, int actionType)
+{
+    updateModalWithIconName(":/icons/touchhelp");
+
+    DBBWallet *wallet = (DBBWallet *)ptr;
     PaymentProposalAction(wallet, proposalData, actionType);
+    ui->modalBlockerView->clearTXData();
 }
 
 void DBBDaemonGui::hideVerificationInfo()
@@ -567,7 +602,6 @@ void DBBDaemonGui::hideVerificationInfo()
         signConfirmationDialog->hide();
     }
 }
-
 
 void DBBDaemonGui::passwordProvided()
 {
@@ -1083,8 +1117,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue bootlock = find_value(deviceObj, "bootlock");
                 UniValue walletIDUV = find_value(deviceObj, "id");
                 cachedWalletAvailableState = seeded.isTrue();
-
-                bool lockAvailable = lock.isTrue();
+                cachedDeviceLock = lock.isTrue();
 
                 //update version and name
                 if (version.isStr())
@@ -1099,7 +1132,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
-                updateOverviewFlags(cachedWalletAvailableState, lockAvailable, false);
+                updateOverviewFlags(cachedWalletAvailableState, cachedDeviceLock, false);
 
                 bool shouldCreateSingleWallet = false;
                 if (cachedWalletAvailableState && walletIDUV.isStr())
@@ -1267,8 +1300,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
                     responseMutable.pushKV("type", "p2pkh");
-                if (websocketServer->sendStringToAllClients(responseMutable.write()))
+                if (websocketServer->sendStringToAllClients(responseMutable.write()) > 0)
+                {
                     sentToWebsocketClients = true;
+                    verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+                }
 
 
 
@@ -1499,7 +1535,7 @@ void DBBDaemonGui::createTxProposalPressed()
         else
         {
             emit changeNetLoading(false);
-            emit shouldHideModalInfo();
+            emit shouldUpdateModalInfo(tr("Start Signing Process"));
             emit createTxProposalDone(singleWallet, proposalOut);
         }
 
@@ -1957,8 +1993,6 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     std::string serTx;
     UniValue changeAddressData;
     wallet->client.ParseTxProposal(paymentProposal, changeAddressData, serTx, inputHashesAndPaths);
-
-    showModalInfo(tr("Start Signing Process"));
 
     //build sign command
     std::string hashCmd;

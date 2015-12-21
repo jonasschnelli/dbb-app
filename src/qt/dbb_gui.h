@@ -152,11 +152,13 @@ private:
     bool processCommand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    bool cachedDeviceLock;
     bool deviceReadyToInteract;
     bool touchButtonInfo;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
     QPropertyAnimation* netActivityAnimation;
     QPropertyAnimation* usbActivityAnimation;
+    QPropertyAnimation* verificationActivityAnimation;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
@@ -224,6 +226,8 @@ private slots:
     void gotoSettingsPage();
     //!shows info about the smartphone verification
     void showEchoVerification(DBBWallet*, const UniValue& response, int actionType, const std::string& echoStr);
+    //!proceed with the signing (2nd step)
+    void proceedVerification(const QString& twoFACode, void *ptr, const UniValue& data, int actionType);
     //!hides verification info
     void hideVerificationInfo();
     //!gets called when the user hits enter in the "enter password form"
