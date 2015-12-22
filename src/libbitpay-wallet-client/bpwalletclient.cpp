@@ -427,7 +427,7 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
 
     long httpStatusCode = 0;
     std::string response;
-    if (!SendRequest("post", "/v1/wallets/", json, response, httpStatusCode))
+    if (!SendRequest("post", "/v2/wallets/", json, response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)
@@ -480,7 +480,7 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletI
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
-    if (SendRequest("post", "/v1/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode))
+    if (SendRequest("post", "/v2/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode))
         return false;
 
     std::string getWalletsResponse;
@@ -546,7 +546,7 @@ bool BitPayWalletClient::GetWallets(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    if (!SendRequest("get", "/v1/wallets/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+    if (!SendRequest("get", "/v2/wallets/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)
@@ -615,7 +615,10 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
     UniValue inputsObj = find_value(txProposal, "inputs");
     std::vector<UniValue> inputs = inputsObj.getValues();
 
+    UniValue addressTypeUni = find_value(txProposal, "addressType");
+
     for (i = 0; i < inputs.size(); i++) {
+
         UniValue aInput = inputs[i];
         std::vector<std::string> keys = aInput.getKeys();
         std::vector<UniValue> values = aInput.getValues();
@@ -652,11 +655,15 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             }
         }
 
-        cstring* script = cstr_new_sz(1024); //create P2SH, MS
-        btc_script_append_op(script, OP_0);  //multisig workaround
+        // reverse txid and parse hex
+        std::vector<unsigned char> aHash = DBB::ParseHex(ReversePairs(txId));
 
+        // add the input to the tx
+        btc_tx_in* txin = btc_tx_in_new();
+        memcpy(txin->prevout.hash, &aHash[0], 32);
+        txin->prevout.n = nInput;
 
-        vector* v_pubkeys = vector_new(3, NULL);
+        vector* v_pubkeys = vector_new(3, free);
         int k;
         for (k = 0; k < publicKeys.size(); k++) {
             btc_pubkey* pubkey = (btc_pubkey*)malloc(sizeof(btc_pubkey));
@@ -669,32 +676,70 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             vector_add(v_pubkeys, pubkey);
         }
 
-        cstring* msscript = cstr_new_sz(1024); //create multisig script
-        btc_script_build_multisig(msscript, requiredSignatures, v_pubkeys);
+        if (addressTypeUni.isStr() && addressTypeUni.get_str() == "P2PKH")
+        {
+            cstring* script = cstr_new_sz(1024); //create P2PKH
+            btc_script_append_op(script, OP_DUP);
+            btc_script_append_op(script, OP_HASH160);
+
+            if (v_pubkeys->len == 1)
+            {
+                btc_pubkey* pubkey = (btc_pubkey *)vector_idx(v_pubkeys, 0);
+                uint8_t hash160[20];
+                btc_pubkey_get_hash160(pubkey, hash160);
+                btc_script_append_pushdata(script, (unsigned char*)hash160, 20);
+            }
+
+            btc_script_append_op(script, OP_EQUALVERIFY);
+            btc_script_append_op(script, OP_CHECKSIG);
+
+            std::vector<unsigned char> vScript(script->len);
+            vScript.assign(script->str, script->str + script->len);
+            path.erase(0, 2); //remove m/ from path
+            inputsScriptAndPath.push_back(std::make_pair(path, vScript));
+
+            txin->script_sig = cstr_new_sz(script->len);
+            cstr_append_buf(txin->script_sig, script->str, script->len);
+            
+            vector_add(tx->vin, txin);
+            cstr_free(script, true);
+        }
+        else
+        {
+            //assume P2SH / n-of-m
+
+            cstring* script = cstr_new_sz(1024); //create P2SH, MS
+            btc_script_append_op(script, OP_0);  //multisig workaround
+
+            cstring* msscript = cstr_new_sz(1024); //create multisig script
+            btc_script_build_multisig(msscript, requiredSignatures, v_pubkeys);
+
+            // append script for P2SH / OP_0
+            btc_script_append_pushdata(script, (unsigned char*)msscript->str, msscript->len);
+
+            // store the script for later sighash operations
+            std::vector<unsigned char> msP2SHScript(msscript->len);
+            msP2SHScript.assign(msscript->str, msscript->str + msscript->len);
+            cstr_free(msscript, true);
+            path.erase(0, 2); //remove m/ from path
+            inputsScriptAndPath.push_back(std::make_pair(path, msP2SHScript));
+
+            // reverse txid and parse hex
+            std::vector<unsigned char> aHash = DBB::ParseHex(ReversePairs(txId));
+
+            // add the input to the tx
+            btc_tx_in* txin = btc_tx_in_new();
+            memcpy(txin->prevout.hash, &aHash[0], 32);
+            txin->prevout.n = nInput;
+            txin->script_sig = cstr_new_sz(script->len);
+            cstr_append_buf(txin->script_sig, script->str, script->len);
+            vector_add(tx->vin, txin);
+
+            cstr_free(script, true);
+        }
+
+        //free pubkey vector
         vector_free(v_pubkeys, true);
-
-        // append script for P2SH / OP_0
-        btc_script_append_pushdata(script, (unsigned char*)msscript->str, msscript->len);
-
-        // store the script for later sighash operations
-        std::vector<unsigned char> msP2SHScript(msscript->len);
-        msP2SHScript.assign(msscript->str, msscript->str + msscript->len);
-        cstr_free(msscript, true);
-        path.erase(0, 2); //remove m/ from path
-        inputsScriptAndPath.push_back(std::make_pair(path, msP2SHScript));
-
-        // reverse txid and parse hex
-        std::vector<unsigned char> aHash = DBB::ParseHex(ReversePairs(txId));
-
-        // add the input to the tx
-        btc_tx_in* txin = btc_tx_in_new();
-        memcpy(txin->prevout.hash, &aHash[0], 32);
-        txin->prevout.n = nInput;
-        txin->script_sig = cstr_new_sz(script->len);
-        cstr_append_buf(txin->script_sig, script->str, script->len);
-        vector_add(tx->vin, txin);
-
-        cstr_free(script, true);
     }
 
     // find out change address
@@ -725,6 +770,7 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
     btc_tx_serialize(txser, tx);
     serTx = DBB::HexStr((unsigned char*)txser->str, (unsigned char*)txser->str + txser->len);
     BP_LOG_MSG("\n\nhextx: %s\n\n", serTx.c_str());
+    cstr_free(txser, true);
     int cnt = 0;
 
     for (cnt = 0; cnt < tx->vin->len; cnt++) {
