@@ -252,9 +252,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     statusBar()->addWidget(this->statusBarLabelLeft);
 
     this->statusBarLabelRight = new QLabel("");
-    statusBar()->addPermanentWidget(this->statusBarVDeviceIcon);
     statusBar()->addPermanentWidget(this->statusBarNetIcon);
     statusBar()->addPermanentWidget(this->statusBarUSBIcon);
+    statusBar()->addPermanentWidget(this->statusBarVDeviceIcon);
     if (!netActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
         this->statusBarNetIcon->setGraphicsEffect(eff);
@@ -1462,6 +1462,7 @@ void DBBDaemonGui::verifyAddress()
 {
     getXPub(ui->keypathLabel->text().toStdString(), DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_P2PKH);
 }
+
 void DBBDaemonGui::getXPub(const std::string& keypath,  dbb_response_type_t response_type, dbb_address_style_t address_type)
 {
     executeCommandWrapper("{\"xpub\":\"" + keypath + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this,response_type,address_type](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
