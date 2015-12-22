@@ -1734,7 +1734,7 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     }
 
     //TODO, add a monetary amount / unit helper function
-    this->ui->multisigBalance->setText(tr("%1 Bits").arg(vMultisigWallets[0]->totalBalance));
+    this->ui->multisigBalance->setText(QString::fromStdString(DBB::formatMoney(vMultisigWallets[0]->totalBalance)));
     this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
 }
 
@@ -1746,8 +1746,8 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
 
     QString balance = QString::fromStdString(DBB::formatMoney(singleWallet->totalBalance));
 
-    this->ui->balanceLabel->setText(tr("%1 BTC").arg(balance));
-    this->ui->singleWalletBalance->setText(tr("%1 BTC").arg(balance));
+    this->ui->balanceLabel->setText(balance);
+    this->ui->singleWalletBalance->setText(balance);
 }
 
 void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue &history)
@@ -1788,7 +1788,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         UniValue amountUV = find_value(obj, "amount");
         if (amountUV.isNum())
         {
-            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())) + " BTC" );
+            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())));
             transactionTableModel->setItem(cnt, 2, item);
         }
 

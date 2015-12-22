@@ -155,7 +155,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     UniValue amountUni = find_value(txData, "amount");
     if (amountUni.isNum())
     {
-        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+" BTC</strong>";
+        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+"</strong>";
     }
 
     UniValue toAddressUni = find_value(txData, "toAddress");
@@ -169,7 +169,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     UniValue feeUni = find_value(txData, "fee");
     if (feeUni.isNum())
     {
-        longString += " with an additional fee of <strong>" + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()))+" BTC</strong>";
+        longString += " with an additional fee of <strong>" + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()))+"</strong>";
     }
 
     showModalInfo(longString, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);

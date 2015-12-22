@@ -21,13 +21,13 @@
    </property>
    <layout class="QVBoxLayout" name="verticalLayout">
     <property name="spacing">
-     <number>5</number>
+     <number>0</number>
     </property>
     <property name="leftMargin">
-     <number>5</number>
+     <number>3</number>
     </property>
     <property name="rightMargin">
-     <number>5</number>
+     <number>3</number>
     </property>
     <item>
      <layout class="QHBoxLayout" name="horizontalLayout">
@@ -84,28 +84,65 @@
       </property>
       <item>
        <widget class="QLabel" name="amountLabelKey">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>Amount</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
       <item>
        <widget class="QLabel" name="amountLabel">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Preferred" vsizetype="Maximum">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
         <property name="text">
          <string>0.0</string>
         </property>
        </widget>
       </item>
+     </layout>
+    </item>
+    <item>
+     <layout class="QHBoxLayout" name="horizontalLayout_2">
+      <property name="leftMargin">
+       <number>5</number>
+      </property>
       <item>
        <widget class="QLabel" name="feeLabelKey">
+        <property name="sizePolicy">
+         <sizepolicy hsizetype="Maximum" vsizetype="Preferred">
+          <horstretch>0</horstretch>
+          <verstretch>0</verstretch>
+         </sizepolicy>
+        </property>
+        <property name="minimumSize">
+         <size>
+          <width>100</width>
+          <height>0</height>
+         </size>
+        </property>
         <property name="text">
          <string>Fee</string>
         </property>
         <property name="alignment">
-         <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
         </property>
        </widget>
       </item>
@@ -124,7 +161,7 @@
        <widget class="QPushButton" name="arrowLeft">
         <property name="maximumSize">
          <size>
-          <width>30</width>
+          <width>50</width>
           <height>16777215</height>
          </size>
         </property>
@@ -167,7 +204,7 @@
        <widget class="QPushButton" name="arrowRight">
         <property name="maximumSize">
          <size>
-          <width>30</width>
+          <width>50</width>
           <height>16777215</height>
          </size>
         </property>

@@ -29,25 +29,19 @@ void SignConfirmationDialog::setData(const UniValue &dataIn)
     UniValue amountUni = find_value(data, "amount");
     if (amountUni.isNum())
     {
-        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+" BTC</strong>";
-
-        //this->ui->amountLabel->setText(QString::number(amountUni.get_int()));
+        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+"</strong>";
     }
 
     UniValue toAddressUni = find_value(data, "toAddress");
     if (toAddressUni.isStr())
     {
         longString += " to <strong>"+QString::fromStdString(toAddressUni.get_str())+"</strong>";
-        //this->ui->toLabel->setText(QString::fromStdString(toAddressUni.get_str()));
     }
-
-
 
     UniValue feeUni = find_value(data, "fee");
     if (feeUni.isNum())
     {
         longString += " with an additional fee of <strong>" + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()))+" BTC</strong>";
-        //this->ui->feeLabel->setText(QString::number(feeUni.get_int()));
     }
 
     ui->longTextLabel->setText(longString);
