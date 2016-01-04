@@ -37,5 +37,9 @@
     <file alias="BebasNeue-Thin">res/fonts/BebasNeue-Thin.ttf</file>
     <file alias="BebasNeue-Regular">res/fonts/BebasNeue-Regular.ttf</file>
     <file alias="BebasKai-Regular">res/fonts/BebasKai-Regular.ttf</file>
+    <file alias="SourceSansPro-Bold">res/fonts/SourceSansPro-Bold.ttf</file>
+    <file alias="SourceSansPro-Black">res/fonts/SourceSansPro-Black.ttf</file>
+    <file alias="SourceSansPro-Light">res/fonts/SourceSansPro-Light.ttf</file>
+    <file alias="SourceSansPro-ExtraLight">res/fonts/SourceSansPro-ExtraLight.ttf</file>
     </qresource>
 </RCC>
