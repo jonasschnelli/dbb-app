@@ -9,7 +9,15 @@
 #include <string>
 #include <map>
 #include <memory>
+#include <mutex>
 #include <vector>
+
+#ifdef WIN32
+#include <windows.h>
+#include "mingw/mingw.mutex.h"
+#include "mingw/mingw.condition_variable.h"
+#include "mingw/mingw.thread.h"
+#endif
 
 #ifndef _SRC_CONFIG__DBB_CONFIG_H
 #include "config/_dbb-config.h"
@@ -60,5 +68,18 @@ std::string formatMoney(const int64_t &n);
 bool ParseMoney(const std::string& str, int64_t& nRet);
 bool ParseMoney(const char* pszIn, int64_t& nRet);
 void strReplace(std::string& str, const std::string& oldStr, const std::string& newStr);
+
+int LogPrintStr(const std::string &str);
+void OpenDebugLog();
+
+template<typename... Args>
+void LogPrint(const std::string &fmt, Args... args )
+{
+    size_t size = std::snprintf( nullptr, 0, fmt.c_str(), args ... ) + 1; // Extra space for '\0'
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, fmt.c_str(), args ... );
+    LogPrintStr(std::string( buf.get(), buf.get() + size - 1 ));
+}
+
 }
 #endif // LIBDBB_UTIL_H

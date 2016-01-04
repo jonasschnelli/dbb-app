@@ -348,6 +348,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
 void DBBDaemonGui::deviceIsReadyToInteract()
 {
+    DBB::LogPrint("Device is ready to interact\n", "");
     //update multisig wallet data
     MultisigUpdateWallets();
     SingleWalletUpdateWallets();
@@ -375,10 +376,12 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
         if (state && deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE) {
             deviceConnected = true;
             //: translation: device connected status bar
+            DBB::LogPrint("Device connected\n", "");
             this->statusBarLabelLeft->setText(tr("Device Connected"));
             this->statusBarButton->setVisible(true);
         } else {
             deviceConnected = false;
+            DBB::LogPrint("Device disconnected\n", "");
             this->statusBarLabelLeft->setText(tr("No Device Found"));
             this->statusBarButton->setVisible(false);
         }
@@ -758,6 +761,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
 
 void DBBDaemonGui::eraseClicked()
 {
+    DBB::LogPrint("Request device erasing...\n", "");
     if (executeCommandWrapper("{\"reset\":\"__ERASE__\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
@@ -790,6 +794,7 @@ void DBBDaemonGui::getInfo()
 
 void DBBDaemonGui::seedHardware()
 {
+    DBB::LogPrint("Request device seeding...\n", "");
     std::string command = "{\"seed\" : {\"source\" :\"create\","
                           "\"decrypt\": \"yes\" } }";
 
@@ -851,6 +856,7 @@ void DBBDaemonGui::upgradeFirmware()
     if (firmwareFileToUse.isNull())
         return;
 
+    DBB::LogPrint("Request bootloader unlock\n", "");
     executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -868,6 +874,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             fwUpgradeThread->join();
             delete fwUpgradeThread;
         }
+        DBB::LogPrint("Start upgrading firmware\n", "");
 
         //: translation: started updating firmware info text
         showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by...", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
@@ -950,11 +957,13 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     if (status)
     {
         //: translation: successfull firmware update text
+        DBB::LogPrint("Firmware successfully upgraded\n", "");
         showModalInfo(tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
         //: translation: firmware upgrade error
+        DBB::LogPrint("Error while upgrading firmware\n", "");
         showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug/plug your Digital Bitbox."));
     }
 
@@ -1007,6 +1016,7 @@ void DBBDaemonGui::addBackup()
                           "\"filename\": \"backup-" +
                           timeStr + ".bak\"} }";
 
+    DBB::LogPrint("Adding a backup (%s)\n", timeStr.c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1034,6 +1044,7 @@ void DBBDaemonGui::eraseAllBackups()
     if (reply == QMessageBox::No)
         return;
 
+    DBB::LogPrint("Erasing all backups...\n", "");
     std::string command = "{\"backup\" : \"erase\" }";
 
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1050,6 +1061,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
     std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
                                                                                          "\"decrypt\": \"yes\" } }";
 
+    DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1639,6 +1651,7 @@ void DBBDaemonGui::joinCopayWallet(int walletIndex)
         DBBNetThread* thread = DBBNetThread::DetachThread();
         thread->currentThread = std::thread([this, thread, wallet]() {
 
+            DBB::LogPrint("Creating Copay wallet...\n", "");
             //single wallet, create wallet first
             {
                 std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
@@ -1658,6 +1671,7 @@ void DBBDaemonGui::joinCopayWallet(int walletIndex)
 
 void DBBDaemonGui::joinCopayWalletComplete(DBBWallet *wallet)
 {
+    DBB::LogPrint("Copay wallet joined successfully, loading address..\n", "");
     getNewAddress();
     updateWallet(wallet);
     hideModalInfo();
@@ -1722,7 +1736,6 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
             data.read(txHistoryResponse);
 
         emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
-        //emit shouldHideModalInfo();
         thread->completed();
     });
 }
@@ -1816,6 +1829,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished)
 {
+    DBB::LogPrint("Updating copay wallet\n", "");
     DBBNetThread* thread = DBBNetThread::DetachThread();
     thread->currentThread = std::thread([this, thread, wallet, cmdFinished]() {
         std::string walletsResponse;
@@ -1855,7 +1869,7 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     UniValue response;
     if (response.read(walletsResponse)) {
         if (response.isObject()) {
-            printf("Wallet: %s\n", response.write(true, 2).c_str());
+            DBB::LogPrint("Got update wallet response...\n", "");
 
             if (wallet == singleWallet)
                 updateUISingleWallet(response);
@@ -1880,6 +1894,7 @@ bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue& response)
 
         printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
         std::vector<UniValue> values = pendingTxps.getValues();
+        DBB::LogPrint("Got pending multisig txps (%d)\n", values.size());
         if (values.size() == 0) {
             hidePaymentProposalsWidget();
             return false;
@@ -1916,10 +1931,6 @@ bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue& response)
                 MultisigShowPaymentProposal(pendingTxps, isUni.get_str());
 
             return true;
-
-            QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Payment Proposal Available"), tr("Do you want to sign: pay %1BTC to %2").arg(amount, toAddress), QMessageBox::Yes | QMessageBox::No);
-            if (reply == QMessageBox::No)
-                return false;
         } //end proposal loop
     }
 
@@ -2036,12 +2047,12 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
     printf("Command: %s\n", command.c_str());
 
     bool ret = false;
+    DBB::LogPrint("Request signing...\n", "");
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processCommand = false;
         setLoading(false);
 
-        printf("cmd back: %s\n", cmdOut.c_str());
         UniValue jsonOut(UniValue::VOBJ);
         jsonOut.read(cmdOut);
 
@@ -2055,7 +2066,10 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
                 UniValue errorCodeObj = find_value(errorObj, "code");
                 UniValue errorMessageObj = find_value(errorObj, "message");
                 if (errorMessageObj.isStr())
+                {
+                    DBB::LogPrint("Error while signing (%s)\n", errorMessageObj.get_str().c_str());
                     emit shouldShowAlert("Error", QString::fromStdString(errorMessageObj.get_str()));
+                }
 
                 emit shouldHideModalInfo();
                 emit shouldHideVerificationInfo();
@@ -2094,12 +2108,16 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
     thread->currentThread = std::thread([this, thread, wallet, proposal, vSigs]() {
         //thread->currentThread = ;
         if (!wallet->client.PostSignaturesForTxProposal(proposal, vSigs))
+        {
+            DBB::LogPrint("Error posting txp signatures\n", "");
             emit shouldShowAlert("Error", tr("Could not post signatures"));
+        }
         else
         {
             if (!wallet->client.BroadcastProposal(proposal))
             {
                 emit shouldHideModalInfo();
+                DBB::LogPrint("Error broadcasting transaction\n", "");
                 emit shouldShowAlert("Error", tr("Could not broadcast transaction"));
             }
             else
@@ -2114,6 +2132,7 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
 
         thread->completed();
     });
+    DBB::LogPrint("Broadcast Transaction\n", "");
     showModalInfo(tr("Broadcast Transaction"));
     setNetLoading(true);
 }
@@ -2124,7 +2143,9 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
 {
     if (!deviceReadyToInteract)
         return;
-    
+
+    DBB::LogPrint("Paring request\n", "");
+
     executeCommandWrapper("{\"verifypass\": {\"ecdh\" : \"" + pubkey + "\"}}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -2135,6 +2156,7 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
 
 void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
 {
+    DBB::LogPrint("Verification devices changed, new: %d\n", amountOfClients);
     this->statusBarVDeviceIcon->setToolTip(tr("%1 Verification Device(s) Connected").arg(amountOfClients));
     this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
 }

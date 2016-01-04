@@ -37,7 +37,11 @@
 
 #include <climits>
 
+#ifdef DBB_ENABLE_DEBUG
 #define BP_LOG_MSG printf
+#else
+#define BP_LOG_MSG(f_, ...)
+#endif
 
 std::string BitPayWalletClient::ReversePairs(std::string const& src)
 {
@@ -1026,9 +1030,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     }
     curl_global_cleanup();
 
-#ifdef DBB_ENABLE_DEBUG
     BP_LOG_MSG("response: %s", responseOut.c_str());
-#endif
 
     return success;
 };

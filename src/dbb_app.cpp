@@ -241,6 +241,8 @@ int main(int argc, char** argv)
 
     QApplication app(argc, argv);
 
+    DBB::OpenDebugLog();
+    DBB::LogPrint("\n\n\n\nStarting DBB App %s - %s\n", DBB_PACKAGE_VERSION, VERSION);
     widget = new DBBDaemonGui(0);
     widget->show();
     //set style sheets
