@@ -1168,6 +1168,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 
                 if (!cachedWalletAvailableState)
                 {
+                    if (sdcard.isBool() && !sdcard.isTrue())
+                    {
+                        //: translation: warning text if SDCard needs to be insert for wallet creation
+                        showModalInfo(tr("Please insert a SDCard and replug the device. Initializing the wallet is only possible with a SDCard (otherwise you don't have a backup!)."));
+                        updateModalWithIconName(":/icons/touchhelp_sdcard_in");
+                        return;
+                    }
                     //: translation: modal text during seed command DBB
                     showModalInfo(tr("Creating New Wallet"));
                     seedHardware();
