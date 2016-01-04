@@ -8,6 +8,8 @@
 #include <QStringListModel>
 #include <QStringList>
 
+#include "dbb_util.h"
+
 PaymentProposal::PaymentProposal(QWidget *parent) :
 QWidget(parent),
 ui(new Ui::PaymentProposal)
@@ -40,11 +42,11 @@ void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, 
 
     UniValue amountUni = find_value(proposalData, "amount");
     if (amountUni.isNum())
-        this->ui->amountLabel->setText(QString::number(amountUni.get_int()));
+        this->ui->amountLabel->setText(QString::fromStdString(DBB::formatMoney(amountUni.get_int())));
 
     UniValue feeUni = find_value(proposalData, "fee");
     if (feeUni.isNum())
-        this->ui->feeLabel->setText(QString::number(feeUni.get_int()));
+        this->ui->feeLabel->setText(QString::fromStdString(DBB::formatMoney(feeUni.get_int())));
 
     UniValue actions = find_value(proposalData, "actions");
 
