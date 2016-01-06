@@ -69,6 +69,8 @@ bool ParseMoney(const std::string& str, int64_t& nRet);
 bool ParseMoney(const char* pszIn, int64_t& nRet);
 void strReplace(std::string& str, const std::string& oldStr, const std::string& newStr);
 
+void CreateDir(const char* dir);
+std::string GetDefaultDBBDataDir();
 int LogPrintStr(const std::string &str);
 void OpenDebugLog();
 

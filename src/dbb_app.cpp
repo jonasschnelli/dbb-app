@@ -241,6 +241,8 @@ int main(int argc, char** argv)
 
     QApplication app(argc, argv);
 
+    std::string dataDir = DBB::GetDefaultDBBDataDir();
+    DBB::CreateDir(dataDir.c_str());
     DBB::OpenDebugLog();
     DBB::LogPrint("\n\n\n\nStarting DBB App %s - %s\n", DBB_PACKAGE_VERSION, VERSION);
     widget = new DBBDaemonGui(0);

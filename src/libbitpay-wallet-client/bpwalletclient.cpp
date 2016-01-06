@@ -56,7 +56,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
     return result;
 }
 
-BitPayWalletClient::BitPayWalletClient(bool testnetIn) : testnet(testnetIn)
+BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : dataDir(dataDirIn), testnet(testnetIn)
 {
     //set the default wallet service
     baseURL = "https://bws.bitpay.com/bws/api";
@@ -1035,56 +1035,6 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     return success;
 };
 
-void CreateDir(const char* dir)
-{
-#if defined WIN32
-    mkdir(dir);
-#elif defined __GNUC__
-    mkdir(dir, 0777);
-#endif
-}
-
-#ifdef WIN32
-std::string GetSpecialFolderPath(int nFolder, bool fCreate)
-{
-    char pszPath[MAX_PATH] = "";
-
-    if (SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate)) {
-        return std::string(pszPath);
-    }
-
-    return std::string("");
-}
-#endif
-
-std::string GetDefaultDBBDataDir()
-{
-// Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
-// Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin
-// Mac: ~/Library/Application Support/Bitcoin
-// Unix: ~/.bitcoin
-#ifdef WIN32
-    // Windows
-    return GetSpecialFolderPath(CSIDL_APPDATA, true) + "/DBB";
-#else
-    std::string pathRet;
-    char* pszHome = getenv("HOME");
-    if (pszHome == NULL || strlen(pszHome) == 0)
-        pathRet = "/";
-    else
-        pathRet = std::string(pszHome);
-#ifdef MAC_OSX
-    // Mac
-    pathRet += "/Library/Application Support";
-    CreateDir(pathRet.c_str());
-    return pathRet += "/DBB";
-#else
-    // Unix
-    return pathRet += "/.dbb";
-#endif
-#endif
-}
-
 bool BitPayWalletClient::IsSeeded()
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
@@ -1107,8 +1057,6 @@ void BitPayWalletClient::SaveLocalData()
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
 
     //TODO, write a proper generic serialization class (or add a keystore/database to libbtc)
-    std::string dataDir = GetDefaultDBBDataDir();
-    CreateDir(dataDir.c_str());
     FILE* writeFile = fopen(localDataFilename(dataDir).c_str(), "wb");
     if (writeFile) {
         unsigned char header[2] = {0xAA, 0xF0};
@@ -1128,9 +1076,6 @@ void BitPayWalletClient::SaveLocalData()
 void BitPayWalletClient::LoadLocalData()
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
-
-    std::string dataDir = GetDefaultDBBDataDir();
-    CreateDir(dataDir.c_str());
     FILE* fh = fopen(localDataFilename(dataDir).c_str(), "rb");
 
     //TODO: better error handling, misses fclose!
@@ -1173,8 +1118,6 @@ void BitPayWalletClient::LoadLocalData()
 void BitPayWalletClient::RemoveLocalData()
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
-
-    std::string dataDir = GetDefaultDBBDataDir();
     remove(localDataFilename(dataDir).c_str());
     setNull();
 }

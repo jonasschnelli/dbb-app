@@ -283,7 +283,7 @@ void CreateDir(const char* dir)
 #endif
 }
 
-static std::string GetDefaultDBBDataDir()
+std::string GetDefaultDBBDataDir()
 {
     // Windows < Vista: C:\Documents and Settings\Username\Application Data\Bitcoin
     // Windows >= Vista: C:\Users\Username\AppData\Roaming\Bitcoin

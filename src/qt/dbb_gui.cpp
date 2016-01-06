@@ -307,9 +307,10 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
 
     //create the single and multisig wallet
-    singleWallet = new DBBWallet(DBB_USE_TESTNET);
+    std::string dataDir = DBB::GetDefaultDBBDataDir();
+    singleWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     singleWallet->setBaseKeypath(DBB_USE_TESTNET ? "m/100203'/45'" : "m/203'/45'");
-    DBBWallet* copayWallet = new DBBWallet(DBB_USE_TESTNET);
+    DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath("m/103'/45'");
     vMultisigWallets.push_back(copayWallet);
 
