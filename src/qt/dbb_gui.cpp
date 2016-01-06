@@ -106,6 +106,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     std::string smallFontSize = "10pt";
 #endif
 
+    QFontDatabase::addApplicationFont(":/fonts/BebasKai-Regular");
     QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-ExtraLight");
     QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-Bold");
     QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-Black");
@@ -118,8 +119,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     }
 
     qApp->setStyleSheet("QWidget { font-family: Source Sans Pro; } QHeaderView::section { font-family: Source Sans Pro Black; }");
-    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: white; } QPushButton { font-family: Source Sans Pro Black; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #444444; };");
-    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: #003366; } QPushButton { font-family: Source Sans Pro Black; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #003366; };");
+    QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: white; } QPushButton { font-family: Bebas Kai; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #444444; };");
+    QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: #003366; } QPushButton { font-family: Bebas Kai; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #003366; };");
 
     this->ui->receiveButton->setStyleSheet(buttonCss);
     this->ui->overviewButton->setStyleSheet(buttonCss);
