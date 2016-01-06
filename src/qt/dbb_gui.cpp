@@ -2146,6 +2146,11 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
     if (!deviceReadyToInteract)
         return;
 
+    //:translation: accept pairing rquest message box
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to accept a pairing request?"), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
     DBB::LogPrint("Paring request\n", "");
 
     executeCommandWrapper("{\"verifypass\": {\"ecdh\" : \"" + pubkey + "\"}}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
