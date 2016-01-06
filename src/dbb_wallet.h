@@ -32,7 +32,7 @@ public:
     int64_t availableBalance;
     std::atomic<bool> updatingWallet;
     std::atomic<bool> shouldUpdateWalletAgain;
-    DBBWallet(bool testnetIn) : client(testnetIn)
+    DBBWallet(const std::string& dataDirIn, bool testnetIn) : client(dataDirIn, testnetIn)
     {
         _baseKeypath = "m/131'/45'";
         participationName = "digitalbitbox";

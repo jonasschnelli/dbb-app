@@ -63,7 +63,7 @@ public:
 class BitPayWalletClient
 {
 public:
-    BitPayWalletClient(bool testnetIn = false);
+    BitPayWalletClient(std::string dataDirIn, bool testnetIn = false);
     ~BitPayWalletClient();
 
     //!set the filename-base to store local data
@@ -175,7 +175,7 @@ public:
 
 private:
     std::recursive_mutex cs_client;
-
+    const std::string dataDir;
     const bool testnet;
     std::string masterPrivKey; // "m/45'"
     std::string masterPubKey;  // "m/45'"

@@ -86,7 +86,7 @@ enum dbb_device_mode deviceAvailable()
 
         std::vector<std::string> vSNParts = DBB::split(strSN, ':');
 
-        if (vSNParts.size() == 2 && vSNParts[0] == "dbb.fw" || strSN == "firmware")
+        if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
         {
             foundType = DBB_DEVICE_MODE_FIRMWARE;
         }
