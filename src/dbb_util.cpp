@@ -253,8 +253,6 @@ void strReplace(std::string& str, const std::string& oldStr, const std::string& 
     }
 }
 
-static std::once_flag debugPrintInitFlag;
-
 static FILE* fileout = NULL;
 static std::recursive_mutex* mutexDebugLog = NULL;
 static std::list<std::string> *vMsgsBeforeOpenLog;
@@ -269,9 +267,11 @@ static int FileWriteStr(const std::string &str, FILE *fp)
 
 static void DebugPrintInit()
 {
-    assert(mutexDebugLog == NULL);
-    mutexDebugLog = new std::recursive_mutex();
-    vMsgsBeforeOpenLog = new std::list<std::string>;
+    if(mutexDebugLog == NULL)
+    {
+        mutexDebugLog = new std::recursive_mutex();
+        vMsgsBeforeOpenLog = new std::list<std::string>;
+    }
 }
 
 void CreateDir(const char* dir)
@@ -282,6 +282,19 @@ void CreateDir(const char* dir)
     mkdir(dir, 0777);
 #endif
 }
+
+#ifdef WIN32
+std::string GetSpecialFolderPath(int nFolder, bool fCreate)
+{
+    char pszPath[MAX_PATH] = "";
+
+    if (SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate)) {
+        return std::string(pszPath);
+    }
+
+    return std::string("");
+}
+#endif
 
 std::string GetDefaultDBBDataDir()
 {
@@ -313,7 +326,7 @@ std::string GetDefaultDBBDataDir()
 
 void OpenDebugLog()
 {
-    std::call_once(debugPrintInitFlag, &DebugPrintInit);
+    DebugPrintInit();
     std::unique_lock<std::recursive_mutex> scoped_lock(*mutexDebugLog);
 
     assert(fileout == NULL);
@@ -370,7 +383,7 @@ int LogPrintStr(const std::string &str)
     }
     else if (fPrintToDebugLog)
     {
-        std::call_once(debugPrintInitFlag, &DebugPrintInit);
+        DebugPrintInit();
         std::unique_lock<std::recursive_mutex> scoped_lock(*mutexDebugLog);
 
         // buffer if we haven't opened the log yet
