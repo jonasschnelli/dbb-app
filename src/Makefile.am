@@ -134,6 +134,8 @@ dbb_app_clean: FORCE
 
 clean-local:
 	-$(MAKE) -C libbtc clean
+	-$(MAKE) -C univalue clean
+	-$(MAKE) -C secp256k1 clean
 
 ui_%.h: %.ui
 	@test -f $(UIC)

@@ -1,7 +1,7 @@
-packages:=openssl libevent hidapi curl
+packages:=openssl libevent eudev libusb hidapi curl
 darwin_packages:=
 linux_packages:=
-native_packages :=
+linux_native_packages := native_gperf
 
 qt_native_packages = 
 qt_packages = qrencode

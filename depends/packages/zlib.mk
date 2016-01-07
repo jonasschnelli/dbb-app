@@ -1,13 +1,8 @@
-package=hidapi
-$(package)_version=0.8.0-rc1
-$(package)_download_path=https://github.com/signal11/hidapi/archive/
+package=zlib
+$(package)_version=1.2.8
+$(package)_download_path=http://zlib.net/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=3c147200bf48a04c1e927cd81589c5ddceff61e6dac137a605f6ac9793f4af61
-$(package)_dependencies=eudev libusb
-
-define $(package)_preprocess_cmds
-  autoreconf -i
-endef
+$(package)_sha256_hash=36658cb768a54c1d4dec43c3116c27ed893e88b02ecfcb44f2166f9c0b7f2a0d
 
 define $(package)_set_vars
   $(package)_config_opts=--disable-shared
