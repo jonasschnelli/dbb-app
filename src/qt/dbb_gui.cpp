@@ -1307,11 +1307,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
             bool sentToWebsocketClients = false;
 
-            UniValue responseMutable = response;
+            UniValue responseMutable(UniValue::VOBJ);
             UniValue requestXPubKeyUV = find_value(response, "xpub");
+            UniValue requestXPubEchoUV = find_value(response, "echo");
             QString errorString;
-            if (requestXPubKeyUV.isStr()) {
+            if (requestXPubKeyUV.isStr() && requestXPubEchoUV.isStr()) {
                 //pass the response to the verification devices
+                responseMutable.pushKV("echo", requestXPubEchoUV.get_str().c_str());
                 if (subtag == DBB_ADDRESS_STYLE_MULTISIG_1OF1)
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
@@ -1331,8 +1333,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     verificationDialog = new VerificationDialog();
 
                 verificationDialog->show();
-                verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning multiple QRCodes.", response.write());
-
+                verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning QRCodes.", responseMutable.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
