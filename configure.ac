@@ -228,13 +228,14 @@ AC_CHECK_LIB(crypto, main)
 AC_CHECK_LIB(ssl, SSL_version, , AC_MSG_WARN([SSL Disabled]) )
 
 # Look for hidapi library
-AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!))
 case $host in
   *linux*)
-  AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-  ;;
+   AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
+   ;;
 esac
+AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
+AC_CHECK_LIB(hidapi-hidraw, hid_open)
+AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
 dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
 
 # Look for dns_sd flag
