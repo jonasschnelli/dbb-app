@@ -1,6 +1,7 @@
-packages:=openssl libevent eudev libusb hidapi curl
+packages:=openssl libevent curl hidapi
 darwin_packages:=
-linux_packages:=
+linux_packages:=eudev libusb
+mingw32_packages:=
 linux_native_packages := native_gperf
 
 qt_native_packages = 
