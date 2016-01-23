@@ -1,9 +1,8 @@
-package=hidapi
-$(package)_version=0.8.0-rc1
-$(package)_download_path=https://github.com/signal11/hidapi/archive/
-$(package)_file_name=$(package)-$($(package)_version).tar.gz
-$(package)_sha256_hash=3c147200bf48a04c1e927cd81589c5ddceff61e6dac137a605f6ac9793f4af61
-$(package)_dependencies=eudev libusb
+package=libusb
+$(package)_version=1.0.9
+$(package)_download_path=http://sourceforge.net/projects/libusb/files/libusb-1.0/libusb-1.0.9/
+$(package)_file_name=$(package)-$($(package)_version).tar.bz2
+$(package)_sha256_hash=e920eedc2d06b09606611c99ec7304413c6784cba6e33928e78243d323195f9b
 
 define $(package)_preprocess_cmds
   autoreconf -i
