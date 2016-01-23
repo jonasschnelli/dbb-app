@@ -5,16 +5,15 @@ $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=36658cb768a54c1d4dec43c3116c27ed893e88b02ecfcb44f2166f9c0b7f2a0d
 
 define $(package)_set_vars
-  $(package)_config_opts=--disable-shared
-  $(package)_config_opts_linux=--with-pic
+  $(package)_config_env+=CHOST=$($($(package)_type)_host)
 endef
 
 define $(package)_config_cmds
-  $($(package)_autoconf)
+	PREFIX=i686-w64-mingw32 ./configure --prefix=$($($(package)_type)_prefix)
 endef
 
 define $(package)_build_cmd
-  $(MAKE)
+  $(MAKE) -f win32/Makefile.gcc
 endef
 
 define $(package)_stage_cmds

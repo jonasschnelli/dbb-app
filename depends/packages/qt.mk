@@ -129,6 +129,7 @@ endef
 
 define $(package)_preprocess_cmds
   sed -i.old "s|updateqm.commands = \$$$$\$$$$LRELEASE|updateqm.commands = $($(package)_extract_dir)/qttools/bin/lrelease|" qttranslations/translations/translations.pro && \
+  sed -i.old "s|updateqm.commands = \$$$$\$$$$LRELEASE|updateqm.commands = $($(package)_extract_dir)/qttools/bin/lrelease|" qtwebsockets/qtwebsockets.pro && \
   sed -i.old "s/src_plugins.depends = src_sql src_xml src_network/src_plugins.depends = src_xml src_network/" qtbase/src/src.pro && \
   sed -i.old "s|X11/extensions/XIproto.h|X11/X.h|" qtbase/src/plugins/platforms/xcb/qxcbxsettings.cpp && \
   sed -i.old 's/if \[ "$$$$XPLATFORM_MAC" = "yes" \]; then xspecvals=$$$$(macSDKify/if \[ "$$$$BUILD_ON_MAC" = "yes" \]; then xspecvals=$$$$(macSDKify/' qtbase/configure && \
@@ -164,10 +165,16 @@ define $(package)_build_cmds
   $(MAKE) -C src $(addprefix sub-,$($(package)_qt_libs)) && \
   $(MAKE) -C ../qttools/src/linguist/lrelease && \
   $(MAKE) -C ../qttranslations && \
+  echo "$(MAKE)" && \
+	export PATH=$(host_prefix)/native/bin/:$(PATH) && \
+  echo "$(PATH)" && \
   $(MAKE) -C ../qtwebsockets
 endef
 
 define $(package)_stage_cmds
+  export PATH=$(host_prefix)/native/bin/:$(PATH) && \
+  echo "---------------------" && \
+  echo "$(MAKE)" && \
   $(MAKE) -C src INSTALL_ROOT=$($(package)_staging_dir) $(addsuffix -install_subtargets,$(addprefix sub-,$($(package)_qt_libs))) && cd .. &&\
   $(MAKE) -C qttools/src/linguist/lrelease INSTALL_ROOT=$($(package)_staging_dir) install_target && \
   $(MAKE) -C qttranslations INSTALL_ROOT=$($(package)_staging_dir) install_subtargets && \

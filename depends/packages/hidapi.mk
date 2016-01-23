@@ -3,7 +3,7 @@ $(package)_version=0.8.0-rc1
 $(package)_download_path=https://github.com/signal11/hidapi/archive/
 $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=3c147200bf48a04c1e927cd81589c5ddceff61e6dac137a605f6ac9793f4af61
-$(package)_dependencies=eudev libusb
+$(package)_linux_dependencies=eudev libusb
 
 define $(package)_preprocess_cmds
   autoreconf -i

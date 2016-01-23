@@ -202,15 +202,12 @@ case $host in
      fi
 
      AX_CHECK_LINK_FLAG([[-Wl,-headerpad_max_install_names]], [LDFLAGS="$LDFLAGS -Wl,-headerpad_max_install_names"])
-     CPPFLAGS="$CPPFLAGS -DMAC_OSX"
+     CXXFLAGS="$CXXFLAGS -std=c++11 -stdlib=libc++"
+     CPPFLAGS="$CPPFLAGS -DMAC_OSX -std=c++11 -stdlib=libc++"
+     OBJCXXFLAGS="$CXXFLAGS"
      ;;
    *linux*)
      TARGET_OS=linux
-     AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-     AC_CHECK_HEADER([openssl/crypto.h],,AC_MSG_ERROR(libcrypto headers missing))
-     AC_CHECK_HEADER([openssl/ssl.h],, AC_MSG_ERROR(libssl headers missing),)
-     AC_CHECK_LIB(crypto, main)
-     AC_CHECK_LIB(ssl, SSL_version, , AC_MSG_WARN([SSL Disabled]) )
      LINUX_LIBS=
      AC_SUBST(LINUX_LIBS)
      ;;
@@ -227,9 +224,18 @@ LIBS="$LIBS $SSL_LIBS $CRYPTO_LIBS"
 CXXFLAGS="$CXXFLAGS_TEMP"
 LIBS="$LIBS_TEMP"
 
+AC_CHECK_LIB(crypto, main)
+AC_CHECK_LIB(ssl, SSL_version, , AC_MSG_WARN([SSL Disabled]) )
+
 # Look for hidapi library
 AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
 AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!))
+case $host in
+  *linux*)
+  AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
+  ;;
+esac
+dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
 
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
