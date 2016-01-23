@@ -90,6 +90,7 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     ui->qrCodeSequence->setVisible(false);
     ui->showDetailsButton->setVisible(false);
 
+    ui->modalInfoLabelLA->setText("");
     ui->modalInfoLabel->setText(info);
     QWidget* slide = this;
     // setup slide
@@ -150,30 +151,28 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 {
     QString longString;
 
-    longString += "Do you want to send ";
+    longString += "Sending:<br />";
 
     UniValue amountUni = find_value(txData, "amount");
     if (amountUni.isNum())
     {
-        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+"</strong>";
+        longString += "<strong>"+QString::fromStdString(DBB::formatMoney(amountUni.get_int64()))+"</strong><br />";
     }
 
     UniValue toAddressUni = find_value(txData, "toAddress");
     if (toAddressUni.isStr())
     {
-        longString += " to <strong>"+QString::fromStdString(toAddressUni.get_str())+"</strong>";
+        longString += "to <strong>"+QString::fromStdString(toAddressUni.get_str())+"</strong><br />";
     }
-
-
 
     UniValue feeUni = find_value(txData, "fee");
     if (feeUni.isNum())
     {
-        longString += " with an additional fee of <strong>" + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()))+"</strong>";
+        longString += "Fee: " + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()));
     }
 
-    showModalInfo(longString, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
-
+    showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+    ui->modalInfoLabelLA->setText(longString);
     ui->twoFACode->setVisible(twoFAlocked);
     ui->qrCodeSequence->setData(txEcho);
     ui->showDetailsButton->setVisible(true);
