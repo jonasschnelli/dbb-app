@@ -904,9 +904,10 @@ bool BitPayWalletClient::PostSignaturesForTxProposal(const UniValue& txProposal,
     UniValue sigs = UniValue(UniValue::VARR);
     for (const std::string& sSig : vHexSigs) {
         std::vector<unsigned char> data = DBB::ParseHex(sSig);
-        unsigned char sig[74];
-        int sizeN = ecdsa_sig_to_der(&data[0], sig);
-        std::string sSigDER = DBB::HexStr(sig, sig + sizeN);
+        size_t sigder_len = 74;
+        unsigned char sigder[sigder_len];
+        btc_ecc_compact_to_der_normalized(&data[0], sigder, &sigder_len);
+        std::string sSigDER = DBB::HexStr(sigder, sigder + sigder_len);
         sigs.push_back(sSigDER);
     }
     signaturesRequest.push_back(Pair("signatures", sigs));

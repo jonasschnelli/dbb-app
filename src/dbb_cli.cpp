@@ -226,7 +226,7 @@ int main(int argc, char* argv[])
                 std::string hashHex = DBB::HexStr(hashout, hashout+32);
 
                 // sign and get the compact signature
-                ecc_start();
+                btc_ecc_start();
                 btc_key key;
                 btc_privkey_init(&key);
                 std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
@@ -237,6 +237,7 @@ int main(int argc, char* argv[])
                 int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
                 std::string sigStr = DBB::HexStr(sig, sig+sizeout);
 
+                btc_ecc_stop();
                 // send firmware blob to DBB
                 if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](const std::string& infotext, float progress) {}))
                     printf("Firmware upgrade failed!\n");
