@@ -34,6 +34,7 @@
 #include "btc/base58.h"
 #include "btc/hash.h"
 #include "btc/ecc.h"
+#include "btc/ecc_key.h"
 
 #include "ripemd160.h"
 #include "sha2.h"
@@ -69,7 +70,7 @@ btc_bool btc_hdnode_from_seed(const uint8_t* seed, int seed_len, btc_hdnode* out
     hmac_sha512((const uint8_t*)"Bitcoin seed", 12, seed, seed_len, I);
     memcpy(out->private_key, I, BTC_ECKEY_PKEY_LENGTH);
 
-    if (!ecc_verify_privatekey(out->private_key)) {
+    if (!btc_ecc_verify_privatekey(out->private_key)) {
         memset(I, 0, sizeof(I));
         return false;
     }
@@ -105,7 +106,7 @@ btc_bool btc_hdnode_public_ckd(btc_hdnode* inout, uint32_t i)
     memcpy(inout->chain_code, I + 32, BTC_BIP32_CHAINCODE_SIZE);
 
 
-    if (!ecc_public_key_tweak_add(inout->public_key, I))
+    if (!btc_ecc_public_key_tweak_add(inout->public_key, I))
         failed = false;
 
     if (!failed) {
@@ -152,13 +153,13 @@ btc_bool btc_hdnode_private_ckd(btc_hdnode* inout, uint32_t i)
     memcpy(z, inout->private_key, BTC_ECKEY_PKEY_LENGTH);
 
     int failed = 0;
-    if (!ecc_verify_privatekey(z)) {
+    if (!btc_ecc_verify_privatekey(z)) {
         failed = 1;
         return false;
     }
 
     memcpy(inout->private_key, p, BTC_ECKEY_PKEY_LENGTH);
-    if (!ecc_private_key_tweak_add(inout->private_key, z)) {
+    if (!btc_ecc_private_key_tweak_add(inout->private_key, z)) {
         failed = 1;
     }
 
@@ -179,7 +180,7 @@ btc_bool btc_hdnode_private_ckd(btc_hdnode* inout, uint32_t i)
 void btc_hdnode_fill_public_key(btc_hdnode* node)
 {
     size_t outsize = BTC_ECKEY_COMPRESSED_LENGTH;
-    ecc_get_pubkey(node->private_key, node->public_key, &outsize, true);
+    btc_ecc_get_pubkey(node->private_key, node->public_key, &outsize, true);
 }
 
 
@@ -221,6 +222,16 @@ void btc_hdnode_get_p2pkh_address(const btc_hdnode* node, const btc_chain* chain
     btc_hash_sngl_sha256(node->public_key, BTC_ECKEY_COMPRESSED_LENGTH, hashout);
     ripemd160(hashout, 32, hash160+1);
     btc_base58_encode_check(hash160, 21, str, strsize);
+}
+
+btc_bool btc_hdnode_get_pub_hex(const btc_hdnode* node, char* str, size_t *strsize)
+{
+    btc_pubkey pubkey;
+    btc_pubkey_init(&pubkey);
+    memcpy(&pubkey.pubkey, node->public_key, BTC_ECKEY_COMPRESSED_LENGTH);
+    pubkey.compressed = true;
+
+    return btc_pubkey_get_hex(&pubkey, str, strsize);
 }
 
 
