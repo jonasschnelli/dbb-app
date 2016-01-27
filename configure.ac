@@ -11,7 +11,8 @@ AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
 AM_MAINTAINER_MODE([enable])
 m4_ifdef([AM_SILENT_RULES], [AM_SILENT_RULES([yes])])
 
-AX_CXX_COMPILE_STDCXX_11()
+AX_CXX_COMPILE_STDCXX([11], [noext], [mandatory])
+dnl AX_CXX_COMPILE_STDCXX_11()
 
 dnl Compiler checks (here before libtool).
 if test "x${CXXFLAGS+set}" = "xset"; then
@@ -188,6 +189,7 @@ case $host in
            BUILD_OS=darwin
            ;;
          *)
+           CXXFLAGS="$CXXFLAGS -std=c++11 -stdlib=libc++"
            AC_PATH_TOOL([INSTALLNAMETOOL], [install_name_tool], install_name_tool)
            AC_PATH_TOOL([OTOOL], [otool], otool)
            AC_PATH_PROGS([GENISOIMAGE], [genisoimage mkisofs],genisoimage)
@@ -202,8 +204,8 @@ case $host in
      fi
 
      AX_CHECK_LINK_FLAG([[-Wl,-headerpad_max_install_names]], [LDFLAGS="$LDFLAGS -Wl,-headerpad_max_install_names"])
-     CXXFLAGS="$CXXFLAGS -std=c++11 -stdlib=libc++"
-     CPPFLAGS="$CPPFLAGS -DMAC_OSX -std=c++11 -stdlib=libc++"
+     CXXFLAGS="$CXXFLAGS -framework Security -framework CoreServices -framework Foundation -framework ApplicationServices -framework AppKit -framework IOKit"
+     CPPFLAGS="$CPPFLAGS -DMAC_OSX"
      OBJCXXFLAGS="$CXXFLAGS"
      ;;
    *linux*)
@@ -227,17 +229,6 @@ LIBS="$LIBS_TEMP"
 AC_CHECK_LIB(crypto, main)
 AC_CHECK_LIB(ssl, SSL_version, , AC_MSG_WARN([SSL Disabled]) )
 
-# Look for hidapi library
-case $host in
-  *linux*)
-   AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-   ;;
-esac
-AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-AC_CHECK_LIB(hidapi-hidraw, hid_open)
-AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
-dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
-
 # Look for dns_sd flag
 AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
 
@@ -256,8 +247,6 @@ if test x$use_reduce_exports = xyes; then
     AX_CHECK_LINK_FLAG([[-Wl,--exclude-libs,ALL]], [RELDFLAGS="-Wl,--exclude-libs,ALL"])
 fi
 
-
-
 if test x$TARGET_OS != xwindows; then
   # All windows code is PIC, forcing it on just adds useless compile warnings
   AX_CHECK_COMPILE_FLAG([-fPIC],[PIC_FLAGS="-fPIC"])
@@ -270,6 +259,22 @@ fi
 BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
+
+# Look for hidapi library
+case $host in
+  *linux*)
+   AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
+   AC_CHECK_LIB(hidapi-hidraw, hid_open)
+   ;;
+  *darwin*)
+   CXXFLAGS="$CXXFLAGS"
+   AC_CHECK_LIB(hidapi, hid_open)
+   ;;
+esac
+AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
+AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
+
 
 dnl --enable-thread-safety
 AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
@@ -316,6 +321,7 @@ AC_SUBST(PIC_FLAGS)
 AC_SUBST(PIE_FLAGS)
 AC_SUBST(BUILD_TEST)
 AC_SUBST(BUILD_QT)
+export CXXFLAGS
 AC_CONFIG_SUBDIRS([src/libbtc src/univalue])
 
 AC_PROG_CXX
