@@ -2119,9 +2119,16 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
         {
             if (!wallet->client.BroadcastProposal(proposal))
             {
-                emit shouldHideModalInfo();
                 DBB::LogPrint("Error broadcasting transaction\n", "");
-                emit shouldShowAlert("Error", tr("Could not broadcast transaction"));
+
+                //hack: sleep and try again
+                std::this_thread::sleep_for(std::chrono::milliseconds(3000));
+                if (!wallet->client.BroadcastProposal(proposal))
+                {
+                    emit shouldHideModalInfo();
+                    DBB::LogPrint("Error broadcasting transaction\n", "");
+                    emit shouldShowAlert("Error", tr("Could not broadcast transaction"));
+                }
             }
             else
             {
