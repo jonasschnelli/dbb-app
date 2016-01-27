@@ -289,10 +289,12 @@ std::string GetSpecialFolderPath(int nFolder, bool fCreate)
     char pszPath[MAX_PATH] = "";
 
     if (SHGetSpecialFolderPathA(NULL, pszPath, nFolder, fCreate)) {
-        return std::string(pszPath);
+        if (pszPath)
+            return std::string(pszPath);
+        return "";
     }
 
-    return std::string("");
+    return "";
 }
 #endif
 
