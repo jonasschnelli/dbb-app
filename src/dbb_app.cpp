@@ -235,7 +235,7 @@ int main(int argc, char** argv)
         }
     });
 
-    ecc_start();
+    btc_ecc_start();
     // Generate high-dpi pixmaps
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 
@@ -251,6 +251,6 @@ int main(int argc, char** argv)
     app.exec();
 
     DBB::closeConnection(); //clean up HID
-    ecc_stop();
+    btc_ecc_stop();
     exit(1);
 }
