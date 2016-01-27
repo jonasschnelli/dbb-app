@@ -1102,7 +1102,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108) {
                 //: translation: password wrong text
                 showAlert(tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())));
-
+                sessionPassword.clear();
                 //try again
                 askForSessionPassword();
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110) {
