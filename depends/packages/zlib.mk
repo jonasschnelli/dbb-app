@@ -9,7 +9,8 @@ define $(package)_set_vars
 endef
 
 define $(package)_config_cmds
-	PREFIX=i686-w64-mingw32 ./configure --prefix=$($($(package)_type)_prefix)
+	echo "--> $(MAKE)"
+	./configure --prefix=$($($(package)_type)_prefix)
 endef
 
 define $(package)_build_cmd
