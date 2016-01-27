@@ -83,5 +83,17 @@ void LogPrint(const std::string &fmt, Args... args )
     LogPrintStr(std::string( buf.get(), buf.get() + size - 1 ));
 }
 
+template<typename... Args>
+void LogPrintDebug(const std::string &fmt, Args... args )
+{
+    if (!DBB::mapArgs.count("-verbosedebug"))
+        return;
+
+    size_t size = std::snprintf( nullptr, 0, fmt.c_str(), args ... ) + 1; // Extra space for '\0'
+    std::unique_ptr<char[]> buf( new char[ size ] );
+    std::snprintf( buf.get(), size, fmt.c_str(), args ... );
+    LogPrintStr(std::string( buf.get(), buf.get() + size - 1 ));
+}
+
 }
 #endif // LIBDBB_UTIL_H

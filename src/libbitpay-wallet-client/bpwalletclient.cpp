@@ -1020,6 +1020,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
             BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+            DBB::LogPrintDebug("curl_easy_perform() failed "+std::string(curl_easy_strerror(res)));
             success = false;
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
@@ -1032,7 +1033,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
     curl_global_cleanup();
 
     BP_LOG_MSG("response: %s", responseOut.c_str());
-
+    DBB::LogPrintDebug("response: "+responseOut);
     return success;
 };
 
