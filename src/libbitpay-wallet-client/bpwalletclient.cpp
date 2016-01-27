@@ -1011,6 +1011,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
 
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
 #ifdef DBB_ENABLE_DEBUG
