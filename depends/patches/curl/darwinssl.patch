@@ -1,0 +1,12 @@
+--- old/configure.ac
++++ new/configure.ac
+@@ -1365,8 +1365,7 @@
+ 
+ AC_MSG_CHECKING([whether to enable iOS/Mac OS X native SSL/TLS])
+ if test "$curl_ssl_msg" = "$init_ssl_msg"; then
+-  if test "x$OPT_DARWINSSL" != "xno" &&
+-     test -d "/System/Library/Frameworks/Security.framework"; then
++  if test "x$OPT_DARWINSSL" != "xno"; then
+     AC_MSG_RESULT(yes)
+     AC_DEFINE(USE_DARWINSSL, 1, [to enable iOS/Mac OS X native SSL/TLS support])
+     AC_SUBST(USE_DARWINSSL, [1])

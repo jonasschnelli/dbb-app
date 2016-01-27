@@ -9,7 +9,6 @@ $(package)_linux_dependencies=freetype fontconfig dbus libxcb libX11 xproto libX
 $(package)_build_subdir=qtbase
 $(package)_qt_libs=corelib network widgets gui plugins testlib
 $(package)_patches=mac-qmake.conf fix-xcb-include-order.patch mingw-uuidof.patch pidlist_absolute.patch
-
 $(package)_qttranslations_file_name=qttranslations-$($(package)_suffix)
 $(package)_qttranslations_sha256_hash=c4bd6db6e426965c6f8824c54e81f68bbd61e2bae1bcadc328c6e81c45902a0d
 
@@ -53,7 +52,7 @@ $(package)_config_opts += -no-sql-sqlite2
 $(package)_config_opts += -prefix $(host_prefix)
 $(package)_config_opts += -hostprefix $(build_prefix)
 $(package)_config_opts += -bindir $(build_prefix)/bin
-$(package)_config_opts += -no-c++11
+$(package)_config_opts += -c++11
 $(package)_config_opts += -openssl-linked
 $(package)_config_opts += -v
 $(package)_config_opts += -static
@@ -61,7 +60,6 @@ $(package)_config_opts += -silent
 $(package)_config_opts += -pkg-config
 $(package)_config_opts += -qt-libpng
 $(package)_config_opts += -qt-libjpeg
-$(package)_config_opts += -qt-zlib
 $(package)_config_opts += -qt-pcre
 $(package)_config_opts += -no-pulseaudio
 $(package)_config_opts += -no-openvg
@@ -133,6 +131,7 @@ define $(package)_preprocess_cmds
   sed -i.old "s/src_plugins.depends = src_sql src_xml src_network/src_plugins.depends = src_xml src_network/" qtbase/src/src.pro && \
   sed -i.old "s|X11/extensions/XIproto.h|X11/X.h|" qtbase/src/plugins/platforms/xcb/qxcbxsettings.cpp && \
   sed -i.old 's/if \[ "$$$$XPLATFORM_MAC" = "yes" \]; then xspecvals=$$$$(macSDKify/if \[ "$$$$BUILD_ON_MAC" = "yes" \]; then xspecvals=$$$$(macSDKify/' qtbase/configure && \
+	sed -i.old 's/\[ "$$$$CFG_ZLIB" = "yes" \] && CFG_ZLIB="system"/true/' qtbase/configure && \
   mkdir -p qtbase/mkspecs/macx-clang-linux &&\
   cp -f qtbase/mkspecs/macx-clang/Info.plist.lib qtbase/mkspecs/macx-clang-linux/ &&\
   cp -f qtbase/mkspecs/macx-clang/Info.plist.app qtbase/mkspecs/macx-clang-linux/ &&\
