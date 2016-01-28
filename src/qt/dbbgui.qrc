@@ -26,7 +26,7 @@
         <file alias="statusbar">res/statusbar.png</file>
         <file alias="qrcode">res/qrcode.png</file>
         <file alias="devicephone">res/device-phone.png</file>
-        <file alias="betabadge">res/betabadge.png</file>
+        <file alias="betabadge">res/betabadgeleft.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>
