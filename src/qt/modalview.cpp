@@ -70,6 +70,9 @@ void ModalView::showOrHide(bool state)
 
 void ModalView::showSetPasswordInfo(bool showCleanInfo)
 {
+    ui->twoFACode->setVisible(false);
+    ui->qrCodeSequence->setVisible(false);
+    ui->showDetailsButton->setVisible(false);
     ui->okButton->setVisible(false);
     ui->setPasswordWidget->setVisible(true);
     ui->passwordInfo->setVisible(showCleanInfo);
