@@ -73,10 +73,18 @@ enum dbb_device_mode deviceAvailable()
     struct hid_device_info* devs, *cur_dev;
 
     devs = hid_enumerate(0x03eb, 0x2402);
+
     cur_dev = devs;
     enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
         // get the manufacturer wide string
+        if (!cur_dev || !cur_dev->manufacturer_string)
+        {
+            cur_dev = cur_dev->next;
+            continue;
+        }
+
+
         std::wstring wsMF(cur_dev->manufacturer_string);
         std::string strMF( wsMF.begin(), wsMF.end() );
 
@@ -89,21 +97,17 @@ enum dbb_device_mode deviceAvailable()
         if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
         {
             foundType = DBB_DEVICE_MODE_FIRMWARE;
+            break;
         }
         else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
         {
             foundType = DBB_DEVICE_MODE_BOOTLOADER;
+            break;
         }
         else
         {
-            //TODO: legacy. Needs to be removed before releasing
-            //currently mixed up
-            if (strMF == "Digital Bitbox")
-                foundType = DBB_DEVICE_MODE_BOOTLOADER;
-            else
-                foundType = DBB_DEVICE_MODE_FIRMWARE;
+            cur_dev = cur_dev->next;
         }
-        break;
     }
     hid_free_enumeration(devs);
     
