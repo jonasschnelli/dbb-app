@@ -120,13 +120,15 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
         printf("%s\n", family.toStdString().c_str());
     }
 
+#if defined(Q_OS_WIN)
+    qApp->setStyleSheet("");
+#else
     qApp->setStyleSheet("QWidget { font-family: Source Sans Pro; } QHeaderView::section { font-family: Source Sans Pro Black; }");
+#endif
     QString buttonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: white; } QPushButton { font-family: Bebas Kai; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #444444; };");
     QString msButtonCss("QPushButton::hover { } QPushButton:pressed { background-color: rgba(200,200,200,230); border:0; color: #003366; } QPushButton { font-family: Bebas Kai; font-size:" + QString::fromStdString(menuFontSize) + "; border:0; color: #003366; };");
 
-#if defined(Q_OS_WIN)
-qApp->setStyleSheet("QWidget { font-family: Source Sans Pro; font-size: 14pt; } QHeaderView::section { font-family: Source Sans Pro Black; }");
-#endif
+
 
     this->ui->receiveButton->setStyleSheet(buttonCss);
     this->ui->overviewButton->setStyleSheet(buttonCss);
@@ -870,6 +872,10 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before locking. Unlocking a device is only possible by erasing it. Proceed?"), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
     executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);

@@ -655,7 +655,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="lockDevice">
            <property name="text">
-            <string>Lock Devices</string>
+            <string>Enable 2FA</string>
            </property>
           </widget>
          </item>
