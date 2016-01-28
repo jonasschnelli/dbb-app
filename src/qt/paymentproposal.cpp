@@ -100,12 +100,12 @@ void PaymentProposal::nextPressed()
 
 void PaymentProposal::acceptPressed()
 {
-    emit processProposal(wallet, proposalData, ProposalActionTypeAccept);
+    emit processProposal(wallet, "", proposalData, ProposalActionTypeAccept);
 }
 
 void PaymentProposal::rejectPressed()
 {
-    emit processProposal(wallet, proposalData, ProposalActionTypeReject);
+    emit processProposal(wallet, "", proposalData, ProposalActionTypeReject);
 }
 
 PaymentProposal::~PaymentProposal()

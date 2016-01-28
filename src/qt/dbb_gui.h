@@ -126,7 +126,7 @@ signals:
     void shouldHideModalInfo();
     void shouldShowAlert(const QString& title, const QString& text);
     //emitted when a tx proposal was successfully created
-    void createTxProposalDone(DBBWallet *, const UniValue &proposal);
+    void createTxProposalDone(DBBWallet *, const QString &tfaCode, const UniValue &proposal);
     //emitted when a wallet join process was done
     void joinCopayWalletDone(DBBWallet *);
 
@@ -333,7 +333,7 @@ private slots:
     //!show a single payment proposals with given id
     bool MultisigShowPaymentProposal(const UniValue& pendingTxps, const std::string& targetID);
     //!execute payment proposal action
-    void PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType = ProposalActionTypeAccept);
+    void PaymentProposalAction(DBBWallet* wallet, const QString &tfaCode, const UniValue& paymentProposal, int actionType = ProposalActionTypeAccept);
     //!post
     void postSignaturesForPaymentProposal(DBBWallet* wallet, const UniValue& proposal, const std::vector<std::string>& vSigs);
 

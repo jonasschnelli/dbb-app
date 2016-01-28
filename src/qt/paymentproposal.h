@@ -26,7 +26,7 @@ class PaymentProposal : public QWidget
     Q_OBJECT
 
 signals:
-    void processProposal(DBBWallet *wallet, const UniValue &proposalData, int actionType);
+    void processProposal(DBBWallet *wallet, const QString &tfaCode, const UniValue &proposalData, int actionType);
     void shouldDisplayProposal(const UniValue &pendingTxp, const std::string &proposalId);
 
 public slots:

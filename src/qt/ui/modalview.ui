@@ -312,11 +312,11 @@
   <zorder>modalInfoLabel</zorder>
   <zorder>modalIcon</zorder>
   <zorder>setPasswordWidget</zorder>
-  <zorder>twoFACode</zorder>
   <zorder>qrCodeSequence</zorder>
   <zorder>showDetailsButton</zorder>
   <zorder>modalInfoLabelLA</zorder>
   <zorder>okButton</zorder>
+  <zorder>twoFACode</zorder>
  </widget>
  <customwidgets>
   <customwidget>

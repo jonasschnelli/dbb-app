@@ -178,6 +178,8 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification Code"));
 
+    if (twoFAlocked)
+        ui->twoFACode->setFocus();
 }
 
 void ModalView::detailButtonAction()
@@ -210,9 +212,9 @@ void ModalView::twoFACodeReturnPressed()
 
     if (txPointer)
     {
+        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
         ui->twoFACode->setText("");
         ui->twoFACode->setVisible(false);
-        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
     }
 }
 
