@@ -179,7 +179,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(shouldUpdateModalInfo(const QString&)), this, SLOT(updateModalInfo(const QString&)));
     connect(this, SIGNAL(shouldHideModalInfo()), this, SLOT(hideModalInfo()));
 
-    connect(this, SIGNAL(createTxProposalDone(DBBWallet *, const UniValue&)), this, SLOT(PaymentProposalAction(DBBWallet*,const UniValue&)));
+    connect(this, SIGNAL(createTxProposalDone(DBBWallet *, const QString&, const UniValue&)), this, SLOT(PaymentProposalAction(DBBWallet*,const QString&, const UniValue&)));
     connect(this, SIGNAL(shouldShowAlert(const QString&,const QString&)), this, SLOT(showAlert(const QString&,const QString&)));
     connect(this, SIGNAL(changeNetLoading(bool)), this, SLOT(setNetLoading(bool)));
     connect(this, SIGNAL(joinCopayWalletDone(DBBWallet*)), this, SLOT(joinCopayWalletComplete(DBBWallet*)));
@@ -580,7 +580,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 
     if (!cachedDeviceLock)
     {
-        PaymentProposalAction(wallet, proposalData, actionType);
+        PaymentProposalAction(wallet, "", proposalData, actionType);
         ui->modalBlockerView->clearTXData();
     }
     else
@@ -592,7 +592,7 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
     updateModalWithIconName(":/icons/touchhelp");
 
     DBBWallet *wallet = (DBBWallet *)ptr;
-    PaymentProposalAction(wallet, proposalData, actionType);
+    PaymentProposalAction(wallet, twoFACode, proposalData, actionType);
     ui->modalBlockerView->clearTXData();
 }
 
@@ -1554,7 +1554,7 @@ void DBBDaemonGui::createTxProposalPressed()
         {
             emit changeNetLoading(false);
             emit shouldUpdateModalInfo(tr("Start Signing Process"));
-            emit createTxProposalDone(singleWallet, proposalOut);
+            emit createTxProposalDone(singleWallet, "", proposalOut);
         }
 
         thread->completed();
@@ -1974,7 +1974,7 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue& pendingTxps, cons
 
             if (!currentPaymentProposalWidget) {
                 currentPaymentProposalWidget = new PaymentProposal(this->ui->copay);
-                connect(currentPaymentProposalWidget, SIGNAL(processProposal(DBBWallet*, const UniValue&, int)), this, SLOT(PaymentProposalAction(DBBWallet*, const UniValue&, int)));
+                connect(currentPaymentProposalWidget, SIGNAL(processProposal(DBBWallet*, const QString&, const UniValue&, int)), this, SLOT(PaymentProposalAction(DBBWallet*, const QString&, const UniValue&, int)));
                 connect(currentPaymentProposalWidget, SIGNAL(shouldDisplayProposal(const UniValue&, const std::string&)), this, SLOT(MultisigShowPaymentProposal(const UniValue&, const std::string&)));
             }
 
@@ -1990,7 +1990,7 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue& pendingTxps, cons
     return true;
 }
 
-void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paymentProposal, int actionType)
+void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCode, const UniValue& paymentProposal, int actionType)
 {
     if (!paymentProposal.isObject())
         return;
@@ -2045,9 +2045,11 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const UniValue& paym
 
     std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0] + 32);
 
+    std::string twoFaPart = "";
+    if (!tfaCode.isEmpty())
+        twoFaPart = "\"pin\" : \""+tfaCode.toStdString()+"\", ";
 
-    std::string command = "{\"sign\": { \"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
-    printf("Command: %s\n", command.c_str());
+    std::string command = "{\"sign\": { "+twoFaPart+"\"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
 
     bool ret = false;
     DBB::LogPrint("Request signing...\n", "");
