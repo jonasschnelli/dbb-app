@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#define HID_REPORT_SIZE_DEFAULT 2048
+#define HID_REPORT_SIZE_DEFAULT 4096
 #define HID_BL_BUF_SIZE_W 4098
 #define HID_BL_BUF_SIZE_R 256
 #define FIRMWARE_CHUNKSIZE 4096
