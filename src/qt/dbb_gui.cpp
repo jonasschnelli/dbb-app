@@ -81,7 +81,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               touchButtonInfo(0),
                                               walletUpdateTimer(0)
 {
+#if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
     ui->setupUi(this);
 
     //testnet/mainnet switch

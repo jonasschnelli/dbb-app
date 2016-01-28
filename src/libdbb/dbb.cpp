@@ -78,7 +78,7 @@ enum dbb_device_mode deviceAvailable()
     enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
         // get the manufacturer wide string
-        if (!cur_dev || !cur_dev->manufacturer_string)
+        if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number)
         {
             cur_dev = cur_dev->next;
             continue;

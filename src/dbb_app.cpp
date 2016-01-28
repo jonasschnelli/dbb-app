@@ -237,7 +237,9 @@ int main(int argc, char** argv)
 
     btc_ecc_start();
     // Generate high-dpi pixmaps
+#if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#endif
 
     QApplication app(argc, argv);
 
