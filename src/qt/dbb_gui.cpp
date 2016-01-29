@@ -168,6 +168,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    ui->upgradeFirmware->setVisible(false);
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
 
