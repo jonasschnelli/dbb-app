@@ -81,6 +81,7 @@ enum dbb_device_mode deviceAvailable()
         if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number)
         {
             cur_dev = cur_dev->next;
+            foundType = DBB_DEVICE_UNKNOWN;
             continue;
         }
 
