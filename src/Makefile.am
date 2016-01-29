@@ -1,5 +1,5 @@
 DIST_SUBDIRS = libbtc univalue
-GIT_VERSION := $(shell git describe --abbrev=6 --dirty --always --tags)
+GIT_VERSION := $(shell git describe --abbrev=6 --always --tags)
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
 AM_LDFLAGS = $(PTHREAD_CFLAGS) $(LIBTOOL_LDFLAGS) $(HARDENED_LDFLAGS)
@@ -147,6 +147,10 @@ qt/qrc_%.cpp: qt/%.qrc
 
 qt/moc_%.cpp: qt/%.h
 	$(MOC) -o $@ $< || (echo "Error creating $@"; false)
+
+.rc.o:
+	@test -f $(WINDRES)
+	$(AM_V_GEN) $(WINDRES) -DWINDRES_PREPROC -i $< -o $@
 
 endif
 
