@@ -303,7 +303,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
-    connect(this->ui->betaIcon, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
+    connect(this->ui->betaIcon, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->receiveButton, SIGNAL(clicked()), this, SLOT(mainReceiveButtonClicked()));
     connect(this->ui->sendButton, SIGNAL(clicked()), this, SLOT(mainSendButtonClicked()));
     connect(this->ui->mainSettingsButton, SIGNAL(clicked()), this, SLOT(mainSettingsButtonClicked()));
@@ -854,7 +854,7 @@ void DBBDaemonGui::showIPAddressQRCode()
                 if ( ip.isEmpty() ) continue;
                 bool foundMatch = false;
                 for (int j=0; j < possibleMatches.size(); j++) if ( ip == possibleMatches[j] ) { foundMatch = true; break; }
-                if ( !foundMatch ) { ipAddress = ip; }
+                if ( !foundMatch ) { ipAddress = ip; break; }
             }
         }
     }
@@ -1108,7 +1108,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET, 1);
     });
 
     backupDialog->close();
@@ -1453,6 +1453,16 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     errorString = QString::fromStdString(errorObj.get_str());
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
+
+                //subtag == 1 means restore from backup
+                if (subtag == 1)
+                {
+                    //remove local wallets
+                    singleWallet->client.RemoveLocalData();
+                    vMultisigWallets[0]->client.RemoveLocalData();
+                    resetInfos();
+                }
+
                 getInfo();
             }
         }
