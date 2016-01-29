@@ -8,6 +8,7 @@
 #include <QApplication>
 #include <QPushButton>
 #include <QDebug>
+#include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
 #include <QMessageBox>
@@ -79,7 +80,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               upgradeFirmwareState(0),
                                               shouldKeepBootloaderState(0),
                                               touchButtonInfo(0),
-                                              walletUpdateTimer(0)
+                                              walletUpdateTimer(0),
+                                              checkingForUpdates(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -166,7 +168,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    ui->upgradeFirmware->setVisible(false);
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
+    connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
 
 
     // connect custom signals
@@ -191,6 +195,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(shouldShowAlert(const QString&,const QString&)), this, SLOT(showAlert(const QString&,const QString&)));
     connect(this, SIGNAL(changeNetLoading(bool)), this, SLOT(setNetLoading(bool)));
     connect(this, SIGNAL(joinCopayWalletDone(DBBWallet*)), this, SLOT(joinCopayWalletComplete(DBBWallet*)));
+
+    connect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
 
 
 
@@ -348,6 +354,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     walletUpdateTimer = new QTimer(this);
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
+
+    QTimer::singleShot(200, this, SLOT(checkForUpdateInBackground()));
 }
 
 /*
@@ -2230,4 +2238,125 @@ void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
     DBB::LogPrint("Verification devices changed, new: %d\n", amountOfClients);
     this->statusBarVDeviceIcon->setToolTip(tr("%1 Verification Device(s) Connected").arg(amountOfClients));
     this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
+}
+
+#pragma mark - Update Check
+
+static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
+{
+    ((std::string*)userp)->append((char*)contents, size * nmemb);
+    return size * nmemb;
+}
+
+bool DBBDaemonGui::SendRequest(const std::string& method,
+                                     const std::string& url,
+                                     const std::string& args,
+                                     std::string& responseOut,
+                                     long& httpcodeOut)
+{
+    CURL* curl;
+    CURLcode res;
+
+    bool success = false;
+
+    curl_global_init(CURL_GLOBAL_ALL);
+    curl = curl_easy_init();
+    if (curl) {
+        struct curl_slist* chunk = NULL;
+        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
+        if (method == "post")
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+
+        if (method == "delete") {
+            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+        }
+
+        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
+        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+
+#ifdef DBB_ENABLE_DEBUG
+        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+#endif
+
+        res = curl_easy_perform(curl);
+        if (res != CURLE_OK) {
+            DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""));
+            success = false;
+        } else {
+            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
+            success = true;
+        }
+
+        curl_slist_free_all(chunk);
+        curl_easy_cleanup(curl);
+    }
+    curl_global_cleanup();
+
+    DBB::LogPrintDebug("response: "+responseOut);
+    return success;
+};
+
+void DBBDaemonGui::checkForUpdateInBackground()
+{
+    checkForUpdate(false);
+}
+
+void DBBDaemonGui::checkForUpdate(bool reportAlways)
+{
+    if (checkingForUpdates)
+        return;
+
+    DBBNetThread* thread = DBBNetThread::DetachThread();
+    thread->currentThread = std::thread([this, thread, reportAlways]() {
+        std::string response;
+        long httpStatusCode;
+        SendRequest("post", "https://digitalbitbox.com/dbb-app/update.json", "version="+std::string(DBB_PACKAGE_VERSION), response, httpStatusCode);
+        emit checkForUpdateResponseAvailable(response, httpStatusCode, reportAlways);
+        thread->completed();
+    });
+
+    checkingForUpdates = true;
+    setNetLoading(true);
+}
+
+void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long statuscode, bool reportAlways)
+{
+    checkingForUpdates = false;
+
+    UniValue jsonOut;
+    jsonOut.read(response);
+
+    bool updateAvailable = false;
+
+    try {
+        if (jsonOut.isObject())
+        {
+            UniValue subtext = find_value(jsonOut, "msg");
+            UniValue url = find_value(jsonOut, "url");
+            if (subtext.isStr() && url.isStr())
+            {
+                //:translation: accept pairing rquest message box
+                QMessageBox::StandardButton reply = QMessageBox::question(this, "", QString::fromStdString(subtext.get_str()), QMessageBox::Yes | QMessageBox::No);
+                if (reply == QMessageBox::Yes)
+                {
+                    updateAvailable = true;
+                    QString link = QString::fromStdString(url.get_str());
+                    QDesktopServices::openUrl(QUrl(link));
+                    return;
+                }
+            }
+        }
+    } catch (std::exception &e) {
+        DBB::LogPrint("Error while reading update json\n", "");
+    }
+
+    if (!updateAvailable && reportAlways)
+    {
+        showModalInfo(tr("There is no update available"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    }
 }

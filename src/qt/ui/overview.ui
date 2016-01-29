@@ -674,6 +674,13 @@ background-color: rgba(240,240,240,255);
           <number>0</number>
          </property>
          <item>
+          <widget class="QPushButton" name="checkForUpdates">
+           <property name="text">
+            <string>Check for updates...</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="upgradeFirmware">
            <property name="text">
             <string>Upgrade Firmware...</string>

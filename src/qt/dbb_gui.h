@@ -130,6 +130,9 @@ signals:
     //emitted when a wallet join process was done
     void joinCopayWalletDone(DBBWallet *);
 
+    //emitted when check-for-updates response is available
+    void checkForUpdateResponseAvailable(const std::string&, long, bool);
+
 private:
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
@@ -155,6 +158,7 @@ private:
     bool cachedDeviceLock;
     bool deviceReadyToInteract;
     bool touchButtonInfo;
+    bool checkingForUpdates;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
     QPropertyAnimation* netActivityAnimation;
     QPropertyAnimation* usbActivityAnimation;
@@ -342,6 +346,12 @@ private slots:
     //!send a ecdh pairing request with pubkey to the DBB
     void sendECDHPairingRequest(const std::string &pubkey);
     void amountOfPairingDevicesChanged(int amountOfClients);
+
+    //== UPDATE CHECKER ==
+    bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);
+    void checkForUpdateInBackground();
+    void checkForUpdate(bool reportAlways = true);
+    void parseCheckUpdateResponse(const std::string &response, long statusCode, bool reportAlways);
 };
 
 #endif
