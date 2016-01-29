@@ -1458,16 +1458,14 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     errorString = QString::fromStdString(errorObj.get_str());
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
-
-                //subtag == 1 means restore from backup
-                if (subtag == 1)
-                {
-                    //remove local wallets
+                //remove local wallets
+                if (singleWallet)
                     singleWallet->client.RemoveLocalData();
-                    vMultisigWallets[0]->client.RemoveLocalData();
-                    resetInfos();
-                }
 
+                if (vMultisigWallets[0])
+                    vMultisigWallets[0]->client.RemoveLocalData();
+
+                resetInfos();
                 getInfo();
             }
         }
