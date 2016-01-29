@@ -823,7 +823,7 @@ DBB Utils
 */
 #pragma mark DBB Utils
 
-void DBBDaemonGui::showIPAddressQRCode()
+QString DBBDaemonGui::getIpAddress()
 {
     QString ipAddress;
     QList<QString> possibleMatches;
@@ -858,9 +858,17 @@ void DBBDaemonGui::showIPAddressQRCode()
             }
         }
     }
+
+    return ipAddress;
+}
+
+void DBBDaemonGui::showIPAddressQRCode()
+{
+    QString ipAddress = getIpAddress();
     showModalInfo(tr("Your IP Address:")+" "+ipAddress, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     updateModalWithQRCode("{\"ip\":\""+ipAddress+"\"}");
 }
+
 void DBBDaemonGui::getRandomNumber()
 {
     executeCommandWrapper("{\"random\" : \"true\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1175,10 +1183,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (name.isStr())
                     this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
 
-                foreach (const QHostAddress &address, QNetworkInterface::allAddresses()) {
-                    if (address.protocol() == QAbstractSocket::IPv4Protocol && address != QHostAddress(QHostAddress::LocalHost))
-                        this->ui->IPAddress->setText(address.toString());
-                }
+                this->ui->IPAddress->setText(getIpAddress());
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
