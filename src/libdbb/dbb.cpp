@@ -145,8 +145,14 @@ bool sendCommand(const std::string& json, std::string& resultOut)
         DBB_DEBUG_INTERNAL("Buffer to small for string to send");
         return false;
     }
-    memcpy(HID_REPORT+1, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
-    if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+1) == -1)
+
+    int reportShift = 0;
+#ifdef DBB_ENABLE_HID_REPORT_SHIFT
+    reportShift = 1;
+#endif
+
+    memcpy(HID_REPORT+reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
+    if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)
     {
         const wchar_t *error = hid_error(HID_HANDLE);
         if (error)

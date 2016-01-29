@@ -29,6 +29,10 @@ dnl we have those under control, re-enable that functionality.
 case $host in
   *mingw*)
      lt_cv_deplibs_check_method="pass_all"
+     enable_hid_report_shift=$enableval
+  ;;
+  *darwin*)
+     enable_hid_report_shift=$enableval
   ;;
 esac
 
@@ -73,6 +77,13 @@ if test "x$enable_daemon" = xyes; then
   AC_CHECK_LIBEVENT
   AC_DEFINE_UNQUOTED([ENABLE_DAEMON],[1],[Define to 1 to enable the dbb daemon])
 	AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
+fi
+
+AC_ARG_ENABLE([hid_report_shift],
+    AS_HELP_STRING([--disable-hid_report_shift], [disable hid_report_shift (default is no)]))
+
+if test "x$enable_hid_report_shift" != xno; then
+  AC_DEFINE_UNQUOTED([ENABLE_HID_REPORT_SHIFT],[1],[Define to 1 to enable the HID REPORT 1 byte shift])
 fi
 
 dnl Check for pthread compile/link requirements
