@@ -4,7 +4,7 @@ IDI_ICON1 ICON DISCARDABLE "dbb.ico"
 
 
 VS_VERSION_INFO VERSIONINFO
-FILEVERSION     VER_FILEVERSION
+FILEVERSION     10001
 PRODUCTVERSION  10001
 FILEOS          VOS_NT_WINDOWS32
 FILETYPE        VFT_APP
@@ -14,7 +14,7 @@ BEGIN
         BLOCK "040904E4" // U.S. English - multilingual (hex)
         BEGIN
             VALUE "CompanyName",        "DigitalBitbox"
-            VALUE "FileDescription",    "DigitalBitbox Aoo"
+            VALUE "FileDescription",    "DigitalBitbox App"
             VALUE "FileVersion",        "0.1"
             VALUE "InternalName",       "dbb-app"
             VALUE "LegalCopyright",     "(c) 2016 Shift Devices AG - Switzerland"
