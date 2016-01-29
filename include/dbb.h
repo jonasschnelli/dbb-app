@@ -18,7 +18,8 @@ namespace DBB {
 enum dbb_device_mode {
     DBB_DEVICE_NO_DEVICE = 0,
     DBB_DEVICE_MODE_BOOTLOADER,
-    DBB_DEVICE_MODE_FIRMWARE
+    DBB_DEVICE_MODE_FIRMWARE,
+    DBB_DEVICE_UNKNOWN,
 };
 //!open a connection to the digital bitbox device
 // retruns false if no connection could be made, keeps connection handling

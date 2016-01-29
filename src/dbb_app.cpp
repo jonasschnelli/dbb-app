@@ -108,7 +108,6 @@ typedef std::tuple<std::string, std::string, std::function<void(const std::strin
 std::queue<t_cmdCB> cmdQueue;
 std::atomic<bool> stopThread(false);
 std::atomic<bool> notified(false);
-std::atomic<int> failCounter(0);
 
 std::atomic<bool> firmwareUpdateHID(false);
 
@@ -220,25 +219,16 @@ int main(int argc, char** argv)
                 if (openSuccess)
                 {
 #ifdef DBB_ENABLE_QT
-                    //TODO, check if this requires locking
-                    if (widget)
-                    {
-                        widget->deviceStateHasChanged(true, deviceType);
-                    }
+                //TODO, check if this requires locking
+                if (widget)
+                    widget->deviceStateHasChanged(true, deviceType);
 #endif
                 }
                 else
                 {
 #ifdef DBB_ENABLE_QT
-                    if (widget)
-                    {
-                        failCounter++;
-                        if (failCounter > 1)
-                        {
-                            widget->deviceStateHasChanged(false, DBB::DBB_DEVICE_NO_DEVICE);
-                            failCounter = 0;
-                        }
-                    }
+                if (widget)
+                    widget->deviceStateHasChanged(false, DBB::DBB_DEVICE_NO_DEVICE);
 #endif
                 }
             }
