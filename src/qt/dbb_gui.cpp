@@ -2321,7 +2321,6 @@ void DBBDaemonGui::checkForUpdate(bool reportAlways)
     });
 
     checkingForUpdates = true;
-    setNetLoading(true);
 }
 
 void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long statuscode, bool reportAlways)
