@@ -99,12 +99,12 @@ Linux (Ubuntu 15.04):
 
 Basics
 
-    sudo apt-get install build-essential libtool autotools-dev autoconf pkg-config git
-    sudo apt-get libhidapi-dev
+    sudo apt-get install build-essential libtool autotools-dev autoconf pkg-config git libcurl4-openssl-dev libqrencode-dev
+    sudo apt-get install libhidapi-dev
 
 For the daemon
 
-    sudo apt-get libevent-dev
+    sudo apt-get install libevent-dev
 
 For QT UI
 
@@ -145,4 +145,4 @@ Basic build steps:
     ./configure --enable-debug --with-gui=qt5
     make
     sudo make install
-    
+
