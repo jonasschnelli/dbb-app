@@ -275,7 +275,7 @@ BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
 case $host in
   *linux*)
    AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-   AC_CHECK_LIB(hidapi-hidraw, hid_open)
+   AC_CHECK_LIB(hidapi-libusb, hid_open)
    ;;
   *darwin*)
    CXXFLAGS="$CXXFLAGS"
@@ -283,7 +283,7 @@ case $host in
    ;;
 esac
 AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
 dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
 
 
