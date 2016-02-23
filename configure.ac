@@ -275,7 +275,8 @@ BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
 case $host in
   *linux*)
    AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-   AC_CHECK_LIB(hidapi-libusb, hid_open)
+   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes], [have_hid_libusb=no])
+   AC_CHECK_LIB(hidapi-hidraw, hid_open)
    ;;
   *darwin*)
    CXXFLAGS="$CXXFLAGS"
@@ -283,10 +284,11 @@ case $host in
    ;;
 esac
 AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
-dnl AC_CHECK_LIB([hidapi], [hid_open], , AC_MSG_ERROR(hiapi is required!))
-
-
+if test x$have_hid_libusb = xno; then
+   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+else
+   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+fi
 dnl --enable-thread-safety
 AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
  [], [enable_thread_safety=yes])
