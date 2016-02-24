@@ -204,6 +204,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     backupDialog = new BackupDialog(0);
     connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
     connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
+    connect(backupDialog, SIGNAL(eraseBackup(const QString&)), this, SLOT(eraseBackup(const QString&)));
     connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
 
     // create get address dialog
@@ -1117,6 +1118,25 @@ void DBBDaemonGui::eraseAllBackups()
     });
 
     backupDialog->showLoading();
+}
+
+void DBBDaemonGui::eraseBackup(const QString& backupFilename)
+{
+    //: translation: Erase all backup warning text
+    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Erase Single Backup?"), tr("Are your sure you want to erase backup %1").arg(backupFilename), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
+    std::string command = "{\"backup\" : { \"erase\" : \"" + backupFilename.toStdString() + "\" } }";
+
+    DBB::LogPrint("Eraseing single backup (%s)...\n", backupFilename.toStdString().c_str());
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP, 1);
+    });
+
+    backupDialog->close();
 }
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)

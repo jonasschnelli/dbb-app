@@ -286,6 +286,7 @@ private slots:
     void addBackup();
     void listBackup();
     void eraseAllBackups();
+    void eraseBackup(const QString& backupFilename);
     void restoreBackup(const QString& backupFilename);
 
     //== DBB USB Commands (Response Parsing) ==

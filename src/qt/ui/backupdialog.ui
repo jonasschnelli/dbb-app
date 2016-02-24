@@ -6,7 +6,7 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>320</width>
+    <width>420</width>
     <height>240</height>
    </rect>
   </property>
@@ -18,8 +18,8 @@
     <rect>
      <x>10</x>
      <y>30</y>
-     <width>301</width>
-     <height>151</height>
+     <width>400</width>
+     <height>150</height>
     </rect>
    </property>
   </widget>
@@ -41,7 +41,7 @@
     <rect>
      <x>10</x>
      <y>190</y>
-     <width>301</width>
+     <width>400</width>
      <height>41</height>
     </rect>
    </property>
@@ -57,6 +57,13 @@
      <widget class="QPushButton" name="restoreButton">
       <property name="text">
        <string>Restore</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="QPushButton" name="eraseSelected">
+      <property name="text">
+       <string>Erase</string>
       </property>
      </widget>
     </item>
