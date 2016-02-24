@@ -17,6 +17,7 @@
         <file alias="touchhelp_replug">res/touchhelp_replug.png</file>
         <file alias="touchhelp_sdcard">res/touchhelp_sdcard.png</file>
         <file alias="touchhelp_sdcard_in">res/touchhelp_sdcard_in.png</file>
+        <file alias="touchhelp_initdone">res/touchhelp_initdone.png</file>
         <file alias="modal_warning">res/modal_warning.png</file>
         <file alias="refresh">res/refresh.png</file>
         <file alias="netactivity">res/weather-cloudy.png</file>

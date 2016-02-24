@@ -155,6 +155,7 @@ private:
     bool processCommand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    bool initialWalletSeeding; //state if initial wallet is in seed
     bool cachedDeviceLock;
     bool deviceReadyToInteract;
     bool touchButtonInfo;
