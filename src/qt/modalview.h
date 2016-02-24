@@ -40,6 +40,8 @@ public slots:
     void detailButtonAction();
     void okButtonAction();
     void twoFACodeReturnPressed();
+
+    void passwordCheck(const QString& password0);
     
 protected:
     virtual void keyPressEvent(QKeyEvent *event);

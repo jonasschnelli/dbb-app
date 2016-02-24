@@ -1156,6 +1156,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             touchErrorShowed = true;
         }
 
+        bool errorShown = false;
         if (errorObj.isObject()) {
             //error found
             UniValue errorCodeObj = find_value(errorObj, "code");
@@ -1163,18 +1164,21 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108) {
                 //: translation: password wrong text
                 showAlert(tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())));
+                errorShown = true;
                 sessionPassword.clear();
                 //try again
                 askForSessionPassword();
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 110) {
                 //: translation: password wrong device reset text
                 showAlert(tr("Password Error"), tr("Device Reset. %1").arg(QString::fromStdString(errorMessageObj.get_str())), true);
+                errorShown = true;
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101) {
                 sessionPassword.clear();
                 showSetPasswordInfo(true);
             } else {
                 //password wrong
                 showAlert(tr("Error"), QString::fromStdString(errorMessageObj.get_str()));
+                errorShown = true;
             }
         } else if (tag == DBB_RESPONSE_TYPE_INFO) {
             UniValue deviceObj = find_value(response, "device");
@@ -1269,29 +1273,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     shouldKeepBootloaderState = false;
                     return;
                 }
-            }
-        } else if (tag == DBB_RESPONSE_TYPE_PASSWORD) {
-            UniValue passwordObj = find_value(response, "password");
-            if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success")) {
-                sessionPasswordDuringChangeProcess.clear();
-                cleanseLoginAndSetPassword(); //remove text from set password fields
-                //could not decrypt, password was changed successfully
-                getInfo();
-            } else {
-                QString errorString;
-                UniValue touchbuttonObj = find_value(response, "touchbutton");
-                if (!touchbuttonObj.isNull() && touchbuttonObj.isObject()) {
-                    UniValue errorObj = find_value(touchbuttonObj, "error");
-                    if (!errorObj.isNull() && errorObj.isStr())
-                        errorString = QString::fromStdString(errorObj.get_str());
-                }
-
-                //reset password in case of an error
-                sessionPassword = sessionPasswordDuringChangeProcess;
-                sessionPasswordDuringChangeProcess.clear();
-
-                //: translation: error text during password set (DBB)
-                showAlert(tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER) {
             UniValue xPubKeyUV = find_value(response, "xpub");
@@ -1500,6 +1481,34 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         }
         if (tag == DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS) {
             getAddressDialog->updateAddress(response);
+        }
+        if (tag == DBB_RESPONSE_TYPE_PASSWORD) {
+            UniValue passwordObj = find_value(response, "password");
+            if (status != DBB_CMD_EXECUTION_STATUS_OK || (passwordObj.isStr() && passwordObj.get_str() == "success")) {
+                sessionPasswordDuringChangeProcess.clear();
+                cleanseLoginAndSetPassword(); //remove text from set password fields
+                //could not decrypt, password was changed successfully
+                getInfo();
+            } else {
+                QString errorString;
+                UniValue touchbuttonObj = find_value(response, "touchbutton");
+                if (!touchbuttonObj.isNull() && touchbuttonObj.isObject()) {
+                    UniValue errorObj = find_value(touchbuttonObj, "error");
+                    if (!errorObj.isNull() && errorObj.isStr())
+                        errorString = QString::fromStdString(errorObj.get_str());
+                }
+
+                //reset password in case of an error
+                sessionPassword = sessionPasswordDuringChangeProcess;
+                sessionPasswordDuringChangeProcess.clear();
+
+                if (!errorShown)
+                {
+                    //: translation: error text during password set (DBB)
+                    showAlert(tr("Password Error"), tr("Could not set password (error: %1)!").arg(errorString));
+                    errorShown = true;
+                }
+            }
         }
     }
 }
