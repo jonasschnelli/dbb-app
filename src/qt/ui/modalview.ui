@@ -83,7 +83,7 @@
      <x>40</x>
      <y>40</y>
      <width>400</width>
-     <height>300</height>
+     <height>350</height>
     </rect>
    </property>
    <property name="styleSheet">
@@ -145,7 +145,7 @@
         <enum>QLineEdit::Password</enum>
        </property>
        <property name="placeholderText">
-        <string>password</string>
+        <string>password, min. 4 letters or digits</string>
        </property>
       </widget>
      </item>
@@ -171,32 +171,77 @@
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="setPassword">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
+      <layout class="QHBoxLayout" name="horizontalLayout">
+       <property name="spacing">
+        <number>-1</number>
        </property>
-       <property name="font">
-        <font>
-         <pointsize>20</pointsize>
-         <weight>75</weight>
-         <bold>true</bold>
-        </font>
+       <property name="topMargin">
+        <number>0</number>
        </property>
-       <property name="styleSheet">
-        <string notr="true">background:#777777;
+       <item>
+        <widget class="QPushButton" name="setPassword">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <pointsize>20</pointsize>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background:#777777;
                               color:white;
                               border:0px;
                               border-radius: 5px;
                               padding:4px;</string>
+         </property>
+         <property name="text">
+          <string>Set Password</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="passwordWarning">
+         <property name="styleSheet">
+          <string notr="true">color: orange;</string>
+         </property>
+         <property name="text">
+          <string/>
+         </property>
+         <property name="alignment">
+          <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <widget class="QLabel" name="passwordInfo2">
+       <property name="minimumSize">
+        <size>
+         <width>0</width>
+         <height>80</height>
+        </size>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">color:white;</string>
        </property>
        <property name="text">
-        <string>Set Password</string>
+        <string>The password will be used to encrypt USB communication and SDCard backups. Make sure you remeber the password and use the same password when restoring a backup.</string>
        </property>
-       <property name="flat">
-        <bool>false</bool>
+       <property name="alignment">
+        <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

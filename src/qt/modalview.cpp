@@ -14,6 +14,8 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     ui->setupUi(this);
 
     connect(this->ui->setPassword0, SIGNAL(returnPressed()), this->ui->setPassword1, SLOT(setFocus()));
+    connect(this->ui->setPassword0, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
+    connect(this->ui->setPassword1, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
     connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
     connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
 
@@ -50,6 +52,9 @@ void ModalView::setPasswordProvided()
     }
 
     emit newPasswordAvailable(ui->setPassword0->text(), !ui->passwordInfo->isVisible());
+
+    ui->setPassword0->setText("");
+    ui->setPassword1->setText("");
 }
 
 void ModalView::showOrHide(bool state)
@@ -251,4 +256,21 @@ void ModalView::keyPressEvent(QKeyEvent* event){
     if ((event->key()==Qt::Key_Return) && visible && ui->okButton->isVisible())
         showOrHide(false);
 
+}
+
+void ModalView::passwordCheck(const QString& password0){
+    if (ui->setPassword0->text().size() < 4)
+    {
+        ui->passwordWarning->setText(tr("Invalid Password"));
+        ui->setPassword->setEnabled(false);
+        return;
+    }
+    if (ui->setPassword0->text() != ui->setPassword1->text())
+    {
+        ui->setPassword->setEnabled(false);
+        ui->passwordWarning->setText(tr("Password not identical"));
+        return;
+    }
+    ui->setPassword->setEnabled(true);
+    ui->passwordWarning->setText("");
 }
