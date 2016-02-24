@@ -858,6 +858,10 @@ QString DBBDaemonGui::getIpAddress()
                 // Ignore non-ipv4 addresses
                 if ( !addresses[a].toIPv4Address() ) continue;
 
+                // Ignore self assigned IPs
+                if ( addresses[a].isInSubnet(QHostAddress("169.254.0.0"), 16) )
+                    continue;
+
                 QString ip = addresses[a].toString();
                 if ( ip.isEmpty() ) continue;
                 bool foundMatch = false;
