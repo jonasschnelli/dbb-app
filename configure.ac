@@ -82,9 +82,8 @@ fi
 AC_ARG_ENABLE([hid_report_shift],
     AS_HELP_STRING([--disable-hid_report_shift], [disable hid_report_shift (default is no)]))
 
-if test "x$enable_hid_report_shift" != xno; then
-  AC_DEFINE_UNQUOTED([ENABLE_HID_REPORT_SHIFT],[1],[Define to 1 to enable the HID REPORT 1 byte shift])
-fi
+AC_ARG_ENABLE([hidrawforce],
+    AS_HELP_STRING([--enable-hidrawforce], [force usage of hidapi hidraw even when libusb is present (default is no)]), [enable_hidrawforce=yes],[enable_hidrawforce=no])
 
 dnl Check for pthread compile/link requirements
 AX_PTHREAD
@@ -276,18 +275,27 @@ case $host in
   *linux*)
    AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
    AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes], [have_hid_libusb=no])
-   AC_CHECK_LIB(hidapi-hidraw, hid_open)
+   AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
    ;;
   *darwin*)
    CXXFLAGS="$CXXFLAGS"
-   AC_CHECK_LIB(hidapi, hid_open)
+   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes], [have_hid_libusb=no])
+   AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
+   if test x$have_hid_libusb$have_hid_hidraw = xnono;  then
+      AC_CHECK_LIB(hidapi, hid_open)
+   fi
    ;;
 esac
 AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-if test x$have_hid_libusb = xno; then
-   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+if test x$have_hid_libusb$enable_hidrawforce = xyesno;  then
+   AC_MSG_NOTICE([using hidapi with libusb])
+   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!))
 else
-   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw], , AC_MSG_ERROR(hiapi is required!), [-lhidapi])
+   if test x$have_hid_hidraw = xyes;  then
+      AC_MSG_NOTICE([using hidapi with hidraw (hidrawforce: $enable_hidrawforce)])
+      AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw], , AC_MSG_ERROR(hiapi is required!))
+      AC_MSG_NOTICE([enabling HID report shift because of using hidraw])
+   fi
 fi
 dnl --enable-thread-safety
 AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
@@ -322,6 +330,10 @@ fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
 
+if test "x$enable_hid_report_shift" != xno; then
+  AC_DEFINE_UNQUOTED([ENABLE_HID_REPORT_SHIFT],[1],[Define to 1 to enable the HID REPORT 1 byte shift])
+fi
+
 BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], AC_MSG_ERROR(qrencode missing))])
 BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, AC_MSG_ERROR(qrencode missing))])
 AC_SUBST(QR_LIBS)
@@ -351,4 +363,3 @@ echo "  CXX      = $CXX"
 echo "  CXXFLAGS = $CXXFLAGS"
 echo "  LDFLAGS  = $LDFLAGS"
 echo ""
-
