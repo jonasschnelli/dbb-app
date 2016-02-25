@@ -25,10 +25,12 @@ signals:
     void addBackup();
     void restoreFromBackup(QString filename);
     void eraseAllBackups();
+    void eraseBackup(QString filename);
 
 public slots:
     void addBackupPressed();
     void eraseAllBackupPressed();
+    void eraseSingleBackupPressed();
     void restoreBackupPressed();
 
 private:

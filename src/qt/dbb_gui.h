@@ -155,6 +155,7 @@ private:
     bool processCommand;
     bool deviceConnected;
     bool cachedWalletAvailableState;
+    bool initialWalletSeeding; //state if initial wallet is in seed
     bool cachedDeviceLock;
     bool deviceReadyToInteract;
     bool touchButtonInfo;
@@ -286,6 +287,7 @@ private slots:
     void addBackup();
     void listBackup();
     void eraseAllBackups();
+    void eraseBackup(const QString& backupFilename);
     void restoreBackup(const QString& backupFilename);
 
     //== DBB USB Commands (Response Parsing) ==

@@ -68,6 +68,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               deviceConnected(0),
                                               deviceReadyToInteract(0),
                                               cachedWalletAvailableState(0),
+                                              initialWalletSeeding(0),
                                               cachedDeviceLock(0),
                                               currentPaymentProposalWidget(0),
                                               signConfirmationDialog(0),
@@ -204,6 +205,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     backupDialog = new BackupDialog(0);
     connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
     connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
+    connect(backupDialog, SIGNAL(eraseBackup(const QString&)), this, SLOT(eraseBackup(const QString&)));
     connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
 
     // create get address dialog
@@ -476,6 +478,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         setTabbarEnabled(false);
         deviceReadyToInteract = false;
         cachedWalletAvailableState = false;
+        initialWalletSeeding = false;
         cachedDeviceLock = false;
         //hide modal dialog and abort possible ecdh pairing
         hideModalInfo();
@@ -1119,6 +1122,25 @@ void DBBDaemonGui::eraseAllBackups()
     backupDialog->showLoading();
 }
 
+void DBBDaemonGui::eraseBackup(const QString& backupFilename)
+{
+    //: translation: Erase all backup warning text
+    QMessageBox::StandardButton reply = QMessageBox::question(this, tr("Erase Single Backup?"), tr("Are your sure you want to erase backup %1").arg(backupFilename), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
+    std::string command = "{\"backup\" : { \"erase\" : \"" + backupFilename.toStdString() + "\" } }";
+
+    DBB::LogPrint("Eraseing single backup (%s)...\n", backupFilename.toStdString().c_str());
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP, 1);
+    });
+
+    backupDialog->close();
+}
+
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
     std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
@@ -1230,7 +1252,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (shouldCreateSingleWallet)
                 {
                     //: translation: modal info during copay wallet creation
-                    showModalInfo(tr("Creating Copay Wallet"));
+                    showModalInfo(tr("Creating Wallet"));
                     createSingleWallet();
                 }
 
@@ -1247,7 +1269,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         return;
                     }
                     //: translation: modal text during seed command DBB
-                    showModalInfo(tr("Creating New Wallet"));
+                    showModalInfo(tr("Creating Wallet"));
+                    initialWalletSeeding = true;
                     seedHardware();
                     return;
                 }
@@ -1272,6 +1295,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     lockBootloader();
                     shouldKeepBootloaderState = false;
                     return;
+                }
+
+                if (initialWalletSeeding)
+                {
+                    showModalInfo(tr(""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    updateModalWithIconName(":/icons/touchhelp_initdone");
+                    initialWalletSeeding = false;
                 }
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER) {
@@ -1698,6 +1728,13 @@ void DBBDaemonGui::getXPubKeyForCopay(int walletIndex)
     executeCommandWrapper("{\"xpub\":\"" + baseKeyPath + "\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, walletIndex](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
+
+        //TODO: fix hack
+        if (walletIndex == 0)
+        {
+            // small UI delay that people can read "Creating Wallet" modal screen
+            std::this_thread::sleep_for(std::chrono::milliseconds(350));
+        }
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_XPUB_MS_MASTER, walletIndex);
     });
 }

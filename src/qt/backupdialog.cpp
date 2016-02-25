@@ -17,6 +17,7 @@ BackupDialog::BackupDialog(QWidget *parent) :
     //connect buttons to slots
     connect(ui->addButton, SIGNAL(clicked()), this, SLOT(addBackupPressed()));
     connect(ui->eraseAllButton, SIGNAL(clicked()), this, SLOT(eraseAllBackupPressed()));
+    connect(ui->eraseSelected, SIGNAL(clicked()), this, SLOT(eraseSingleBackupPressed()));
     connect(ui->restoreButton, SIGNAL(clicked()), this, SLOT(restoreBackupPressed()));
 }
 
@@ -51,6 +52,15 @@ void BackupDialog::restoreBackupPressed()
     
     QModelIndex index = ui->listView->currentIndex();
     emit restoreFromBackup(index.data().toString());
+}
+
+void BackupDialog::eraseSingleBackupPressed()
+{
+    if (loadingState)
+        return;
+
+    QModelIndex index = ui->listView->currentIndex();
+    emit eraseBackup(index.data().toString());
 }
 
 void BackupDialog::eraseAllBackupPressed()
