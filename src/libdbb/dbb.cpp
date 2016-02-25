@@ -150,7 +150,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 #ifdef DBB_ENABLE_HID_REPORT_SHIFT
     reportShift = 1;
 #endif
-
+    HID_REPORT[0] = 0x01;
     memcpy(HID_REPORT+reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
     if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)
     {
