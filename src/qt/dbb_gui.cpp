@@ -1215,6 +1215,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 cachedWalletAvailableState = seeded.isTrue();
                 cachedDeviceLock = lock.isTrue();
 
+                ui->lockDevice->setEnabled(!cachedDeviceLock);
+                if (cachedDeviceLock)
+                    ui->lockDevice->setText(tr("Full 2FA is enabled"));
+                else
+                    ui->lockDevice->setText(tr("Enable Full 2FA"));
+
                 //update version and name
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
