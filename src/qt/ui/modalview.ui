@@ -145,7 +145,7 @@
         <enum>QLineEdit::Password</enum>
        </property>
        <property name="placeholderText">
-        <string>password, min. 4 letters or digits</string>
+        <string>Password</string>
        </property>
       </widget>
      </item>
@@ -166,7 +166,7 @@
         <enum>QLineEdit::Password</enum>
        </property>
        <property name="placeholderText">
-        <string>repeate password</string>
+        <string>Repeat password</string>
        </property>
       </widget>
      </item>
@@ -235,7 +235,7 @@
         <string notr="true">color:white;</string>
        </property>
        <property name="text">
-        <string>The password will be used to encrypt USB communication and SDCard backups. Make sure you remeber the password and use the same password when restoring a backup.</string>
+        <string>* The password also encrypts SD card backups. The same password is therefore REQUIRED when restoring a backup. Don't forget it!</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>

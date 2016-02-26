@@ -261,7 +261,7 @@ void ModalView::keyPressEvent(QKeyEvent* event){
 void ModalView::passwordCheck(const QString& password0){
     if (ui->setPassword0->text().size() < 4)
     {
-        ui->passwordWarning->setText(tr("Invalid Password"));
+        ui->passwordWarning->setText(tr("Password too short"));
         ui->setPassword->setEnabled(false);
         return;
     }
