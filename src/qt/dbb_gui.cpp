@@ -172,7 +172,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     ui->upgradeFirmware->setVisible(false);
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
-
+    connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
@@ -1896,6 +1896,12 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
 
     this->ui->balanceLabel->setText(balance);
     this->ui->singleWalletBalance->setText(balance);
+}
+
+void DBBDaemonGui::historyShowTx(QModelIndex index)
+{
+    QString txId = ui->tableWidget->model()->data(ui->tableWidget->model()->index(index.row(),4)).toString();
+    QDesktopServices::openUrl(QUrl("https://" + QString(DBB_USE_TESTNET ? "testnet." : "") + "blockexplorer.com/tx/"+txId));
 }
 
 void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue &history)
