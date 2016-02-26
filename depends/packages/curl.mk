@@ -14,7 +14,8 @@ define $(package)_set_vars
   $(package)_build_env+=CFLAGS="$($(package)_cflags) $($(package)_cppflags) -DCURL_STATICLIB"
   $(package)_config_opts=-disable-shared --enable-static --disable-ftp --disable-ldap --disable-telnet --disable-tftp --disable-pop3 --disable-imap --disable-file --without-libssh2 --without-libidn --without-librtmp --without-libpsl --without-ldap --without-libmetalink --without-zlib --with-ssl=$(host_prefix)
   $(package)_config_opts_linux=--with-pic
-	$(package)_config_opts_darwin=--with-darwinssl
+  $(package)_config_opts_darwin=--with-darwinssl
+	$(package)_config_opts_mingw32=--without-ssl --with-winssl
 endef
 
 define $(package)_config_cmds
