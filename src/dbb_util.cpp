@@ -5,6 +5,7 @@
 #include "dbb_util.h"
 
 #include <assert.h>
+#include <inttypes.h>
 #include <stdio.h>
 #include <string.h>
 #include <sstream>
@@ -168,7 +169,7 @@ std::string formatMoney(const int64_t &n)
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs/COIN;
     int64_t remainder = n_abs%COIN;
-    std::string str = string_format("%d.%08d BTC", quotient, remainder);
+    std::string str = string_format("%" PRId64 ".%08" PRId64 " BTC", quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;
