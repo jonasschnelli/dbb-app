@@ -600,8 +600,20 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 
     if (!cachedDeviceLock)
     {
-        PaymentProposalAction(wallet, "", proposalData, actionType);
-        ui->modalBlockerView->clearTXData();
+        if (amountOfClientsInformed > 0)
+        {
+            //no follow up action required, clear TX data
+            ui->modalBlockerView->clearTXData();
+
+            //directly start DBB signing process
+            PaymentProposalAction(wallet, "", proposalData, actionType);
+        }
+        else
+        {
+            //no verification device connected, start QRCode based verification
+            QMessageBox::warning(this, tr(""), tr("No Verification App is connected, connect a device or verify your transaction by scanning the QRCodes above"), QMessageBox::Ok);
+        }
+
     }
     else
         updateModalWithIconName(":/icons/twofahelp");
@@ -899,7 +911,7 @@ void DBBDaemonGui::lockDevice()
     if (reply == QMessageBox::No)
         return;
 
-    executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
@@ -1214,6 +1226,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 UniValue walletIDUV = find_value(deviceObj, "id");
                 cachedWalletAvailableState = seeded.isTrue();
                 cachedDeviceLock = lock.isTrue();
+
+                ui->lockDevice->setEnabled(!cachedDeviceLock);
+                if (cachedDeviceLock)
+                    ui->lockDevice->setText(tr("Full 2FA is enabled"));
+                else
+                    ui->lockDevice->setText(tr("Enable Full 2FA"));
 
                 //update version and name
                 if (version.isStr())

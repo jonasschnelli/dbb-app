@@ -29,7 +29,7 @@ public slots:
     void nextButton();
     void prevButton();
     void showPage(int page = 0);
-
+    void useOnDarkBackground(bool state);
     static void setIconFromQRCode(QRcode *qrcode, QIcon *icon, int width = 240, int height = 240);
 
 private:

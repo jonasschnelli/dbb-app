@@ -22,6 +22,9 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
     connect(this->ui->twoFACode, SIGNAL(returnPressed()), this, SLOT(twoFACodeReturnPressed()));
+    connect(this->ui->continueButton, SIGNAL(clicked()), this, SLOT(continuePressed()));
+
+    ui->qrCodeSequence->useOnDarkBackground(true);
     visible = false;
 }
 
@@ -76,6 +79,7 @@ void ModalView::showOrHide(bool state)
 void ModalView::showSetPasswordInfo(bool showCleanInfo)
 {
     ui->twoFACode->setVisible(false);
+    ui->continueButton->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
     ui->showDetailsButton->setVisible(false);
     ui->okButton->setVisible(false);
@@ -96,6 +100,7 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     ui->okButton->setVisible(false);
     ui->twoFACode->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
+    ui->continueButton->setVisible(false);
     ui->showDetailsButton->setVisible(false);
 
     ui->modalInfoLabelLA->setText("");
@@ -186,13 +191,26 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification Code"));
 
+    if (showQRSqeuence)
+    {
+        ui->continueButton->setVisible(true);
+        setQrCodeVisibility(true);
+        updateIcon(QIcon());
+        ui->showDetailsButton->setVisible(false);
+    }
+
     if (twoFAlocked)
         ui->twoFACode->setFocus();
 }
 
 void ModalView::detailButtonAction()
 {
-    if (ui->qrCodeSequence->isVisible())
+    setQrCodeVisibility(!ui->qrCodeSequence->isVisible());
+}
+
+void ModalView::setQrCodeVisibility(bool state)
+{
+    if (!state)
     {
         ui->showDetailsButton->setText(tr("Show Verification Code"));
         ui->qrCodeSequence->setVisible(false);
@@ -261,7 +279,7 @@ void ModalView::keyPressEvent(QKeyEvent* event){
 void ModalView::passwordCheck(const QString& password0){
     if (ui->setPassword0->text().size() < 4)
     {
-        ui->passwordWarning->setText(tr("Invalid Password"));
+        ui->passwordWarning->setText(tr("Password too short"));
         ui->setPassword->setEnabled(false);
         return;
     }
@@ -273,4 +291,14 @@ void ModalView::passwordCheck(const QString& password0){
     }
     ui->setPassword->setEnabled(true);
     ui->passwordWarning->setText("");
+}
+
+void ModalView::continuePressed()
+{
+    if (txPointer)
+    {
+        setQrCodeVisibility(false);
+        ui->continueButton->setVisible(false);
+        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
+    }
 }

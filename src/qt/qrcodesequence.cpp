@@ -89,8 +89,10 @@ void QRCodeSequence::setData(const std::string& data)
     size_t maxSize = data.size();
     int numPages = ceil(maxSize/QRCODE_MAX_CHARS);
 
+    static const char* digits = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
     // for now, don't allow more then 9 pages
-    if (numPages > 10)
+    if (numPages > strlen(digits))
         return;
 
     int i;
@@ -103,11 +105,19 @@ void QRCodeSequence::setData(const std::string& data)
         std::string subStr = data.substr(i*QRCODE_MAX_CHARS, pageSize);
 
         if (numPages > 1)
-            subStr = QRCODE_SEQUENCE_HEADER0 + std::to_string(i) + std::to_string(numPages) + subStr ;
+            subStr = QRCODE_SEQUENCE_HEADER0 + std::string(1,digits[i]) + std::string(1,digits[numPages]) + subStr ;
 
         QRcode *code = QRcode_encodeString(subStr.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
         qrcodes.push_back(code);
     }
 
     showPage(0);
+}
+
+void QRCodeSequence::useOnDarkBackground(bool state)
+{
+    if (state)
+        ui->pageLabel->setStyleSheet("color: white;");
+    else
+        ui->pageLabel->setStyleSheet("color: black;");
 }
