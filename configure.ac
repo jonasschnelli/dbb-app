@@ -29,10 +29,8 @@ dnl we have those under control, re-enable that functionality.
 case $host in
   *mingw*)
      lt_cv_deplibs_check_method="pass_all"
-     enable_hid_report_shift=$enableval
   ;;
   *darwin*)
-     enable_hid_report_shift=$enableval
   ;;
 esac
 
@@ -69,7 +67,7 @@ fi
 
 AC_ARG_ENABLE([daemon],
     [AS_HELP_STRING([--enable-daemon],
-  								[enable daemon (default is no)])],
+  								[enable daemon (default is yes)])],
     [enable_daemon=$enableval],
     [enable_daemon=yes])
 
@@ -80,10 +78,10 @@ if test "x$enable_daemon" = xyes; then
 fi
 
 AC_ARG_ENABLE([hid_report_shift],
-    AS_HELP_STRING([--disable-hid_report_shift], [disable hid_report_shift (default is no)]))
+    AS_HELP_STRING([--enable-hid_report_shift], [enable hid_report_shift (default is yes)]), , [enable_hid_report_shift=yes])
 
 AC_ARG_ENABLE([hidrawforce],
-    AS_HELP_STRING([--enable-hidrawforce], [force usage of hidapi hidraw even when libusb is present (default is no)]), [enable_hidrawforce=yes],[enable_hidrawforce=no])
+    AS_HELP_STRING([--enable-hidrawforce], [force usage of hidapi hidraw even when libusb is present (default is no)]), ,[enable_hidrawforce=no])
 
 dnl Check for pthread compile/link requirements
 AX_PTHREAD
@@ -286,15 +284,20 @@ case $host in
    fi
    ;;
 esac
+
+usinghidlib=unknown
 AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
 if test x$have_hid_libusb$enable_hidrawforce = xyesno;  then
    AC_MSG_NOTICE([using hidapi with libusb])
+   usinghidlib=libusb
    AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!))
 else
    if test x$have_hid_hidraw = xyes;  then
       AC_MSG_NOTICE([using hidapi with hidraw (hidrawforce: $enable_hidrawforce)])
       AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw], , AC_MSG_ERROR(hiapi is required!))
-      AC_MSG_NOTICE([enabling HID report shift because of using hidraw])
+      usinghidlib=hidraw
+   else
+      usinghidlib=mac_or_win_native
    fi
 fi
 dnl --enable-thread-safety
@@ -362,4 +365,6 @@ echo "  CPPFLAGS = $CPPFLAGS"
 echo "  CXX      = $CXX"
 echo "  CXXFLAGS = $CXXFLAGS"
 echo "  LDFLAGS  = $LDFLAGS"
+echo "  HIDRPSHFT= $enable_hid_report_shift"
+echo "  HIDLIB   = $usinghidlib"
 echo ""
