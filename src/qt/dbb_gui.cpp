@@ -2179,11 +2179,21 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
     if (!tfaCode.isEmpty())
         twoFaPart = "\"pin\" : \""+tfaCode.toStdString()+"\", ";
 
-    std::string command = "{\"sign\": { "+twoFaPart+"\"type\": \"meta\", \"meta\" : \""+serTx+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
+    uint8_t serTxHash[32];
+    btc_hash((const uint8_t*)&serTx[0], serTx.size(), serTxHash);
+    std::string serTxHashHex = DBB::HexStr(serTxHash, serTxHash+32);
 
+    std::string command = "{\"sign\": { "+twoFaPart+"\"type\": \"meta\", \"meta\" : \""+serTxHashHex+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
+
+    if (command.size() >= HID_REPORT_SIZE_DEFAULT)
+    {
+        DBB::LogPrint("signing size exceeded (to many inputs)\n", "");
+        emit shouldShowAlert("Error", tr("To many inputs. Currently a max. of 18 inputs is supported"));
+        return;
+    }
     bool ret = false;
     DBB::LogPrint("Request signing...\n", "");
-    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, serTx, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processCommand = false;
         setLoading(false);
@@ -2193,7 +2203,9 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
 
         UniValue echoStr = find_value(jsonOut, "echo");
         if (!echoStr.isNull() && echoStr.isStr()) {
-            emit shouldVerifySigning(wallet, paymentProposal, actionType, cmdOut);
+            UniValue jsonOutMutable = jsonOut;
+            jsonOutMutable.pushKV("tx", serTx);
+            emit shouldVerifySigning(wallet, paymentProposal, actionType, jsonOutMutable.write());
         } else {
             UniValue errorObj = find_value(jsonOut, "error");
             if (errorObj.isObject()) {
