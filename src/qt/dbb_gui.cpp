@@ -600,8 +600,20 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 
     if (!cachedDeviceLock)
     {
-        PaymentProposalAction(wallet, "", proposalData, actionType);
-        ui->modalBlockerView->clearTXData();
+        if (amountOfClientsInformed > 0)
+        {
+            //no follow up action required, clear TX data
+            ui->modalBlockerView->clearTXData();
+
+            //directly start DBB signing process
+            PaymentProposalAction(wallet, "", proposalData, actionType);
+        }
+        else
+        {
+            //no verification device connected, start QRCode based verification
+            QMessageBox::warning(this, tr(""), tr("No Verification App is connected, connect a device or verify your transaction by scanning the QRCodes above"), QMessageBox::Ok);
+        }
+
     }
     else
         updateModalWithIconName(":/icons/twofahelp");

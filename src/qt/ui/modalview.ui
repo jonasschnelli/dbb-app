@@ -95,7 +95,7 @@
       <x>-1</x>
       <y>-1</y>
       <width>401</width>
-      <height>301</height>
+      <height>359</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_6">
@@ -301,7 +301,7 @@
   <widget class="QRCodeSequence" name="qrCodeSequence" native="true">
    <property name="geometry">
     <rect>
-     <x>140</x>
+     <x>160</x>
      <y>20</y>
      <width>200</width>
      <height>200</height>
@@ -353,6 +353,19 @@
     <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
    </property>
   </widget>
+  <widget class="QPushButton" name="continueButton">
+   <property name="geometry">
+    <rect>
+     <x>340</x>
+     <y>340</y>
+     <width>110</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Continue/Skip</string>
+   </property>
+  </widget>
   <zorder>modalBgWidget</zorder>
   <zorder>modalInfoLabel</zorder>
   <zorder>modalIcon</zorder>
@@ -362,6 +375,7 @@
   <zorder>modalInfoLabelLA</zorder>
   <zorder>okButton</zorder>
   <zorder>twoFACode</zorder>
+  <zorder>continueButton</zorder>
  </widget>
  <customwidgets>
   <customwidget>

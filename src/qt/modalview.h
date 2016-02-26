@@ -42,9 +42,12 @@ public slots:
     void twoFACodeReturnPressed();
 
     void passwordCheck(const QString& password0);
-    
+    void continuePressed();
+
 protected:
     virtual void keyPressEvent(QKeyEvent *event);
+    void setQrCodeVisibility(bool state);
+
 private:
     bool visible;
     UniValue txData;
