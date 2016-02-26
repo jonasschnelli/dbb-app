@@ -899,7 +899,7 @@ void DBBDaemonGui::lockDevice()
     if (reply == QMessageBox::No)
         return;
 
-    executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"device\" : \"lock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_DEVICE_LOCK);
