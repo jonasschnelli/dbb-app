@@ -86,9 +86,11 @@ void ModalView::showSetPasswordInfo(bool showCleanInfo)
     ui->setPasswordWidget->setVisible(true);
     ui->passwordInfo->setVisible(showCleanInfo);
     ui->modalInfoLabel->setText("");
+    ui->modalInfoLabelLA->setText("");
     ui->setPassword0->setFocus();
     ui->modalIcon->setIcon(QIcon());
 
+    ui->setPassword->setEnabled(false);
     showOrHide(true);
 }
 

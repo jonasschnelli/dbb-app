@@ -367,14 +367,14 @@
    </property>
   </widget>
   <zorder>modalBgWidget</zorder>
-  <zorder>modalInfoLabel</zorder>
   <zorder>modalIcon</zorder>
   <zorder>setPasswordWidget</zorder>
   <zorder>qrCodeSequence</zorder>
-  <zorder>showDetailsButton</zorder>
   <zorder>modalInfoLabelLA</zorder>
+  <zorder>modalInfoLabel</zorder>
   <zorder>okButton</zorder>
   <zorder>twoFACode</zorder>
+  <zorder>showDetailsButton</zorder>
   <zorder>continueButton</zorder>
  </widget>
  <customwidgets>

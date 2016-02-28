@@ -664,6 +664,7 @@ void DBBDaemonGui::passwordProvided()
 void DBBDaemonGui::passwordAccepted()
 {
     hideSessionPasswordView();
+    this->ui->passwordLineEdit->setVisible(false);
     this->ui->passwordLineEdit->setText("");
     setTabbarEnabled(true);
 }
@@ -672,6 +673,7 @@ void DBBDaemonGui::askForSessionPassword()
 {
     setLoading(false);
     this->ui->blockerView->setVisible(true);
+    this->ui->passwordLineEdit->setVisible(true);
     QWidget* slide = this->ui->blockerView;
     // setup slide
     slide->setGeometry(-slide->width(), 0, slide->width(), slide->height());
@@ -1193,6 +1195,15 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         bool errorShown = false;
         if (errorObj.isObject()) {
             //error found
+
+            //special case, password not accepted during "login" because of a ongoing-signing, etc.
+            if (this->ui->blockerView->isVisible() && this->ui->passwordLineEdit->isVisible())
+            {
+                sessionPassword.clear();
+                this->ui->passwordLineEdit->setText("");
+                askForSessionPassword();
+            }
+
             UniValue errorCodeObj = find_value(errorObj, "code");
             UniValue errorMessageObj = find_value(errorObj, "message");
             if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108) {
