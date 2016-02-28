@@ -332,7 +332,8 @@ private slots:
     void updateUISingleWallet(const UniValue& walletResponse);
     //!update the single wallet transaction table
     void updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue& history);
-
+    //!show tx in a block explorer
+    void historyShowTx(QModelIndex index);
     //!parse single wallet wallet response
     void parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
     //!update payment proposals
