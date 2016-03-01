@@ -1939,6 +1939,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             QDateTime timestamp;
             timestamp.setTime_t(timeUV.get_int64());
             QStandardItem *item = new QStandardItem(timestamp.toString(Qt::SystemLocaleShortDate));
+            item->setToolTip(tr("Doubleclick for more details"));
             transactionTableModel->setItem(cnt, 0, item);
         }
 
@@ -1947,6 +1948,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         {
             QString iconName = ":/icons/tx_" + QString::fromStdString(actionUV.get_str());
             QStandardItem *item = new QStandardItem(QIcon(iconName), QString::fromStdString(actionUV.get_str()) );
+            item->setToolTip(tr("Doubleclick for more details"));
             transactionTableModel->setItem(cnt, 1, item);
         }
 
@@ -1954,13 +1956,15 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         if (amountUV.isNum())
         {
             QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())));
+            item->setToolTip(tr("Doubleclick for more details"));
             transactionTableModel->setItem(cnt, 2, item);
         }
 
         UniValue feeUV = find_value(obj, "fees");
         if (feeUV.isNum())
         {
-            QStandardItem *item = new QStandardItem(QString::number(feeUV.get_int64()) + " Satoshis" );
+            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(feeUV.get_int64())));
+            item->setToolTip(tr("Doubleclick for more details"));
             transactionTableModel->setItem(cnt, 3, item);
         }
         UniValue txidUV = find_value(obj, "txid");

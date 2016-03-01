@@ -598,15 +598,24 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
-          <widget class="QPushButton" name="ledButton">
+          <widget class="QPushButton" name="getAddress">
+           <property name="toolTip">
+            <string>Opens the address window</string>
+           </property>
            <property name="text">
-            <string>Blink LED</string>
+            <string>Get Receiving Address...</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="passwordButton">
+           <property name="toolTip">
+            <string>Sets a new password</string>
+           </property>
            <property name="text">
             <string>Set Password</string>
            </property>
@@ -616,17 +625,26 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="eraseButton">
+           <property name="toolTip">
+            <string>Erase the device, while not touching the SDCard</string>
+           </property>
            <property name="text">
-            <string>Erase</string>
+            <string>Erase Device (expect SDCard)</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="seedButton">
+           <property name="toolTip">
+            <string>Create a new wallet (master key)</string>
+           </property>
            <property name="text">
-            <string>Seed</string>
+            <string>Create Wallet</string>
            </property>
           </widget>
          </item>
@@ -634,17 +652,26 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="showBackups">
+           <property name="toolTip">
+            <string>Show backup files</string>
+           </property>
            <property name="text">
-            <string>Backups</string>
+            <string>Show Backups...</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="getRand">
+           <property name="toolTip">
+            <string>Generate a random number with the devices true random number generator</string>
+           </property>
            <property name="text">
-            <string>Random Number</string>
+            <string>Generate Random Number</string>
            </property>
           </widget>
          </item>
@@ -652,17 +679,26 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="lockDevice">
+           <property name="toolTip">
+            <string>Enable full two factor authentication. Afterwards, verification over the 2FA smartphone app will be required.</string>
+           </property>
            <property name="text">
             <string>Enable Full 2FA</string>
            </property>
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="getAddress">
+          <widget class="QPushButton" name="ledButton">
+           <property name="toolTip">
+            <string>Executes a led test blink</string>
+           </property>
            <property name="text">
-            <string>Get Address</string>
+            <string>Test LED Blink</string>
            </property>
           </widget>
          </item>
@@ -670,18 +706,27 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
          <item>
           <widget class="QPushButton" name="checkForUpdates">
+           <property name="toolTip">
+            <string>Check online if there are updates for your DBB App</string>
+           </property>
            <property name="text">
-            <string>Check for updates...</string>
+            <string>Check For Updates...</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="upgradeFirmware">
+           <property name="toolTip">
+            <string>Upgrade the devices firmware</string>
+           </property>
            <property name="text">
             <string>Upgrade Firmware...</string>
            </property>
@@ -750,7 +795,7 @@ background-color: rgba(240,240,240,255);
                <item>
                 <widget class="QPushButton" name="ipShowQRCode">
                  <property name="toolTip">
-                  <string>Show QRCode</string>
+                  <string>Show QRCode of your IP-Address</string>
                  </property>
                  <property name="text">
                   <string/>
