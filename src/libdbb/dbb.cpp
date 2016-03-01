@@ -98,6 +98,8 @@ enum dbb_device_mode deviceAvailable()
         if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
         {
             foundType = DBB_DEVICE_MODE_FIRMWARE;
+            if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-')
+                foundType = DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD;
             break;
         }
         else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
