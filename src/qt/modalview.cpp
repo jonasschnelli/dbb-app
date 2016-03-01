@@ -92,6 +92,7 @@ void ModalView::showSetPasswordInfo(bool showCleanInfo)
 
     ui->setPassword->setEnabled(false);
     showOrHide(true);
+    ui->setPassword->setEnabled(false);
 }
 
 void ModalView::showModalInfo(const QString &info, int helpType)

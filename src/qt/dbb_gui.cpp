@@ -394,7 +394,7 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
     }
 
     if (stateChanged) {
-        if (state && deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE) {
+        if (state && (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD)) {
             deviceConnected = true;
             //: translation: device connected status bar
             DBB::LogPrint("Device connected\n", "");
@@ -500,6 +500,11 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         {
             hideModalInfo();
             askForSessionPassword();
+        }
+        else if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD)
+        {
+            hideModalInfo();
+            showSetPasswordInfo(true);
         }
     }
 }
