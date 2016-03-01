@@ -598,6 +598,9 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="getAddress">
            <property name="toolTip">
@@ -622,6 +625,9 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="eraseButton">
            <property name="toolTip">
@@ -646,6 +652,9 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="showBackups">
            <property name="toolTip">
@@ -670,6 +679,9 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="lockDevice">
            <property name="toolTip">
@@ -694,6 +706,9 @@ background-color: rgba(240,240,240,255);
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_11">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
