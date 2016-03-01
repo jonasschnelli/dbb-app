@@ -484,7 +484,7 @@ bool BitPayWalletClient::JoinWallet(const std::string& name, const BitpayWalletI
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
-    if (SendRequest("post", "/v2/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode))
+    if (!SendRequest("post", "/v2/wallets/" + invitation.walletID + "/copayers", json, response, httpStatusCode))
         return false;
 
     std::string getWalletsResponse;
