@@ -59,6 +59,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
 BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : dataDir(dataDirIn), testnet(testnetIn)
 {
     //set the default wallet service
+    ca_file = "";
     baseURL = "https://bws.bitpay.com/bws/api";
     filenameBase.clear();
 }
@@ -1014,6 +1015,12 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
+#if defined(__linux__) || defined(__unix__)
+        //need to libcurl, load it once, set the CA path at runtime
+        //we assume only linux needs CA fixing
+        curl_easy_setopt(curl, CURLOPT_CAPATH, ca_file.c_str());
+#endif
+
 #ifdef DBB_ENABLE_DEBUG
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 #endif
@@ -1139,4 +1146,9 @@ int BitPayWalletClient::CheapRandom()
 {
     srand((unsigned)time(0));
     return rand()%1000000;
+}
+
+void BitPayWalletClient::setCAFile(const std::string& ca_file_in)
+{
+    ca_file = ca_file_in;
 }

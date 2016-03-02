@@ -68,3 +68,8 @@ const std::string& DBBWallet::baseKeypath()
     std::unique_lock<std::recursive_mutex> lock(this->cs_wallet);
     return _baseKeypath;
 }
+
+void DBBWallet::setCAFile(const std::string& ca_file_in)
+{
+    client.setCAFile(ca_file_in);
+}

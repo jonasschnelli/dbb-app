@@ -355,6 +355,9 @@ private slots:
     void checkForUpdateInBackground();
     void checkForUpdate(bool reportAlways = true);
     void parseCheckUpdateResponse(const std::string &response, long statusCode, bool reportAlways);
+
+    //== CA/SSL management==
+    std::string getCAFile();
 };
 
 #endif
