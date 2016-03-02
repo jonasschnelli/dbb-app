@@ -1176,8 +1176,6 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP, 1);
     });
-
-    backupDialog->close();
 }
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
