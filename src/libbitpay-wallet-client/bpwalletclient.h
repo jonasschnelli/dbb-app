@@ -171,6 +171,9 @@ public:
     //flip byte order, required to reverse a given LE hash in hex to BE
     static std::string ReversePairs(const std::string& strIn);
 
+    //set the dynamic/runtime CA file for https requests
+    void setCAFile(const std::string& ca_file);
+
     int CheapRandom();
 
 private:
@@ -191,5 +194,7 @@ private:
     UniValue feeLevelsObject;
     //!Wrapper for libbtcs doubla sha
     void Hash(const std::string& stringIn, uint8_t* hashout);
+
+    std::string ca_file;
 };
 #endif //BP_WALLET_CLIENT_H

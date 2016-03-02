@@ -38,6 +38,15 @@
 
 #include <qrencode.h>
 
+#if defined _MSC_VER
+#include <direct.h>
+#elif defined __GNUC__
+#include <sys/types.h>
+#include <sys/stat.h>
+#endif
+
+static std::string ca_file;
+
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 extern void setFirmwareUpdateHID(bool state);
@@ -88,6 +97,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
     ui->setupUi(this);
+
+#if defined(__linux__) || defined(__unix__)
+    //need to libcurl, load it once, set the CA path at runtime
+    ca_file = getCAFile();
+#endif
 
     //testnet/mainnet switch
     if (DBB::mapArgs.count("-testnet"))
@@ -330,6 +344,12 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     singleWallet->setBaseKeypath(DBB_USE_TESTNET ? "m/100203'/45'" : "m/203'/45'");
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath("m/103'/45'");
+
+#if defined(__linux__) || defined(__unix__)
+    singleWallet->setCAFile(ca_file);
+    copayWallet->setCAFile(ca_file);
+#endif
+
     vMultisigWallets.push_back(copayWallet);
 
 
@@ -2385,6 +2405,12 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
+#if defined(__linux__) || defined(__unix__)
+        //need to libcurl, load it once, set the CA path at runtime
+        //we assume only linux needs CA fixing
+        curl_easy_setopt(curl, CURLOPT_CAPATH, ca_file.c_str());
+#endif
+
 #ifdef DBB_ENABLE_DEBUG
         curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 #endif
@@ -2464,4 +2490,30 @@ void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long st
     {
         showModalInfo(tr("There is no update available"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     }
+}
+
+static const char *ca_paths[] = {
+    "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
+    "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora/RHEL
+    "/etc/ssl/ca-bundle.pem",             // OpenSUSE
+    "/etc/pki/tls/cacert.pem",            // OpenELEC
+};
+
+inline bool file_exists (const char *name) {
+    struct stat buffer;
+    int result = stat(name, &buffer);
+    return (result == 0);
+}
+
+std::string DBBDaemonGui::getCAFile()
+{
+    size_t i = 0;
+    for( i = 0; i < sizeof(ca_paths) / sizeof(ca_paths[0]); i++)
+    {
+        if (file_exists(ca_paths[i]))
+        {
+            return std::string(ca_paths[i]);
+        }
+    }
+    return "";
 }
