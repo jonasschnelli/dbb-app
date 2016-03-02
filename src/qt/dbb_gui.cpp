@@ -2494,6 +2494,7 @@ void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long st
 
 static const char *ca_paths[] = {
     "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
+    "/etc/ssl/certs/ca-bundle.crt", // Debian/Ubuntu/Gentoo etc.
     "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora/RHEL
     "/etc/ssl/ca-bundle.pem",             // OpenSUSE
     "/etc/pki/tls/cacert.pem",            // OpenELEC
@@ -2512,7 +2513,10 @@ std::string DBBDaemonGui::getCAFile()
     {
         if (file_exists(ca_paths[i]))
         {
-            return std::string(ca_paths[i]);
+            std::string fileAndPath(ca_paths[i]);
+            std::string::size_type p = fileAndPath.rfind('/');
+            if (p != std::string::npos)
+                return std::string(fileAndPath, 0, p+1);
         }
     }
     return "";
