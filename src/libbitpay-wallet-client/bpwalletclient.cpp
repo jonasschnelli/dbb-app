@@ -1018,7 +1018,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
 #if defined(__linux__) || defined(__unix__)
         //need to libcurl, load it once, set the CA path at runtime
         //we assume only linux needs CA fixing
-        curl_easy_setopt(curl, CURLOPT_CAPATH, ca_file.c_str());
+        curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
 #endif
 
 #ifdef DBB_ENABLE_DEBUG

@@ -2408,7 +2408,7 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
 #if defined(__linux__) || defined(__unix__)
         //need to libcurl, load it once, set the CA path at runtime
         //we assume only linux needs CA fixing
-        curl_easy_setopt(curl, CURLOPT_CAPATH, ca_file.c_str());
+        curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
 #endif
 
 #ifdef DBB_ENABLE_DEBUG
@@ -2494,7 +2494,7 @@ void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long st
 
 static const char *ca_paths[] = {
     "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
-    "/etc/ssl/certs/ca-bundle.crt", // Debian/Ubuntu/Gentoo etc.
+    "/etc/ssl/certs/ca-bundle.crt",       // Debian/Ubuntu/Gentoo etc.
     "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora/RHEL
     "/etc/ssl/ca-bundle.pem",             // OpenSUSE
     "/etc/pki/tls/cacert.pem",            // OpenELEC
@@ -2513,10 +2513,7 @@ std::string DBBDaemonGui::getCAFile()
     {
         if (file_exists(ca_paths[i]))
         {
-            std::string fileAndPath(ca_paths[i]);
-            std::string::size_type p = fileAndPath.rfind('/');
-            if (p != std::string::npos)
-                return std::string(fileAndPath, 0, p+1);
+            return std::string(ca_paths[i]);
         }
     }
     return "";
