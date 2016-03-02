@@ -268,11 +268,28 @@ BITCOIN_QT_INIT
 dnl sets $bitcoin_enable_qt, $bitcoin_enable_qt_test, $bitcoin_enable_qt_dbus
 BITCOIN_QT_CONFIGURE([$use_pkgconfig], [qt5])
 
+dnl --enable-thread-safety
+AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
+ [], [enable_thread_safety=yes])
+
+if test x$enable_thread_safety = xyes; then
+        AC_CHECK_LIB([pthread], [pthread_mutex_init], [AC_SUBST([LIBPTHREAD], [-lpthread])])
+fi
+AM_CONDITIONAL([HAVE_LIBPTHREAD], [test "x$ac_cv_lib_pthread_pthread_mutex_init" = "xyes" ])
+# FIXME: isn't it able to integrate the followings to AC_CHECK_LIB?
+if test x$ac_cv_lib_pthread_pthread_mutex_init = xyes ; then
+        AC_DEFINE([HAVE_LIBPTHREAD], [1], [Define to 1 if using pthread is enabled.])
+        CFLAGS="$CFLAGS -pthread"
+        CPPFLAGS="$CPPFLAGS -pthread"
+fi
+
+
 # Look for hidapi library
 case $host in
   *linux*)
    AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes], [have_hid_libusb=no])
+	 AC_SEARCH_LIBS(libusb_init, usb, , [have_hid_libusb=no])
+   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes])
    AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
    ;;
   *darwin*)
@@ -300,21 +317,6 @@ else
       usinghidlib=mac_or_win_native
    fi
 fi
-dnl --enable-thread-safety
-AC_ARG_ENABLE([thread-safety], [AS_HELP_STRING([--enable-thread-safety], [make the library thread-safe. [default=yes]])],
- [], [enable_thread_safety=yes])
-
-if test x$enable_thread_safety = xyes; then
-        AC_CHECK_LIB([pthread], [pthread_mutex_init], [AC_SUBST([LIBPTHREAD], [-lpthread])])
-fi
-AM_CONDITIONAL([HAVE_LIBPTHREAD], [test "x$ac_cv_lib_pthread_pthread_mutex_init" = "xyes" ])
-# FIXME: isn't it able to integrate the followings to AC_CHECK_LIB?
-if test x$ac_cv_lib_pthread_pthread_mutex_init = xyes ; then
-        AC_DEFINE([HAVE_LIBPTHREAD], [1], [Define to 1 if using pthread is enabled.])
-        CFLAGS="$CFLAGS -pthread"
-        CPPFLAGS="$CPPFLAGS -pthread"
-fi
-
 
 if test x$bitcoin_enable_qt = xyes; then
 AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
