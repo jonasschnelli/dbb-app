@@ -1176,8 +1176,6 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_ERASE_BACKUP, 1);
     });
-
-    backupDialog->close();
 }
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
@@ -1264,6 +1262,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 cachedDeviceLock = lock.isTrue();
 
                 ui->lockDevice->setEnabled(!cachedDeviceLock);
+                ui->seedButton->setEnabled(!cachedDeviceLock);
+                ui->showBackups->setEnabled(!cachedDeviceLock);
                 if (cachedDeviceLock)
                     ui->lockDevice->setText(tr("Full 2FA is enabled"));
                 else

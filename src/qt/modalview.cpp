@@ -35,6 +35,8 @@ ModalView::~ModalView()
 
 void ModalView::setText(const QString& text)
 {
+    ui->modalInfoLabel->setVisible(true);
+    ui->modalInfoLabelLA->setVisible(true);
     ui->modalInfoLabel->setText(text);
 }
 
@@ -85,6 +87,8 @@ void ModalView::showSetPasswordInfo(bool showCleanInfo)
     ui->okButton->setVisible(false);
     ui->setPasswordWidget->setVisible(true);
     ui->passwordInfo->setVisible(showCleanInfo);
+    ui->modalInfoLabel->setVisible(false);
+    ui->modalInfoLabelLA->setVisible(false);
     ui->modalInfoLabel->setText("");
     ui->modalInfoLabelLA->setText("");
     ui->setPassword0->setFocus();
@@ -105,6 +109,9 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     ui->qrCodeSequence->setVisible(false);
     ui->continueButton->setVisible(false);
     ui->showDetailsButton->setVisible(false);
+
+    ui->modalInfoLabel->setVisible(true);
+    ui->modalInfoLabelLA->setVisible(true);
 
     ui->modalInfoLabelLA->setText("");
     ui->modalInfoLabel->setText(info);
@@ -191,6 +198,8 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     ui->modalInfoLabelLA->setText(longString);
     ui->twoFACode->setVisible(twoFAlocked);
     ui->qrCodeSequence->setData(txEcho);
+    ui->modalInfoLabel->setVisible(true);
+    ui->modalInfoLabelLA->setVisible(true);
     ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification Code"));
 
@@ -203,7 +212,10 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     }
 
     if (twoFAlocked)
+    {
+        ui->continueButton->setVisible(false);
         ui->twoFACode->setFocus();
+    }
 }
 
 void ModalView::detailButtonAction()
@@ -241,6 +253,7 @@ void ModalView::twoFACodeReturnPressed()
 
     if (txPointer)
     {
+        ui->qrCodeSequence->setVisible(false);
         emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
         ui->twoFACode->setText("");
         ui->twoFACode->setVisible(false);
