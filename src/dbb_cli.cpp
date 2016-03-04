@@ -51,6 +51,7 @@ class CDBBCommand
 public:
     std::string cmdname;
     std::string json;
+    std::string example;
     bool requiresEncryption;
 };
 
@@ -62,36 +63,38 @@ public:
 // variables with a leading ! are mandatory and therefore missing a such will result in an error
 static const CDBBCommand vCommands[] =
 {
-    { "erase"           , "{\"reset\" : \"__ERASE__\"}",                                false},
-    { "password"        , "{\"password\" : \"%!newpassword%\"}",                        false},
-    { "led"             , "{\"led\" : \"toggle\"}",                                     true},
+    { "erase"           , "{\"reset\" : \"__ERASE__\"}",                                "", false},
+    { "password"        , "{\"password\" : \"%!newpassword%\"}",                        "", false},
+    { "led"             , "{\"led\" : \"toggle\"}",                                     "", true},
     { "seed"            , "{\"seed\" : {\"source\" :\"%source|create%\","
                             "\"decrypt\": \"%decrypt|no%\","
-                            "\"salt\" : \"%salt%\"} }",                                 true},
+                            "\"salt\" : \"%salt%\"} }",                                 "", true},
 
-    { "backuplist"      , "{\"backup\" : \"list\"}",                                    true},
-    { "backuperase"     , "{\"backup\" : \"erase\"}",                                   true},
+    { "backuplist"      , "{\"backup\" : \"list\"}",                                    "", true},
+    { "backuperase"     , "{\"backup\" : \"erase\"}",                                   "", true},
     { "backup"          , "{\"backup\" : { \"encrypt\":\"%encrypt|no%\","
-                            "\"filename\": \"%filename|backup.dat%\"}}",                true},
+                            "\"filename\": \"%filename|backup.dat%\"}}",                "", true},
 
-    { "sign"            , "{\"sign\" : { \"type\":\"%type|transaction%\","
-                            "\"data\": \"%!data%\","
-                            "\"keypath\": \"%!keypath%\","
-                            "\"change_keypath\": \"%!changekeypath%\"}}",               true},
+    { "sign"            , "{\"sign\" : { \"type\":\"%type|meta%\","
+                            "\"meta\": \"%meta%\","
+                            "\"data\": %!^hashes-keypaths%,"
+                            "\"checkpub\": %!^keypath% }}",
+        "dbb-cli --password=0000 sign -hashes-keypaths='[{\"hash\": \"f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79\", \"keypath\":\"m/44/0\"}]' -keypath='[{\"pubkey\":\"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9\", \"keypath\":\"m/44\"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90\n\n(this will sign the given hash(s) with the privatekey specified with keypath and checks, if pubkey at given keypath is equal/valid",
+                                                                                        true},
 
-    { "xpub"            , "{\"xpub\" : \"%!keypath%\"}",                                true},
-    { "random"          , "{\"random\" : \"%mode|true%\"}",                             true},
-    { "info"            , "{\"device\" : \"info\"}",                                    true},
+    { "xpub"            , "{\"xpub\" : \"%!keypath%\"}",                                "", true},
+    { "random"          , "{\"random\" : \"%mode|true%\"}",                             "", true},
+    { "info"            , "{\"device\" : \"info\"}",                                    "", true},
 
-    { "lock"            , "{\"device\" : \"lock\"}",                                    true},
-    { "verifypass"      , "{\"verifypass\" : \"%operation|create%\"}",                  true},
+    { "lock"            , "{\"device\" : \"lock\"}",                                    "", true},
+    { "verifypass"      , "{\"verifypass\" : \"%operation|create%\"}",                  "", true},
 
     { "aes"             , "{\"aes256cbc\" : { \"type\":\"%type|encrypt%\","
-                            "\"data\": \"%!data%\"}}",                                  true},
+                            "\"data\": \"%!data%\"}}",                                  "", true},
 
-    { "bootloaderunlock", "{\"bootloader\" : \"unlock\"}",                              true},
-    { "bootloaderlock"  , "{\"bootloader\" : \"lock\"}",                                true},
-    { "firmware"        , "%filename%",                                                 true},
+    { "bootloaderunlock", "{\"bootloader\" : \"unlock\"}",                              "", true},
+    { "bootloaderlock"  , "{\"bootloader\" : \"lock\"}",                                "", true},
+    { "firmware"        , "%filename%",                                                 "", true},
 };
 
 int main(int argc, char* argv[])
@@ -133,6 +136,7 @@ int main(int argc, char* argv[])
                     tokenOpenPos = sI;
 
                 else if (json[sI] == '%' && tokenOpenPos >= 0) {
+                    defaultValue = "";
                     if (defaultDelimiterPos >= 0) {
                         var = json.substr(tokenOpenPos + 1, defaultDelimiterPos - tokenOpenPos - 1);
                         defaultValue = json.substr(defaultDelimiterPos + 1, sI - defaultDelimiterPos - 1);
@@ -162,6 +166,8 @@ int main(int argc, char* argv[])
                 }
             }
             printf("\n");
+            if (cmd.example.size() > 0)
+                printf("\n    Example\n    =======\n    %s\n\n", cmd.example.c_str());
 
             continue;
         }
@@ -324,7 +330,15 @@ int main(int argc, char* argv[])
                             if (DBB::mapArgs.count("-newpassword"))
                                 password = DBB::GetArg("-newpassword", "");
 
-                            DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                            UniValue testJson;
+                            testJson.read(cmdOut);
+                            if (testJson.isObject())
+                            {
+                                //json was unencrypted
+                                unencryptedJson = cmdOut;
+                            }
+                            else
+                                DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
                         } catch (const std::exception& ex) {
                             printf("%s\n", ex.what());
                             DBB::closeConnection();
