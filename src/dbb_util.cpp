@@ -169,7 +169,7 @@ std::string formatMoney(const int64_t &n)
     int64_t n_abs = (n > 0 ? n : -n);
     int64_t quotient = n_abs/COIN;
     int64_t remainder = n_abs%COIN;
-    std::string str = string_format("%" PRId64 ".%08" PRId64 " BTC", quotient, remainder);
+    std::string str = string_format("%" PRId64 ".%08" PRId64, quotient, remainder);
 
     // Right-trim excess zeros before the decimal point:
     int nTrim = 0;
@@ -180,7 +180,7 @@ std::string formatMoney(const int64_t &n)
 
     if (n < 0)
         str.insert((unsigned int)0, 1, '-');
-    return str;
+    return str + " BTC";
 }
 
 int64_t atoi64(const char* psz)

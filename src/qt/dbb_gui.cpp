@@ -184,6 +184,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
     ui->upgradeFirmware->setVisible(false);
+    ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
@@ -1456,7 +1457,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     verificationDialog = new VerificationDialog();
 
                 verificationDialog->show();
-                verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning QRCodes.", responseMutable.write());
+                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the address by scanning QR codes."), responseMutable.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
