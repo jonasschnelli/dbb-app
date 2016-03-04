@@ -295,7 +295,7 @@
                               padding:4px;</string>
    </property>
    <property name="placeholderText">
-    <string>Lock code</string>
+    <string>2FA code</string>
    </property>
   </widget>
   <widget class="QRCodeSequence" name="qrCodeSequence" native="true">
