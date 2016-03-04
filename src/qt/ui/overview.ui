@@ -100,7 +100,7 @@
          <item>
           <widget class="QLabel" name="availableBalanceOverviewKey">
            <property name="text">
-            <string>available balance</string>
+            <string>Available Balance</string>
            </property>
           </widget>
          </item>
@@ -1030,7 +1030,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>available balance</string>
+            <string>Available Balance</string>
            </property>
           </widget>
          </item>
