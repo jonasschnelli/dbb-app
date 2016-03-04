@@ -637,7 +637,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
         else
         {
             //no verification device connected, start QRCode based verification
-            QMessageBox::warning(this, tr(""), tr("No Verification App is connected, connect a device or verify your transaction by scanning the QRCodes above"), QMessageBox::Ok);
+            QMessageBox::warning(this, tr(""), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the transaction by scanning the sequence of QR codes."), QMessageBox::Ok);
         }
 
     }
@@ -804,13 +804,13 @@ void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable,
 */
 #pragma mark DBB USB Commands (General)
 
-bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
+bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished, const QString& modaltext)
 {
     if (processCommand)
         return false;
 
     if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON) {
-        showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+        showModalInfo(modaltext, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
         touchButtonInfo = true;
     }
 
@@ -864,7 +864,7 @@ void DBBDaemonGui::seedHardware()
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
-    });
+    }, "This will <strong>OVERWRITE</strong> your existing wallet with a new wallet.");
 }
 
 /*
@@ -935,7 +935,7 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before locking. Unlocking a device is only possible by erasing it. Proceed?"), QMessageBox::Yes | QMessageBox::No);
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before enabling two-factor authentication. After, app pairing and the micro SD card slot (wallet backup and recovery) will be disabled. They can be re-enabled only by resetting and erasing the device. Proceed?"), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::No)
         return;
 
@@ -1477,7 +1477,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
             UniValue randomNumObj = find_value(response, "random");
             if (randomNumObj.isStr()) {
-                showModalInfo("<strong>"+tr("Random Number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -2490,7 +2490,7 @@ void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long st
 
     if (!updateAvailable && reportAlways)
     {
-        showModalInfo(tr("There is no update available"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+        showModalInfo(tr("You are up-to-date."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     }
 }
 

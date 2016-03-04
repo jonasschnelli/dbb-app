@@ -195,7 +195,7 @@ private:
 
     //== USB ==
     //wrapper for the DBB USB command action
-    bool executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
+    bool executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished, const QString& modaltext = "");
 
     //== Copay Wallet ==
     void hidePaymentProposalsWidget();

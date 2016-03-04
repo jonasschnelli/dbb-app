@@ -363,7 +363,7 @@
     </rect>
    </property>
    <property name="text">
-    <string>Continue/Skip</string>
+    <string>Continue</string>
    </property>
   </widget>
   <zorder>modalBgWidget</zorder>
