@@ -59,8 +59,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>481</width>
-        <height>331</height>
+        <width>480</width>
+        <height>330</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -323,8 +323,8 @@ background-color: rgba(240,240,240,255);
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>481</width>
-        <height>331</height>
+        <width>480</width>
+        <height>330</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="copayVLayout">
@@ -1345,7 +1345,7 @@ background-color: rgba(240,240,240,255);
      </rect>
     </property>
     <property name="text">
-     <string>Overview</string>
+     <string>History</string>
     </property>
     <property name="flat">
      <bool>false</bool>
