@@ -1085,6 +1085,7 @@ Address Exporting  Stack
 
 void DBBDaemonGui::showGetAddressDialog()
 {
+    getAddressDialog->setBaseKeypath(singleWallet->baseKeypath());
     getAddressDialog->show();
 }
 

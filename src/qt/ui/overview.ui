@@ -604,10 +604,10 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="getAddress">
            <property name="toolTip">
-            <string>Opens the address window</string>
+            <string>List wallet addresses and their extended public keys for different BIP32 keypaths</string>
            </property>
            <property name="text">
-            <string>Get Receiving Address...</string>
+            <string>List Addresses...</string>
            </property>
           </widget>
          </item>
