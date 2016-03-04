@@ -40,6 +40,7 @@ public slots:
     void detailButtonAction();
     void okButtonAction();
     void twoFACodeReturnPressed();
+    void twoFACanclePressed();
 
     void passwordCheck(const QString& password0);
     void continuePressed();

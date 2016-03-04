@@ -649,6 +649,13 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
 {
     updateModalWithIconName(":/icons/touchhelp");
 
+    if (ptr == NULL && twoFACode.isEmpty())
+    {
+        //cancle pressed
+        ui->modalBlockerView->clearTXData();
+        hideModalInfo();
+        return;
+    }
     DBBWallet *wallet = (DBBWallet *)ptr;
     PaymentProposalAction(wallet, twoFACode, proposalData, actionType);
     ui->modalBlockerView->clearTXData();
