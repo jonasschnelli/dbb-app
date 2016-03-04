@@ -184,6 +184,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
     ui->upgradeFirmware->setVisible(false);
+    ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
@@ -636,7 +637,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
         else
         {
             //no verification device connected, start QRCode based verification
-            QMessageBox::warning(this, tr(""), tr("No Verification App is connected, connect a device or verify your transaction by scanning the QRCodes above"), QMessageBox::Ok);
+            QMessageBox::warning(this, tr(""), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the transaction by scanning the sequence of QR codes."), QMessageBox::Ok);
         }
 
     }
@@ -803,13 +804,13 @@ void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable,
 */
 #pragma mark DBB USB Commands (General)
 
-bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished)
+bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished, const QString& modaltext)
 {
     if (processCommand)
         return false;
 
     if (layerstyle == DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON) {
-        showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+        showModalInfo(modaltext, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
         touchButtonInfo = true;
     }
 
@@ -863,7 +864,7 @@ void DBBDaemonGui::seedHardware()
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_CREATE_WALLET);
-    });
+    }, "This will <strong>OVERWRITE</strong> your existing wallet with a new wallet.");
 }
 
 /*
@@ -934,7 +935,7 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before locking. Unlocking a device is only possible by erasing it. Proceed?"), QMessageBox::Yes | QMessageBox::No);
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before enabling two-factor authentication. After, app pairing and the micro SD card slot (wallet backup and recovery) will be disabled. They can be re-enabled only by resetting and erasing the device. Proceed?"), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::No)
         return;
 
@@ -1084,6 +1085,7 @@ Address Exporting  Stack
 
 void DBBDaemonGui::showGetAddressDialog()
 {
+    getAddressDialog->setBaseKeypath(singleWallet->baseKeypath());
     getAddressDialog->show();
 }
 
@@ -1456,7 +1458,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     verificationDialog = new VerificationDialog();
 
                 verificationDialog->show();
-                verificationDialog->setData("Verify Your Receiving Address", "No Verification Smartphone Device could be detected, you can verify the address by scanning QRCodes.", responseMutable.write());
+                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the address by scanning QR codes."), responseMutable.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
@@ -1475,7 +1477,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
             UniValue randomNumObj = find_value(response, "random");
             if (randomNumObj.isStr()) {
-                showModalInfo("<strong>"+tr("Random Number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -1964,7 +1966,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             QDateTime timestamp;
             timestamp.setTime_t(timeUV.get_int64());
             QStandardItem *item = new QStandardItem(timestamp.toString(Qt::SystemLocaleShortDate));
-            item->setToolTip(tr("Doubleclick for more details"));
+            item->setToolTip(tr("Double-click for more details"));
             transactionTableModel->setItem(cnt, 0, item);
         }
 
@@ -1973,7 +1975,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         {
             QString iconName = ":/icons/tx_" + QString::fromStdString(actionUV.get_str());
             QStandardItem *item = new QStandardItem(QIcon(iconName), QString::fromStdString(actionUV.get_str()) );
-            item->setToolTip(tr("Doubleclick for more details"));
+            item->setToolTip(tr("Double-click for more details"));
             transactionTableModel->setItem(cnt, 1, item);
         }
 
@@ -1981,7 +1983,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         if (amountUV.isNum())
         {
             QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())));
-            item->setToolTip(tr("Doubleclick for more details"));
+            item->setToolTip(tr("Double-click for more details"));
             transactionTableModel->setItem(cnt, 2, item);
         }
 
@@ -1989,7 +1991,7 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         if (feeUV.isNum())
         {
             QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(feeUV.get_int64())));
-            item->setToolTip(tr("Doubleclick for more details"));
+            item->setToolTip(tr("Double-click for more details"));
             transactionTableModel->setItem(cnt, 3, item);
         }
         UniValue txidUV = find_value(obj, "txid");
@@ -2488,7 +2490,7 @@ void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long st
 
     if (!updateAvailable && reportAlways)
     {
-        showModalInfo(tr("There is no update available"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+        showModalInfo(tr("You are up-to-date."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     }
 }
 

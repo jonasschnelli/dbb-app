@@ -201,7 +201,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     ui->modalInfoLabel->setVisible(true);
     ui->modalInfoLabelLA->setVisible(true);
     ui->showDetailsButton->setVisible(true);
-    ui->showDetailsButton->setText(tr("Show Verification Code"));
+    ui->showDetailsButton->setText(tr("Show Verification QR Codes"));
 
     if (showQRSqeuence)
     {
@@ -227,7 +227,7 @@ void ModalView::setQrCodeVisibility(bool state)
 {
     if (!state)
     {
-        ui->showDetailsButton->setText(tr("Show Verification Code"));
+        ui->showDetailsButton->setText(tr("Show Verification QR Codes"));
         ui->qrCodeSequence->setVisible(false);
 
         QIcon newIcon;

@@ -59,8 +59,8 @@
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>481</width>
-        <height>331</height>
+        <width>480</width>
+        <height>330</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout">
@@ -100,7 +100,7 @@
          <item>
           <widget class="QLabel" name="availableBalanceOverviewKey">
            <property name="text">
-            <string>available balance</string>
+            <string>Available Balance</string>
            </property>
           </widget>
          </item>
@@ -323,8 +323,8 @@ background-color: rgba(240,240,240,255);
        <rect>
         <x>0</x>
         <y>0</y>
-        <width>481</width>
-        <height>331</height>
+        <width>480</width>
+        <height>330</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="copayVLayout">
@@ -602,73 +602,73 @@ background-color: rgba(240,240,240,255);
           <number>20</number>
          </property>
          <item>
-          <widget class="QPushButton" name="getAddress">
+          <widget class="QPushButton" name="showBackups">
            <property name="toolTip">
-            <string>Opens the address window</string>
+            <string>Backup your wallet, load a different wallet, or erase backups.</string>
            </property>
            <property name="text">
-            <string>Get Receiving Address...</string>
+            <string>Manage Backups...</string>
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="ledButton">
+           <property name="toolTip">
+            <string>Blink LED</string>
+           </property>
+           <property name="text">
+            <string>Blink LED</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="seedButton">
+           <property name="toolTip">
+            <string>Overwrite the existing wallet with a new wallet</string>
+           </property>
+           <property name="text">
+            <string>Create New Wallet</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QPushButton" name="getAddress">
+           <property name="toolTip">
+            <string>List wallet addresses and their extended public keys for different BIP32 keypaths</string>
+           </property>
+           <property name="text">
+            <string>List Addresses...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="passwordButton">
            <property name="toolTip">
             <string>Sets a new password</string>
            </property>
            <property name="text">
-            <string>Set Password</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>20</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="eraseButton">
-           <property name="toolTip">
-            <string>Erase the device, while not touching the SDCard</string>
-           </property>
-           <property name="text">
-            <string>Erase Device (expect SDCard)</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="seedButton">
-           <property name="toolTip">
-            <string>Create a new wallet (master key)</string>
-           </property>
-           <property name="text">
-            <string>Create Wallet</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>20</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="showBackups">
-           <property name="toolTip">
-            <string>Show backup files</string>
-           </property>
-           <property name="text">
-            <string>Show Backups...</string>
+            <string>Change Password</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QPushButton" name="getRand">
            <property name="toolTip">
-            <string>Generate a random number with the devices true random number generator</string>
+            <string>Generate a random number with the device's onboard high-quality random number generator</string>
            </property>
            <property name="text">
             <string>Generate Random Number</string>
@@ -685,7 +685,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="lockDevice">
            <property name="toolTip">
-            <string>Enable full two factor authentication. Afterwards, verification over the 2FA smartphone app will be required.</string>
+            <string>Enable two-factor authentication. Afterward, a device running the Digital Bitbox mobile app is required to send coins.</string>
            </property>
            <property name="text">
             <string>Enable Full 2FA</string>
@@ -693,12 +693,12 @@ background-color: rgba(240,240,240,255);
           </widget>
          </item>
          <item>
-          <widget class="QPushButton" name="ledButton">
+          <widget class="QPushButton" name="eraseButton">
            <property name="toolTip">
-            <string>Executes a led test blink</string>
+            <string>Erase the device and reset to factory default settings. An inserted micro SD card and the backups it holds are not affected.</string>
            </property>
            <property name="text">
-            <string>Test LED Blink</string>
+            <string>Reset Device</string>
            </property>
           </widget>
          </item>
@@ -1030,7 +1030,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QLabel" name="label_3">
            <property name="text">
-            <string>available balance</string>
+            <string>Available Balance</string>
            </property>
           </widget>
          </item>
@@ -1324,8 +1324,11 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="verifyAddressButton">
+           <property name="toolTip">
+            <string>Securely verify this address with the Digital Bitbox mobile app</string>
+           </property>
            <property name="text">
-            <string>Verify Address</string>
+            <string>Verify Address Securely</string>
            </property>
           </widget>
          </item>
@@ -1345,7 +1348,7 @@ background-color: rgba(240,240,240,255);
      </rect>
     </property>
     <property name="text">
-     <string>Overview</string>
+     <string>History</string>
     </property>
     <property name="flat">
      <bool>false</bool>

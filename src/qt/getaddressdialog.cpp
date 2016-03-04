@@ -14,12 +14,12 @@
 
 GetAddressDialog::GetAddressDialog(QWidget *parent) :
 QDialog(parent),
-ui(new Ui::GetAddressDialog)
+ui(new Ui::GetAddressDialog), _baseKeypath(DBB_DEFAULT_KEYPATH)
 {
     ui->setupUi(this);
 
 
-    ui->kpDefault->setText(QString(DBB_DEFAULT_KEYPATH)+"k");
+    ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
     ui->kpMK->setText(QString(DBB_ALTERNATIVE_KEYPATH)+"k");
 
     //connect buttons to slots
@@ -112,13 +112,22 @@ QString GetAddressDialog::getCurrentKeypath()
 
     QString basePath;
     if (ui->kpDefault->isChecked())
-        basePath = DBB_DEFAULT_KEYPATH;
+        basePath = QString::fromStdString(_baseKeypath);
     else if (ui->kpMK->isChecked())
         basePath = DBB_ALTERNATIVE_KEYPATH;
 
     basePath += ui->childIndex->text();
     ui->keypath->setText(basePath);
     return basePath;
+}
+
+void GetAddressDialog::setBaseKeypath(const std::string& keypath)
+{
+    _baseKeypath = keypath;
+    if(_baseKeypath.back() != '/')
+        _baseKeypath += "/";
+
+    ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
 }
 
 GetAddressDialog::~GetAddressDialog()

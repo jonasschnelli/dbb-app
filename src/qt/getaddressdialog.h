@@ -30,7 +30,11 @@ public slots:
     void updateAddress(const UniValue &xpubResult);
     void keypathEditFinished();
 
+    //allows to set the base keypath
+    void setBaseKeypath(const std::string& keypath);
+
 private:
+    std::string _baseKeypath;
     Ui::GetAddressDialog *ui;
     QString getCurrentKeypath();
     QString lastKeypath;
