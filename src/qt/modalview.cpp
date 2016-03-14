@@ -18,6 +18,7 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->setPassword1, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
     connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
     connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
+    connect(this->ui->cancelSetPassword, SIGNAL(clicked()), this, SLOT(cancelSetPasswordProvided()));
 
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
@@ -63,6 +64,11 @@ void ModalView::setPasswordProvided()
     ui->setPassword1->setText("");
 }
 
+void ModalView::cancelSetPasswordProvided()
+{
+    showOrHide();
+}
+
 void ModalView::showOrHide(bool state)
 {
     if (state)
@@ -89,6 +95,7 @@ void ModalView::showSetPasswordInfo(bool showCleanInfo)
     ui->okButton->setVisible(false);
     ui->setPasswordWidget->setVisible(true);
     ui->passwordInfo->setVisible(showCleanInfo);
+    ui->cancelSetPassword->setVisible(!showCleanInfo);
     ui->modalInfoLabel->setVisible(false);
     ui->modalInfoLabelLA->setVisible(false);
     ui->modalInfoLabel->setText("");
