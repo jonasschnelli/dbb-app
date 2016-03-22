@@ -332,7 +332,12 @@ int main(int argc, char* argv[])
 
                             UniValue testJson;
                             testJson.read(cmdOut);
+                            UniValue ct;
+
                             if (testJson.isObject())
+                                ct = find_value(testJson, "ciphertext");
+
+                            if (testJson.isObject() && !ct.isStr())
                             {
                                 //json was unencrypted
                                 unencryptedJson = cmdOut;
