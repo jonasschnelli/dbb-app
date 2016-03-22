@@ -95,7 +95,55 @@ static const CDBBCommand vCommands[] =
     { "bootloaderunlock", "{\"bootloader\" : \"unlock\"}",                              "", true},
     { "bootloaderlock"  , "{\"bootloader\" : \"lock\"}",                                "", true},
     { "firmware"        , "%filename%",                                                 "", true},
+    { "decryptbackup"   , "%filename%",                                                 "", true},
 };
+
+
+#define strlens(s) (s == NULL ? 0 : strlen(s))
+#define PBKDF2_SALT     "Digital Bitbox"
+#define PBKDF2_SALTLEN  14
+#define PBKDF2_ROUNDS   2048
+#define PBKDF2_HMACLEN  64
+
+extern "C" {
+    extern void hmac_sha512(const uint8_t* key, const uint32_t keylen, const uint8_t* msg, const uint32_t msglen, uint8_t* hmac);
+    extern char* utils_uint8_to_hex(const uint8_t* bin, size_t l);
+}
+void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keylen)
+{
+    uint32_t i, j, k;
+    uint8_t f[PBKDF2_HMACLEN], g[PBKDF2_HMACLEN];
+    uint32_t blocks = keylen / PBKDF2_HMACLEN;
+
+    static uint8_t salt[PBKDF2_SALTLEN + 4];
+    memset(salt, 0, sizeof(salt));
+    memcpy(salt, PBKDF2_SALT, strlens(PBKDF2_SALT));
+
+    if (keylen & (PBKDF2_HMACLEN - 1)) {
+        blocks++;
+    }
+    for (i = 1; i <= blocks; i++) {
+        salt[PBKDF2_SALTLEN    ] = (i >> 24) & 0xFF;
+        salt[PBKDF2_SALTLEN + 1] = (i >> 16) & 0xFF;
+        salt[PBKDF2_SALTLEN + 2] = (i >> 8) & 0xFF;
+        salt[PBKDF2_SALTLEN + 3] = i & 0xFF;
+        hmac_sha512(pass, passlen, salt, PBKDF2_SALTLEN + 4, g);
+        memcpy(f, g, PBKDF2_HMACLEN);
+        for (j = 1; j < PBKDF2_ROUNDS; j++) {
+            hmac_sha512(pass, passlen, g, PBKDF2_HMACLEN, g);
+            for (k = 0; k < PBKDF2_HMACLEN; k++) {
+                f[k] ^= g[k];
+            }
+        }
+        if (i == blocks && (keylen & (PBKDF2_HMACLEN - 1))) {
+            memcpy(key + PBKDF2_HMACLEN * (i - 1), f, keylen & (PBKDF2_HMACLEN - 1));
+        } else {
+            memcpy(key + PBKDF2_HMACLEN * (i - 1), f, PBKDF2_HMACLEN);
+        }
+    }
+    memset(f, 0, sizeof(f));
+    memset(g, 0, sizeof(g));
+}
 
 int main(int argc, char* argv[])
 {
@@ -192,7 +240,43 @@ int main(int argc, char* argv[])
             return 0;
         }
 
-        if (userCmd == "firmware")
+        if (userCmd == "decryptbackup")
+        {
+            if (!DBB::mapArgs.count("-password"))
+            {
+                printf("You need to provide the password used during backup creation (-password=<password>)\n");
+                return 0;
+            }
+
+            std::string password = DBB::GetArg("-password", "0000");
+            std::string key;
+
+            // load the file
+            std::string possibleFilename = DBB::mapArgs["-filename"];
+            if ((possibleFilename.empty() || possibleFilename == ""))
+                possibleFilename = cmdArgs[1].c_str();
+
+            std::ifstream backupFile(possibleFilename, std::ios::ate);
+            std::streamsize backupSize = backupFile.tellg();
+
+            if (backupSize <= 0)
+            {
+                printf("Backup file (%s) does not exists or is empty\n", possibleFilename.c_str());
+                return 0;
+            }
+            backupFile.seekg(0, std::ios::beg);
+
+            //PBKDF2 key stretching
+            key.resize(PBKDF2_HMACLEN);
+            pbkdf2_hmac_sha512((uint8_t *)password.c_str(), password.size(), (uint8_t *)&key[0], PBKDF2_HMACLEN);
+
+            std::string backupBuffer((std::istreambuf_iterator<char>(backupFile)), std::istreambuf_iterator<char>());
+            backupBuffer = "{\"ciphertext\" : \""+backupBuffer+"\"}";
+            std::string unencryptedBackup;
+            DBB::decryptAndDecodeCommand(backupBuffer, std::string(utils_uint8_to_hex((uint8_t *)&key[0], PBKDF2_HMACLEN)), unencryptedBackup);
+            printf("%s\n", unencryptedBackup.c_str());
+        }
+        else if (userCmd == "firmware")
         {
             // dummy private key to allow current testing
             // the private key matches the pubkey on the DBB bootloader / FW
