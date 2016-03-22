@@ -125,7 +125,7 @@ void GetAddressDialog::setBaseKeypath(const std::string& keypath)
 {
     _baseKeypath = keypath;
     if(_baseKeypath.back() != '/')
-        _baseKeypath += "/";
+        _baseKeypath += "/0/";
 
     ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
 }

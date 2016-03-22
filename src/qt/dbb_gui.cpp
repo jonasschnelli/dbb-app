@@ -342,9 +342,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //create the single and multisig wallet
     std::string dataDir = DBB::GetDefaultDBBDataDir();
     singleWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
-    singleWallet->setBaseKeypath(DBB_USE_TESTNET ? "m/100203'/45'" : "m/203'/45'");
+    singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'" : "m/44'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
-    copayWallet->setBaseKeypath("m/103'/45'");
+    copayWallet->setBaseKeypath(DBB::GetArg("-mskeypath","m/100'/45'/0'"));
 
 #if defined(__linux__) || defined(__unix__)
     singleWallet->setCAFile(ca_file);
