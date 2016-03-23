@@ -131,12 +131,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-Black");
     this->setStyleSheet("QMainWindow {background: 'white';}");
 
-    QFontDatabase db;
-    QStringList fams = db.families();
-    foreach (const QString &family, fams) {
-        printf("%s\n", family.toStdString().c_str());
-    }
-
 #if defined(Q_OS_WIN)
     qApp->setStyleSheet("");
 #else
