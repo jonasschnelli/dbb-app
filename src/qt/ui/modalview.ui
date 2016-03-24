@@ -116,7 +116,7 @@
       <widget class="QLabel" name="setPasswordTitle">
        <property name="font">
         <font>
-         <pointsize>28</pointsize>
+         <pointsize>20</pointsize>
         </font>
        </property>
        <property name="styleSheet">
@@ -132,7 +132,7 @@
       <widget class="QLineEdit" name="setPassword0">
        <property name="font">
         <font>
-         <pointsize>24</pointsize>
+         <pointsize>20</pointsize>
         </font>
        </property>
        <property name="styleSheet">
@@ -153,7 +153,7 @@
       <widget class="QLineEdit" name="setPassword1">
        <property name="font">
         <font>
-         <pointsize>24</pointsize>
+         <pointsize>20</pointsize>
         </font>
        </property>
        <property name="styleSheet">
@@ -188,7 +188,6 @@
          </property>
          <property name="font">
           <font>
-           <pointsize>20</pointsize>
            <weight>75</weight>
            <bold>true</bold>
           </font>
@@ -202,6 +201,36 @@
          </property>
          <property name="text">
           <string>Set Password</string>
+         </property>
+         <property name="flat">
+          <bool>false</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QPushButton" name="cancelSetPassword">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="font">
+          <font>
+           <weight>75</weight>
+           <bold>true</bold>
+          </font>
+         </property>
+         <property name="styleSheet">
+          <string notr="true">background:#777777;
+                       color:white;
+                       border:0px;
+                       border-radius: 5px;
+                       padding:4px;
+</string>
+         </property>
+         <property name="text">
+          <string>Cancel</string>
          </property>
          <property name="flat">
           <bool>false</bool>

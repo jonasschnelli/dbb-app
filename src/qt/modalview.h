@@ -31,6 +31,7 @@ public slots:
     void showModalInfo(const QString &info, int helpType);
     void showTransactionVerification(bool twoFAlocked, bool showQRSqeuence = false);
     void setPasswordProvided();
+    void cancelSetPasswordProvided();
     void cleanse();
     void setText(const QString& text);
     void updateIcon(const QIcon& icon);
