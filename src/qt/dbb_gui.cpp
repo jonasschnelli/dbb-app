@@ -332,6 +332,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //set password screen
     connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, bool)));
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
+    //modal general signals
+    connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
 
     //create the single and multisig wallet
     std::string dataDir = DBB::GetDefaultDBBDataDir();
@@ -774,6 +776,12 @@ void DBBDaemonGui::updateModalInfo(const QString &info)
 void DBBDaemonGui::hideModalInfo()
 {
     ui->modalBlockerView->showOrHide(false);
+}
+
+void DBBDaemonGui::modalStateChanged(bool state)
+{
+    this->ui->sendToAddress->setEnabled(!state);
+    this->ui->sendAmount->setEnabled(!state);
 }
 
 void DBBDaemonGui::updateModalWithQRCode(const QString& string)

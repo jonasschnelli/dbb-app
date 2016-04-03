@@ -24,6 +24,7 @@ public:
 signals:
     void newPasswordAvailable(const QString&, bool);
     void signingShouldProceed(const QString&, void *, const UniValue&, int);
+    void modalViewWillShowHide(bool);
 
 public slots:
     void showOrHide(bool state = false);
