@@ -2458,7 +2458,7 @@ void DBBDaemonGui::checkForUpdate(bool reportAlways)
     thread->currentThread = std::thread([this, thread, reportAlways]() {
         std::string response;
         long httpStatusCode;
-        SendRequest("post", "https://digitalbitbox.com/dbb-app/update.json", "version="+std::string(DBB_PACKAGE_VERSION), response, httpStatusCode);
+        SendRequest("post", "https://digitalbitbox.com/dbb-app/update.json", "dv="+std::string(VERSION)+"&version="+std::string(DBB_PACKAGE_VERSION), response, httpStatusCode);
         emit checkForUpdateResponseAvailable(response, httpStatusCode, reportAlways);
         thread->completed();
     });
