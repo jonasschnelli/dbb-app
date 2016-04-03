@@ -247,6 +247,7 @@ private slots:
     //!show a new Icon in the modal info
     void updateModalWithIconName(const QString& filename);
     void hideModalInfo();
+    void modalStateChanged(bool state);
     //!show set passworf form
     void showSetPasswordInfo(bool showCleanInfo = false);
     //!gets called when the user hits enter (or presses button) in the "set password form"

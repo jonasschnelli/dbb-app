@@ -83,6 +83,8 @@ void ModalView::showOrHide(bool state)
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 
     visible = state;
+
+    emit modalViewWillShowHide(false);
 }
 
 void ModalView::showSetPasswordInfo(bool showCleanInfo)
@@ -178,6 +180,8 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     animation->setEasingCurve(QEasingCurve::OutQuad);
     // to slide in call
     animation->start(QAbstractAnimation::DeleteWhenStopped);
+
+    emit modalViewWillShowHide(true);
 }
 
 void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuence)
