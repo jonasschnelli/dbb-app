@@ -761,15 +761,22 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
 
     int64_t changeAmount = inTotal - toAmount - fee;
 
-    // flip output order after value given by the wallet server
-    if (outputOrder.size() > 0 && outputOrder[0] == 1) {
-        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
+    if (changeAmount == 0)
+    {
+        // don't add a change address when there the changeAmount if 0
         btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
-    } else {
-        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
-        btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
     }
-
+    else
+    {
+        // flip output order after value given by the wallet server
+        if (outputOrder.size() > 0 && outputOrder[0] == 1) {
+            btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
+            btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
+        } else {
+            btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), toAmount, toAddress.c_str());
+            btc_tx_add_address_out(tx, (testnet ? &btc_chain_test : &btc_chain_main), changeAmount, changeAdr.c_str());
+        }
+    }
 
     cstring* txser = cstr_new_sz(1024);
     btc_tx_serialize(txser, tx);
