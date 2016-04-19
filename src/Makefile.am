@@ -87,7 +87,10 @@ DBB_GUI_H = \
     qt/qrcodesequence.h \
     qt/verificationdialog.h \
     qt/modalview.h \
-    qt/clickablelabel.h
+    qt/clickablelabel.h \
+    qt/qrcodescanner.h \
+    qt/quirc/lib/quirc_internal.h \
+    qt/quirc/lib/quirc.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
@@ -97,7 +100,12 @@ DBB_GUI_CPP = \
     qt/qrcodesequence.cpp \
     qt/verificationdialog.cpp \
     qt/modalview.cpp \
-    qt/clickablelabel.cpp
+    qt/clickablelabel.cpp \
+    qt/qrcodescanner.cpp \
+    qt/quirc/lib/decode.c \
+    qt/quirc/lib/identify.c \
+    qt/quirc/lib/quirc.c \
+    qt/quirc/lib/version_db.c
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
@@ -108,7 +116,8 @@ QT_MOC_CPP = \
     qt/moc_qrcodesequence.cpp \
     qt/moc_verificationdialog.cpp \
     qt/moc_modalview.cpp \
-    qt/moc_clickablelabel.cpp
+    qt/moc_clickablelabel.cpp \
+    qt/moc_qrcodescanner.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
@@ -119,7 +128,8 @@ QT_MOC = \
   qt/qrcodesequence.moc \
   qt/verificationdialog.moc \
   qt/modalview.moc \
-  qt/clickablelabel.moc
+  qt/clickablelabel.moc \
+  qt/qrcodescanner.moc
 
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 

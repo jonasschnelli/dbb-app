@@ -1129,6 +1129,18 @@ background-color: rgba(240,240,240,255);
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="qrCodeButton">
+          <property name="toolTip">
+              <string>Scan QRCode</string>
+          </property>
+           <property name="icon">
+               <iconset>
+                   <normaloff>:/icons/qrcode</normaloff>
+                   <disabledoff>:/icons/qrcode</disabledoff>:/icons/qrcode</iconset>
+           </property>
+          </widget>
+         </item>
         </layout>
        </item>
        <item>

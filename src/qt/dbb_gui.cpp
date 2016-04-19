@@ -103,7 +103,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               checkingForUpdates(0),
                                               comServer(0),
                                               lastPing(0),
-                                              smartVerificationDeviceConnected(0)
+                                              smartVerificationDeviceConnected(0),
+                                              qrCodeScanner(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -177,6 +178,15 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     qRegisterMetaType<std::vector<std::string> >("std::vector<std::string>");
     qRegisterMetaType<DBBWallet*>("DBBWallet *");
 
+    // initiaize QRCode scanner
+    if (DBBQRCodeScanner::availability())
+    {
+        qrCodeScanner = new DBBQRCodeScanner(this);
+        ui->qrCodeButton->setEnabled(true);
+    }
+    else
+        ui->qrCodeButton->setEnabled(false);
+    
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
@@ -199,6 +209,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
     connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
+    // connect QRCode Scanner
+    connect(ui->qrCodeButton, SIGNAL(clicked()),this,SLOT(showQrCodeScanner()));
+    connect(qrCodeScanner, SIGNAL(QRCodeFound(const QString&)), this, SLOT(qrCodeFound(const QString&)));
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
@@ -2815,4 +2828,44 @@ std::string DBBDaemonGui::getCAFile()
         }
     }
     return "";
+}
+
+void DBBDaemonGui::showQrCodeScanner()
+{
+    if (!qrCodeScanner)
+        return;
+
+    qrCodeScanner->show();
+    qrCodeScanner->setScannerActive(true);
+}
+
+void DBBDaemonGui::qrCodeFound(const QString &payload)
+{
+    static const char bitcoinurl[] = "bitcoin:";
+    static const char amountfield[] = "amount=";
+
+    if (payload.startsWith(bitcoinurl, Qt::CaseInsensitive))
+    {
+        // get the part after the "bitcoin:"
+        QString addressWithDetails = payload.mid(strlen(bitcoinurl));
+
+        // form a substring with only the address
+        QString onlyAddress = addressWithDetails.mid(0,addressWithDetails.indexOf("?"));
+
+        // if there is an amount, rip our the string
+        if (addressWithDetails.indexOf(amountfield) != -1)
+        {
+            QString part = addressWithDetails.mid(addressWithDetails.indexOf(amountfield));
+            QString amount = part.mid(strlen(amountfield),part.indexOf("&")-strlen(amountfield));
+
+            // fill amount
+            this->ui->sendAmount->setText(amount);
+        }
+
+        // fill address
+        this->ui->sendToAddress->setText(onlyAddress);
+
+        qrCodeScanner->setScannerActive(false);
+        qrCodeScanner->hide();
+    }
 }

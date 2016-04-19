@@ -29,6 +29,7 @@
 #include "dbb_wallet.h"
 
 #include "dbb_comserver.h"
+#include "qrcodescanner.h"
 
 #include "backupdialog.h"
 #include "getaddressdialog.h"
@@ -181,6 +182,8 @@ private:
     DBBComServer *comServer;
     bool smartVerificationDeviceConnected;
     std::time_t lastPing;
+
+    DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
 
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
@@ -378,6 +381,10 @@ private slots:
 
     //== CA/SSL management==
     std::string getCAFile();
+
+    //== QRCode Scanner==
+    void showQrCodeScanner();
+    void qrCodeFound(const QString& payload);
 };
 
 #endif
