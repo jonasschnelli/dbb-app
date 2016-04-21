@@ -53,8 +53,8 @@ dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp dbb_wallet.h dbb_wallet.cpp dbb_netthread.h dbb_netthread.cpp
 dbb_app_CPPFLAGS = $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
-dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS) $(LIBEVENT_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(LIBEVENT_LIBS) $(UNIVALUE) $(LIBCURL)
+dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(UNIVALUE) $(LIBCURL)
 
 if ENABLE_QT
 

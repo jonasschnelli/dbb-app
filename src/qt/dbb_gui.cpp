@@ -2428,7 +2428,7 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
 
         res = curl_easy_perform(curl);
         if (res != CURLE_OK) {
-            DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""));
+            DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
             success = false;
         } else {
             curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
@@ -2440,7 +2440,7 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
     }
     curl_global_cleanup();
 
-    DBB::LogPrintDebug("response: "+responseOut);
+    DBB::LogPrintDebug("response: "+responseOut, "");
     return success;
 };
 
