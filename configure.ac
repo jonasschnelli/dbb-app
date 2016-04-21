@@ -62,19 +62,18 @@ AC_ARG_ENABLE([debug],
 if test "x$enable_debug" = xyes; then
     CFLAGS="$CFLAGS -g3 -O0 -DDEBUG"
     CXXFLAGS="$CXXFLAGS -g3 -O0 -DDEBUG"
-		AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[1],[Define to 1 to enable debung output])
+    AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[1],[Define to 1 to enable debung output])
 fi
 
 AC_ARG_ENABLE([daemon],
     [AS_HELP_STRING([--enable-daemon],
-  								[enable daemon (default is yes)])],
+    [enable daemon (default is yes)])],
     [enable_daemon=$enableval],
     [enable_daemon=yes])
 
 if test "x$enable_daemon" = xyes; then
-  AC_CHECK_LIBEVENT
   AC_DEFINE_UNQUOTED([ENABLE_DAEMON],[1],[Define to 1 to enable the dbb daemon])
-	AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
+  AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
 AC_ARG_ENABLE([hid_report_shift],
@@ -288,7 +287,7 @@ fi
 case $host in
   *linux*)
    AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-	 AC_SEARCH_LIBS(libusb_init, usb, , [have_hid_libusb=no])
+   AC_SEARCH_LIBS(libusb_init, usb, , [have_hid_libusb=no])
    AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes])
    AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
    ;;
@@ -324,11 +323,11 @@ AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
 
 if test x$bitcoin_enable_qt = xno; then
-	if test x$enable_daemon] = xno; then
-	AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
-	else
-	AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
-	fi
+  if test x$enable_daemon] = xno; then
+  AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
+  else
+  AM_CONDITIONAL([ENABLE_DBB_APP],[test x$enable_daemon = xyes])
+  fi
 else
 AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
 fi
