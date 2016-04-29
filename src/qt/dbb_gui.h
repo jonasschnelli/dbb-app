@@ -65,7 +65,8 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_XPUB_VERIFY,
     DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS,
     DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK,
-    DBB_RESPONSE_TYPE_BOOTLOADER_LOCK
+    DBB_RESPONSE_TYPE_BOOTLOADER_LOCK,
+    DBB_RESPONSE_TYPE_SET_DEVICE_NAME,
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -278,6 +279,8 @@ private slots:
     //!start upgrading the firmware with a file at given location
     void upgradeFirmwareWithFile(const QString& fileName);
     void upgradeFirmwareDone(bool state);
+    //!change device name
+    void setDeviceNameClicked();
 
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();
