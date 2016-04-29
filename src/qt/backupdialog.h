@@ -23,12 +23,14 @@ public:
 
 signals:
     void addBackup();
-    void restoreFromBackup(QString filename);
+    void restoreFromBackup(const QString& filename);
     void eraseAllBackups();
-    void eraseBackup(QString filename);
+    void eraseBackup(const QString& filename);
+    void verifyBackup(const QString& filename);
 
 public slots:
     void addBackupPressed();
+    void verifyBackupPressed();
     void eraseAllBackupPressed();
     void eraseSingleBackupPressed();
     void restoreBackupPressed();

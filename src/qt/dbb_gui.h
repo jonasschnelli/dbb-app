@@ -59,6 +59,7 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_ADD_BACKUP,
     DBB_RESPONSE_TYPE_LIST_BACKUP,
     DBB_RESPONSE_TYPE_ERASE_BACKUP,
+    DBB_RESPONSE_TYPE_VERIFY_BACKUP,
     DBB_RESPONSE_TYPE_RANDOM_NUM,
     DBB_RESPONSE_TYPE_DEVICE_LOCK,
     DBB_RESPONSE_TYPE_VERIFYPASS_ECDH,
@@ -292,6 +293,7 @@ private slots:
     void listBackup();
     void eraseAllBackups();
     void eraseBackup(const QString& backupFilename);
+    void verifyBackup(const QString& backupFilename);
     void restoreBackup(const QString& backupFilename);
 
     //== DBB USB Commands (Response Parsing) ==

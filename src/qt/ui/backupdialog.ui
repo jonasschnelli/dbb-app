@@ -54,6 +54,13 @@
      </widget>
     </item>
     <item>
+     <widget class="QPushButton" name="verifyButton">
+      <property name="text">
+       <string>Verify</string>
+      </property>
+     </widget>
+    </item>
+    <item>
      <widget class="QPushButton" name="restoreButton">
       <property name="text">
        <string>Restore</string>
