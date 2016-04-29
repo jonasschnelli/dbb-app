@@ -182,6 +182,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
+    connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
@@ -1085,6 +1086,28 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
 
 }
 
+void DBBDaemonGui::setDeviceNameClicked()
+{
+    bool ok;
+    QString newName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
+    if (!ok || newName.isEmpty())
+        return;
+
+    QRegExp nameMatcher("^[0-9A-Z-_]{4,20}$", Qt::CaseInsensitive);
+    if (!nameMatcher.exactMatch(newName))
+    {
+        showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+        return;
+    }
+
+    std::string command = "{\"name\" : \""+newName.toStdString()+"\" }";
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
+    });
+}
+
 /*
 ////////////////////////
 Address Exporting  Stack
@@ -1514,6 +1537,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         }
         else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
             hideModalInfo();
+        }
+        else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME) {
+            UniValue name = find_value(response, "name");
+            if (name.isStr())
+                this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
         }
         else {
         }

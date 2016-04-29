@@ -811,9 +811,6 @@ background-color: rgba(240,240,240,255);
                    <height>16</height>
                   </size>
                  </property>
-                 <property name="shortcut">
-                  <string>Ctrl+S</string>
-                 </property>
                 </widget>
                </item>
               </layout>
@@ -950,9 +947,12 @@ background-color: rgba(240,240,240,255);
                 </widget>
                </item>
                <item>
-                <widget class="QLabel" name="deviceNameLabel">
+                <widget class="ClickableLabel" name="deviceNameLabel">
                  <property name="text">
                   <string/>
+                 </property>
+                 <property name="toolTip">
+                     <string>Click to set a new device name</string>
                  </property>
                  <property name="alignment">
                   <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
