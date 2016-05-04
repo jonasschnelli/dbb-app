@@ -19,13 +19,15 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QtNetwork/QHostInfo>
+#include <QDateTime>
 
 #include "ui/ui_overview.h"
 #include <dbb.h>
+#include "libdbb/crypto.h"
 
 #include "dbb_util.h"
 #include "dbb_netthread.h"
-#include "bonjourserviceregister.h"
+#include "serialize.h"
 
 #include <cstdio>
 #include <ctime>
@@ -51,15 +53,21 @@ static std::string ca_file;
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 extern void setFirmwareUpdateHID(bool state);
 
-DBBDaemonGui::~DBBDaemonGui()
+// static C based callback which gets called if the com server gets a message
+static void comServerCallback(DBBComServer* cs, const std::string& str, void *ctx)
 {
-    delete bonjourRegister;
+    // will be called on the com server thread
+    if (ctx)
+    {
+        DBBDaemonGui *gui = (DBBDaemonGui *)ctx;
+
+        // emits signal "comServerIncommingMessage"
+        QMetaObject::invokeMethod(gui, "comServerIncommingMessage", Qt::QueuedConnection,
+                                  Q_ARG(QString, QString::fromStdString(str)));
+    }
 }
 
-void testfunc(DNSServiceRef, DNSServiceFlags,
-              DNSServiceErrorType errorCode, const char *name,
-              const char *regtype, const char *domain,
-              void *data)
+DBBDaemonGui::~DBBDaemonGui()
 {
 
 }
@@ -72,7 +80,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               backupDialog(0),
                                               getAddressDialog(0),
                                               verificationDialog(0),
-                                              websocketServer(0),
                                               processCommand(0),
                                               deviceConnected(0),
                                               deviceReadyToInteract(0),
@@ -91,7 +98,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               shouldKeepBootloaderState(0),
                                               touchButtonInfo(0),
                                               walletUpdateTimer(0),
-                                              checkingForUpdates(0)
+                                              checkingForUpdates(0),
+                                              comServer(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -178,6 +186,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
@@ -209,11 +218,12 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
 
-
+    connect(this, SIGNAL(comServerIncommingMessage(const QString&)), this, SLOT(comServerMessageParse(const QString&)));
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
     connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
+    connect(backupDialog, SIGNAL(verifyBackup(const QString&)), this, SLOT(verifyBackup(const QString&)));
     connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
     connect(backupDialog, SIGNAL(eraseBackup(const QString&)), this, SLOT(eraseBackup(const QString&)));
     connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
@@ -335,8 +345,14 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
 
-    //create the single and multisig wallet
+    //get the default data dir
     std::string dataDir = DBB::GetDefaultDBBDataDir();
+
+    //load the configuration file
+    configData = new DBB::DBBConfigdata(dataDir+"/config.dat");
+    configData->read();
+
+    //create the single and multisig wallet
     singleWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'" : "m/44'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
@@ -350,26 +366,26 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     vMultisigWallets.push_back(copayWallet);
 
 
+    processCommand = false;
     deviceConnected = false;
     resetInfos();
+
     //set status bar connection status
     uiUpdateDeviceState();
     changeConnectedState(DBB::isConnectionOpen(), DBB::deviceAvailable());
 
-
-    processCommand = false;
-
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
-    //create a local websocket server
-    websocketServer = new WebsocketServer(WEBSOCKET_PORT, false);
-    connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
-    connect(websocketServer, SIGNAL(amountOfConnectionsChanged(int)), this, SLOT(amountOfPairingDevicesChanged(int)));
-
-    //announce service over mDNS
-    bonjourRegister = new BonjourServiceRegister(this);
-    bonjourRegister->registerService(BonjourRecord("Digital Bitbox App Websocket", QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
+    //connect to the com server
+    comServer = new DBBComServer();
+    comServer->setParseMessageCB(comServerCallback, this);
+    if (configData->comServerChannelID.size() > 0)
+    {
+        comServer->setChannelID(configData->comServerChannelID);
+        comServer->setEncryptionKey(configData->encryptionKey);
+        comServer->startLongPollThread();
+    }
 
     walletUpdateTimer = new QTimer(this);
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
@@ -499,8 +515,6 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         cachedDeviceLock = false;
         //hide modal dialog and abort possible ecdh pairing
         hideModalInfo();
-        if (websocketServer)
-            websocketServer->abortECDHPairing();
 
         //clear some infos
         sdcardWarned = false;
@@ -610,11 +624,11 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 {
 
     int amountOfClientsInformed = 0;
-    if (websocketServer)
+    if (comServer)
     {
-        amountOfClientsInformed = websocketServer->sendStringToAllClients(echoStr);
-        if (amountOfClientsInformed > 0)
-            verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+        amountOfClientsInformed = 1;
+        comServer->postNotification(echoStr);
+        verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
     }
 
     ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
@@ -1487,7 +1501,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
-            bool sentToWebsocketClients = false;
+            bool sentToVerificationClients = false;
 
             UniValue responseMutable(UniValue::VOBJ);
             UniValue requestXPubKeyUV = find_value(response, "xpub");
@@ -1500,16 +1514,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
                     responseMutable.pushKV("type", "p2pkh");
-                if (websocketServer->sendStringToAllClients(responseMutable.write()) > 0)
+
+                // send verification to verification devices
+                if (comServer)
                 {
-                    sentToWebsocketClients = true;
-                    verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+                    sentToVerificationClients = true;
+                    comServer->postNotification(responseMutable.write());
                 }
 
 
 
             }
-            if (!sentToWebsocketClients)
+            if (!sentToVerificationClients)
             {
                 if (!verificationDialog)
                     verificationDialog = new VerificationDialog();
@@ -1591,7 +1607,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Error"), tr("Verification Device Pairing Failed"));
             }
             hideModalInfo();
-            websocketServer->sendDataToClientInECDHParingState(response);
+            if (comServer)
+                comServer->postNotification(response.write());
         }
 
         if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
@@ -2456,7 +2473,7 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
     setNetLoading(true);
 }
 
-#pragma mark - WebSocket Stack (ECDH)
+#pragma mark - Smart Verification Stack (ECDH / ComServer)
 
 void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
 {
@@ -2485,7 +2502,38 @@ void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
     this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
 }
 
-#pragma mark - Update Check
+void DBBDaemonGui::comServerMessageParse(const QString& msg)
+{
+    // pass in a push message from the communication server
+    // will be called on main thread
+
+    // FIXME: only send a ECDH request if the messages is a ECDH p-req.
+    sendECDHPairingRequest(msg.toStdString());
+}
+
+void DBBDaemonGui::pairSmartphone()
+{
+    //create a new channel id and encryption key
+    if (!comServer->getChannelID().empty())
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to pair with a new device?"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::No)
+            return;
+    }
+
+    comServer->generateNewKey();
+    configData->comServerChannelID = comServer->getChannelID();
+    configData->encryptionKey = comServer->getEncryptionKey();
+    configData->write();
+    comServer->setChannelID(configData->comServerChannelID);
+    comServer->startLongPollThread();
+
+    QString pairingData = QString::fromStdString(comServer->getPairData());
+    showModalInfo(tr("Your pairing ID:")+" "+pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    updateModalWithQRCode("{\"id\":\""+pairingData+"\"}");
+}
+
+#pragma mark - Update Check (FIXME: refactor to own class)
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 {
@@ -2508,11 +2556,14 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
     curl = curl_easy_init();
     if (curl) {
         struct curl_slist* chunk = NULL;
-        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, "Content-Type: text/plain");
         res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         if (method == "post")
+        {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        }
 
         if (method == "delete") {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());

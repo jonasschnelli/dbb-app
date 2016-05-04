@@ -224,7 +224,12 @@ case $host in
      ;;
 esac
 
-
+AC_CHECK_DECLS([le16toh, le32toh, le64toh, htole16, htole32, htole64, be16toh, be32toh, be64toh, htobe16, htobe32, htobe64],,,
+		[#if HAVE_ENDIAN_H
+                 #include <endian.h>
+                 #elif HAVE_SYS_ENDIAN_H
+                 #include <sys/endian.h>
+                 #endif])
 
 CXXFLAGS_TEMP="$CXXFLAGS"
 LIBS_TEMP="$LIBS"
@@ -235,17 +240,6 @@ LIBS="$LIBS_TEMP"
 
 AC_CHECK_LIB(crypto, main)
 AC_CHECK_LIB(ssl, SSL_version, , AC_MSG_WARN([SSL Disabled]) )
-
-# Look for dns_sd flag
-AC_ARG_WITH(dns_sd, [  --with-dns_sd        choose dns_sd mDNS support (default = yes)],,with_dns_sd=yes)
-
-if test x$with_dns_sd = xyes; then 
-  AC_MSG_RESULT(>>Including dns_sd for mDNS support)
-  HAS_DNS_SD=1
-  AC_DEFINE([HAVE_DNS_SD_H], 1, [Needed by the compiler.])
-  AC_SEARCH_LIBS([DNSServiceRefDeallocate], [dns_sd], , AC_MSG_ERROR(dns_sd support requires the dns_sd library!))
-fi
-AM_CONDITIONAL([USE_DNS_SD], [test "x$HAS_DNS_SD" = "x1"])
 
 LIBCURL_CHECK_CONFIG(, 7.15.2, , [AC_MSG_ERROR([Missing required libcurl >= 7.15.2])])
 
