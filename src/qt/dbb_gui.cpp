@@ -147,6 +147,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     this->ui->mainSettingsButton->setStyleSheet(buttonCss);
     this->ui->multisigButton->setStyleSheet(msButtonCss);
 
+    this->ui->betaIcon->setAttribute(Qt::WA_TransparentForMouseEvents);
 
     this->ui->balanceLabel->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     this->ui->singleWalletBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
@@ -321,7 +322,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
-    connect(this->ui->betaIcon, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->receiveButton, SIGNAL(clicked()), this, SLOT(mainReceiveButtonClicked()));
     connect(this->ui->sendButton, SIGNAL(clicked()), this, SLOT(mainSendButtonClicked()));
     connect(this->ui->mainSettingsButton, SIGNAL(clicked()), this, SLOT(mainSettingsButtonClicked()));
