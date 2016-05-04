@@ -1195,6 +1195,18 @@ void DBBDaemonGui::eraseAllBackups()
     backupDialog->showLoading();
 }
 
+void DBBDaemonGui::verifyBackup(const QString& backupFilename)
+{
+    std::string command = "{\"backup\" : { \"decrypt\": \"yes\", \"check\" : \"" + backupFilename.toStdString() + "\" } }";
+
+    DBB::LogPrint("Verify single backup (%s)...\n", backupFilename.toStdString().c_str());
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFY_BACKUP, 1);
+    });
+}
+
 void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 {
     //: translation: Erase all backup warning text
@@ -1263,7 +1275,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
             UniValue errorCodeObj = find_value(errorObj, "code");
             UniValue errorMessageObj = find_value(errorObj, "message");
-            if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108) {
+            UniValue command = find_value(errorObj, "command");
+
+            //hack to avoid backup verify/check error 108 result in a logout
+            //remove it when MCU has different error code for that purpose
+            if (errorCodeObj.isNum() && errorCodeObj.get_int() == 108 && (!command.isStr() || command.get_str() != "backup")) {
                 //: translation: password wrong text
                 showAlert(tr("Password Error"), tr("Password Wrong. %1").arg(QString::fromStdString(errorMessageObj.get_str())));
                 errorShown = true;
@@ -1504,6 +1520,16 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             }
         } else if (tag == DBB_RESPONSE_TYPE_ADD_BACKUP && backupDialog) {
             listBackup();
+        } else if (tag == DBB_RESPONSE_TYPE_VERIFY_BACKUP && backupDialog) {
+            UniValue verifyResult = find_value(response, "backup");
+            if (verifyResult.isStr() && verifyResult.get_str() == "success") {
+                showModalInfo(tr("This backup is a <strong><font color=\"#00AA00\">valid</font></strong> backup of your current wallet."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+            }
+            else
+            {
+                showModalInfo(tr("This backup does <strong><font color=\"#AA0000\">not match</font></strong> your current wallet."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+            }
+            backupDialog->hide();
         } else if (tag == DBB_RESPONSE_TYPE_ERASE_BACKUP && backupDialog) {
             listBackup();
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
