@@ -33,6 +33,7 @@ public:
     std::string channelID;
     std::vector<unsigned char> encryptionKey;
 
+    long nSequence;
     bool generateNewKey();
     void startLongPollThread();
     bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);
