@@ -29,6 +29,7 @@ DBBComServer::DBBComServer()
 {
     channelID.clear();
     parseMessageCB = nullptr;
+    nSequence = 0;
 }
 
 DBBComServer::~DBBComServer()
@@ -141,13 +142,15 @@ void DBBComServer::startLongPollThread()
     longPollThread->currentThread = std::thread([this]() {
         std::string response;
         long httpStatusCode;
+        long sequence = 0;
         UniValue jsonOut;
 
         while(1)
         {
             response = "";
             httpStatusCode = 0;
-            SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=gd&uuid="+channelID+"&dt=0", response, httpStatusCode);
+            SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=gd&uuid="+channelID+"&dt=0&s="+std::to_string(sequence), response, httpStatusCode);
+            sequence++;
 
             jsonOut.read(response);
             if (jsonOut.isObject())
@@ -187,7 +190,8 @@ bool DBBComServer::postNotification(const std::string& payload)
 
         response = "";
         httpStatusCode = 0;
-        SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=data&uuid="+channelID+"&dt=0&pl="+base64_encode((const unsigned char *)&payload[0], payload.size()), response, httpStatusCode);
+        SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=data&s="+std::to_string(nSequence)+"&uuid="+channelID+"&dt=0&pl="+base64_encode((const unsigned char *)&payload[0], payload.size()), response, httpStatusCode);
+        nSequence++; // increase the sequence number
 
         jsonOut.read(response);
         if (jsonOut.isObject())
@@ -227,7 +231,7 @@ const std::string DBBComServer::getAESKeyBase58()
     hash[0] = 180;
     assert(encryptionKey.size() > 0);
     btc_hash(&encryptionKey[0], encryptionKey.size(), hash);
-    int sizeOut = btc_base58_encode_check(hash, 17, &aesKeyBase58[0], aesKeyBase58.size());
+    int sizeOut = btc_base58_encode_check(hash, 33, &aesKeyBase58[0], aesKeyBase58.size());
     aesKeyBase58.resize(sizeOut-1);
     return aesKeyBase58;
 }
