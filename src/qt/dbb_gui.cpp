@@ -378,7 +378,11 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
     //connect to the com server
-    comServer = new DBBComServer();
+    comServer = new DBBComServer(configData->comServerURL);
+#if defined(__linux__) || defined(__unix__)
+    // set the CA file in case we are compliling for linux
+    comServer->setCAFile(ca_file);
+#endif
     comServer->setParseMessageCB(comServerCallback, this);
     if (configData->comServerChannelID.size() > 0)
     {
