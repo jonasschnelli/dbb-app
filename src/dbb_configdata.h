@@ -26,6 +26,9 @@ static const char *kCOMSERVER_URL = "comsrv_url";
 
 namespace DBB
 {
+
+// simple model/controller class for persistance use settings
+// uses JSON/file as persistance store
 class DBBConfigdata {
 public:
     static const int CURRENT_VERSION=1;
