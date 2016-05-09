@@ -295,7 +295,7 @@ bool DBBComServer::postNotification(const std::string& payload)
 
 const std::string DBBComServer::getPairData()
 {
-    std::string channelData = getChannelID()+"-"+getAESKeyBase58();
+    std::string channelData = "{\"id\":\""+getChannelID()+"\",\"key\":\""+getAESKeyBase58()+"\"}";
     return channelData;
 }
 
