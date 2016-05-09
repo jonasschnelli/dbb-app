@@ -2479,8 +2479,8 @@ void DBBDaemonGui::pairSmartphone()
     comServer->startLongPollThread();
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
-    showModalInfo(tr("Your pairing ID:")+" "+pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
-    updateModalWithQRCode("{\"id\":\""+pairingData+"\"}");
+    showModalInfo(pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    updateModalWithQRCode(pairingData);
 }
 
 #pragma mark - Update Check (FIXME: refactor to own class)
