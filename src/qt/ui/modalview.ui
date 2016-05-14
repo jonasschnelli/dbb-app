@@ -359,31 +359,6 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="twoFACode">
-       <property name="sizePolicy">
-        <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-         <horstretch>0</horstretch>
-         <verstretch>0</verstretch>
-        </sizepolicy>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>135</width>
-         <height>16777215</height>
-        </size>
-       </property>
-       <property name="styleSheet">
-        <string notr="true">background:white;
-                              border:0px;
-                              border-radius: 5px;
-                              padding:4px;</string>
-       </property>
-       <property name="placeholderText">
-        <string>2FA code</string>
-       </property>
-      </widget>
-     </item>
-     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
