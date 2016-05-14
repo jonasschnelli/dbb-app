@@ -48,10 +48,12 @@ bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, con
 //!decrypt a json result
 bool decryptAndDecodeCommand(const std::string &cmdIn,
                              const std::string &password,
-                             std::string &stringOut);
+                             std::string &stringOut,
+                             bool stretch = true);
 
 //!encrypts a json command
 bool encryptAndEncodeCommand(const std::string &cmd,
                              const std::string &password,
-                             std::string &base64strOut);
+                             std::string &base64strOut,
+                             bool stretch = true);
 }
