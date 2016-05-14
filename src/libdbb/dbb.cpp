@@ -266,33 +266,43 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
     return true;
 }
 
-bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut)
+bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut, bool stretch)
 {
     unsigned char passwordSha256[BTC_HASH_LENGTH];
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    if (stretch)
+        btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    else
+        memcpy(passwordSha256, password.c_str(), password.size());
 
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
 
-    //decrypt result: TODO:
-    UniValue valRead(UniValue::VSTR);
-    if (!valRead.read(cmdIn))
-        throw std::runtime_error("failed deserializing json");
+    std::string textToDecodeAndDecrypt;
+    if (stretch)
+    {
+        UniValue valRead(UniValue::VSTR);
+        if (!valRead.read(cmdIn))
+            throw std::runtime_error("failed deserializing json");
 
-    UniValue input = find_value(valRead, "input");
-    if (!input.isNull() && input.isObject()) {
-        UniValue error = find_value(input, "error");
-        if (!error.isNull() && error.isStr())
-            throw std::runtime_error("Error decrypting: " + error.get_str());
+        UniValue input = find_value(valRead, "input");
+        if (!input.isNull() && input.isObject()) {
+            UniValue error = find_value(input, "error");
+            if (!error.isNull() && error.isStr())
+                throw std::runtime_error("Error decrypting: " + error.get_str());
+        }
+
+        UniValue ctext = find_value(valRead, "ciphertext");
+        if (ctext.isNull())
+            throw std::runtime_error("failed deserializing json");
+
+        textToDecodeAndDecrypt = ctext.get_str();
     }
+    else
+        textToDecodeAndDecrypt = cmdIn;
 
-    UniValue ctext = find_value(valRead, "ciphertext");
-    if (ctext.isNull())
-        throw std::runtime_error("failed deserializing json");
-
-    std::string base64dec = base64_decode(ctext.get_str());
+    std::string base64dec = base64_decode(textToDecodeAndDecrypt);
     unsigned int base64_len = base64dec.size();
     unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
@@ -329,7 +339,7 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
     return true;
 }
 
-bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut)
+bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut, bool stretch)
 {
     if (password.empty())
         return false;
@@ -340,7 +350,10 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    if (stretch)
+        btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    else
+        memcpy(passwordSha256, password.c_str(), password.size());
 
     //set random IV
     getRandIV(aesIV);
