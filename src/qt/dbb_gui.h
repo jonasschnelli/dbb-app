@@ -177,6 +177,8 @@ private:
 
     DBB::DBBConfigdata *configData; //!< configuration data model
     DBBComServer *comServer;
+    bool smartVerificationDeviceConnected;
+    std::time_t lastPing;
 
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
@@ -221,7 +223,8 @@ private slots:
     void setNetLoading(bool status);
     //!slot for a periodical update timer
     void updateTimerFired();
-    
+    void pingComServer();
+
     //== UI ==
     //general proxy function to show an alert;
     void showAlert(const QString& title, const QString& errorOut, bool critical = false);
@@ -357,7 +360,7 @@ private slots:
 
     //== Smart Verification Pairing ==
     //!send a ecdh pairing request with pubkey to the DBB
-    void sendECDHPairingRequest(const std::string &pubkey);
+    void sendECDHPairingRequest(const std::string &ecdhRequest);
     void amountOfPairingDevicesChanged(int amountOfClients);
     void pairSmartphone();
     void comServerMessageParse(const QString& msg);
