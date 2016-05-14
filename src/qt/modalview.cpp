@@ -27,7 +27,6 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
 
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
-    connect(this->ui->twoFACode, SIGNAL(returnPressed()), this, SLOT(twoFACodeReturnPressed()));
     connect(this->ui->abortButton, SIGNAL(clicked()), this, SLOT(twoFACanclePressed()));
     connect(this->ui->continueButton, SIGNAL(clicked()), this, SLOT(continuePressed()));
 
@@ -93,7 +92,7 @@ void ModalView::showOrHide(bool state)
 
 void ModalView::showSetPasswordInfo(bool newWallet)
 {
-    ui->twoFACode->setVisible(false);
+
     ui->abortButton->setVisible(false);
     ui->continueButton->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
@@ -134,7 +133,6 @@ void ModalView::showModalInfo(const QString &info, int helpType)
 
     ui->setPasswordWidget->setVisible(false);
     ui->okButton->setVisible(false);
-    ui->twoFACode->setVisible(false);
     ui->abortButton->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
     ui->continueButton->setVisible(false);
@@ -228,7 +226,6 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 
     showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
     ui->modalInfoLabelLA->setText(longString);
-    ui->twoFACode->setVisible(twoFAlocked);
     ui->abortButton->setVisible(twoFAlocked);
     ui->qrCodeSequence->setData(txEcho);
     ui->modalInfoLabel->setVisible(true);
@@ -238,7 +235,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 
     if (showQRSqeuence)
     {
-        ui->continueButton->setVisible(true);
+        //ui->continueButton->setVisible(true);
         setQrCodeVisibility(true);
         updateIcon(QIcon());
         ui->showDetailsButton->setVisible(false);
@@ -246,8 +243,12 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 
     if (twoFAlocked)
     {
-        ui->continueButton->setVisible(true);
-        ui->twoFACode->setFocus();
+        //ui->continueButton->setVisible(true);
+
+        QIcon newIcon;
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp_smartverification"), QIcon::Normal);
+        newIcon.addPixmap(QPixmap(":/icons/touchhelp_smartverification"), QIcon::Disabled);
+        updateIcon(newIcon);
     }
 }
 
@@ -264,8 +265,8 @@ void ModalView::setQrCodeVisibility(bool state)
         ui->qrCodeSequence->setVisible(false);
 
         QIcon newIcon;
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Normal);
-        newIcon.addPixmap(QPixmap(":/icons/touchhelp"), QIcon::Disabled);
+        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Normal);
+        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Disabled);
         ui->modalIcon->setIcon(newIcon);
     }
     else
@@ -276,29 +277,18 @@ void ModalView::setQrCodeVisibility(bool state)
     }
 }
 
-void ModalView::twoFACodeReturnPressed()
+void ModalView::proceedFrom2FAToSigning(const QString &twoFACode)
 {
-    if (ui->twoFACode->text().size() == 0)
-    {
-        QMessageBox::warning(this, tr(""), tr("Enter the 2FA Code first"), QMessageBox::Ok);
-        return;
-    }
+    ui->qrCodeSequence->setVisible(false);
+    ui->abortButton->setVisible(false);
+    ui->continueButton->setVisible(false);
 
-    if (txPointer)
-    {
-        ui->qrCodeSequence->setVisible(false);
-        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
-        ui->twoFACode->setText("");
-        ui->twoFACode->setVisible(false);
-        ui->abortButton->setVisible(false);
-    }
+    emit signingShouldProceed(twoFACode, txPointer, txData, txType);
 }
 
 void ModalView::twoFACanclePressed()
 {
     ui->qrCodeSequence->setVisible(false);
-    ui->twoFACode->setText("");
-    ui->twoFACode->setVisible(false);
     ui->abortButton->setVisible(false);
 
     if (txPointer)
@@ -375,12 +365,6 @@ void ModalView::passwordCheck(const QString& password0)
 
 void ModalView::continuePressed()
 {
-    if (ui->twoFACode->isVisible())
-    {
-        twoFACodeReturnPressed();
-        return;
-    }
-
     if (txPointer)
     {
         setQrCodeVisibility(false);
