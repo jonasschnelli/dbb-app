@@ -13,6 +13,7 @@
 #include "libdbb/crypto.h"
 
 #include "dbb_util.h"
+#include "dbb.h"
 #include "univalue.h"
 
 #include <string.h>
@@ -237,12 +238,17 @@ void DBBComServer::startLongPollThread()
                         UniValue payload = find_value(element, "payload");
                         if (payload.isStr())
                         {
-                            std::string base64dec = base64_decode(payload.get_str());
-                            printf("payload: %s\n", base64dec.c_str());
+                            std::string plaintextPayload;
+                            std::string keyS(encryptionKey.begin(), encryptionKey.end());
+                            DBB::decryptAndDecodeCommand(payload.get_str(), keyS, plaintextPayload, false);
+                            std::fill(keyS.begin(), keyS.end(), 0);
+                            keyS.clear();
+
+                            printf("payload: %s\n", plaintextPayload.c_str());
 
                             std::unique_lock<std::mutex> lock(cs_com);
                             if (parseMessageCB)
-                                parseMessageCB(this, base64dec, ctx);
+                                parseMessageCB(this, plaintextPayload, ctx);
                         }
                     }
                 }
@@ -266,7 +272,15 @@ bool DBBComServer::postNotification(const std::string& payload)
 
         response = "";
         httpStatusCode = 0;
-        SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=data&s="+std::to_string(nSequence)+"&uuid="+channelID+"&dt=0&pl="+base64_encode((const unsigned char *)&payload[0], payload.size()), response, httpStatusCode);
+
+        std::string encryptedPayload;
+        std::string keyS(encryptionKey.begin(), encryptionKey.end());
+        DBB::encryptAndEncodeCommand(payload, keyS, encryptedPayload, false);
+
+        // mem-cleanse the key
+        std::fill(keyS.begin(), keyS.end(), 0);
+        keyS.clear();
+        SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=data&s="+std::to_string(nSequence)+"&uuid="+channelID+"&dt=0&pl="+encryptedPayload, response, httpStatusCode);
         nSequence++; // increase the sequence number
 
         jsonOut.read(response);
@@ -306,6 +320,9 @@ const std::string DBBComServer::getAESKeyBase58()
     uint8_t hash[33];
     hash[0] = AES_KEY_BASE57_PREFIX;
     assert(encryptionKey.size() > 0);
+
+    std::string base64dec = base64_encode(&encryptionKey[0], encryptionKey.size());
+    return base64dec;
 
     hmac_sha256((const uint8_t *)aesKeyHMAC_Key, strlen(aesKeyHMAC_Key), &encryptionKey[0], encryptionKey.size(), hash);
 

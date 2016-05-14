@@ -37,11 +37,13 @@ public slots:
     void setText(const QString& text);
     void updateIcon(const QIcon& icon);
 
+    //we directly store the required transaction data in the modal view together with what we display to the user
     void setTXVerificationData(void *info, const UniValue& data, const std::string& echo, int type);
+
     void clearTXData();
     void detailButtonAction();
     void okButtonAction();
-    void twoFACodeReturnPressed();
+    void proceedFrom2FAToSigning(const QString &twoFACode);
     void twoFACanclePressed();
 
     void passwordCheck(const QString& password0);

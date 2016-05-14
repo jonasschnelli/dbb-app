@@ -99,7 +99,8 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
                                               touchButtonInfo(0),
                                               walletUpdateTimer(0),
                                               checkingForUpdates(0),
-                                              comServer(0)
+                                              comServer(0),
+                                              lastPing(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -355,7 +356,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
 
     //create the single and multisig wallet
     singleWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
-    singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'" : "m/44'/0'"));
+    singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'/0'" : "m/44'/0'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath(DBB::GetArg("-mskeypath","m/100'/45'/0'"));
 
@@ -390,6 +391,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
         comServer->setChannelID(configData->comServerChannelID);
         comServer->setEncryptionKey(configData->encryptionKey);
         comServer->startLongPollThread();
+        pingComServer();
     }
 
     walletUpdateTimer = new QTimer(this);
@@ -548,8 +550,21 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
 void DBBDaemonGui::updateTimerFired()
 {
     SingleWalletUpdateWallets(false);
+    pingComServer();
 }
 
+
+void DBBDaemonGui::pingComServer()
+{
+    std::time_t now;
+    std::time(&now);
+
+    if (lastPing != 0 && lastPing+10 < now)
+        this->statusBarVDeviceIcon->setVisible(false);
+
+    std::time(&lastPing);
+    comServer->postNotification("{ \"action\" : \"ping\" }");
+}
 /*
  /////////////////
  UI Action Stack
@@ -657,18 +672,19 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 
     }
     else
-        updateModalWithIconName(":/icons/twofahelp");
+        updateModalWithIconName(":/icons/touchhelp_smartverification");
 }
 
 void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, const UniValue& proposalData, int actionType)
 {
-    updateModalWithIconName(":/icons/touchhelp");
-
-    if (ptr == NULL && twoFACode.isEmpty())
+    if (twoFACode.isEmpty())
     {
         //cancle pressed
         ui->modalBlockerView->clearTXData();
         hideModalInfo();
+        ledClicked();
+        if (comServer)
+            comServer->postNotification("{ \"action\" : \"clear\" }");
         return;
     }
     DBBWallet *wallet = (DBBWallet *)ptr;
@@ -2425,19 +2441,14 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
 
 #pragma mark - Smart Verification Stack (ECDH / ComServer)
 
-void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
+void DBBDaemonGui::sendECDHPairingRequest(const std::string &ecdhRequest)
 {
     if (!deviceReadyToInteract)
         return;
 
-    //:translation: accept pairing rquest message box
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to accept a pairing request?"), QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::No)
-        return;
-
     DBB::LogPrint("Paring request\n", "");
 
-    executeCommandWrapper("{\"verifypass\": {\"ecdh\" : \"" + pubkey + "\"}}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"verifypass\": "+ecdhRequest+"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFYPASS_ECDH);
@@ -2458,7 +2469,39 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     // will be called on main thread
 
     // FIXME: only send a ECDH request if the messages is a ECDH p-req.
-    sendECDHPairingRequest(msg.toStdString());
+    UniValue json;
+    json.read(msg.toStdString());
+
+    //check the type of the notification
+    UniValue possiblePINObject = find_value(json, "pin");
+    UniValue possibleECDHObject = find_value(json, "ecdh");
+    UniValue possibleIDObject = find_value(json, "id");
+    UniValue possibleActionObject = find_value(json, "action");
+    if (possiblePINObject.isStr())
+    {
+        //feed the modal view with the 2FA code
+        QString pinCode = QString::fromStdString(possiblePINObject.get_str());
+        if (pinCode == "abort")
+            pinCode.clear();
+
+        ui->modalBlockerView->proceedFrom2FAToSigning(pinCode);
+    }
+    else if (possibleECDHObject.isStr())
+    {
+        sendECDHPairingRequest(msg.toStdString());
+    }
+    else if (possibleIDObject.isStr())
+    {
+        if (possibleIDObject.get_str() == "success")
+            hideModalInfo();
+    }
+    else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
+    {
+        lastPing = 0;
+        smartVerificationDeviceConnected = true;
+        this->statusBarVDeviceIcon->setToolTip(tr("Verification Device Connected"));
+        this->statusBarVDeviceIcon->setVisible(true);
+    }
 }
 
 void DBBDaemonGui::pairSmartphone()
@@ -2477,6 +2520,7 @@ void DBBDaemonGui::pairSmartphone()
     configData->write();
     comServer->setChannelID(configData->comServerChannelID);
     comServer->startLongPollThread();
+    pingComServer();
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
     showModalInfo(pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
