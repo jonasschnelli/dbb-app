@@ -980,7 +980,7 @@ QString DBBDaemonGui::getIpAddress()
 
 void DBBDaemonGui::getRandomNumber()
 {
-    executeCommandWrapper("{\"random\" : \"true\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"random\" : \"pseudo\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
@@ -1622,9 +1622,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_ERASE_BACKUP && backupDialog) {
             listBackup();
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
-            UniValue randomNumObj = find_value(response, "random");
-            if (randomNumObj.isStr()) {
-                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+            UniValue randomNumObjUV = find_value(response, "random");
+            UniValue randomNumEchoUV = find_value(response, "echo");
+            if (randomNumObjUV.isStr()) {
+                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObjUV.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                QString errorString;
+                if (randomNumEchoUV.isStr()) {
+                    // send verification to verification devices
+                    if (comServer)
+                    {
+                        comServer->postNotification(response.write());
+                    }
+                }
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -2574,6 +2583,7 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     UniValue possiblePINObject = find_value(json, "pin");
     UniValue possibleECDHObject = find_value(json, "ecdh");
     UniValue possibleIDObject = find_value(json, "id");
+    UniValue possibleRandomObject = find_value(json, "random");
     UniValue possibleActionObject = find_value(json, "action");
     if (possiblePINObject.isStr())
     {
@@ -2591,6 +2601,11 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     else if (possibleIDObject.isStr())
     {
         if (possibleIDObject.get_str() == "success")
+            hideModalInfo();
+    }
+    else if (possibleRandomObject.isStr())
+    {
+        if (possibleRandomObject.get_str() == "clear")
             hideModalInfo();
     }
     else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
