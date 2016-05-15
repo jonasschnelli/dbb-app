@@ -913,10 +913,11 @@ void DBBDaemonGui::seedHardware()
     std::string name = this->ui->deviceNameLabel->text().toStdString();
     std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
     
-    std::string command = "{\"seed\" : {\"source\" :\"create\","
+    std::string command = "{\"seed\":{"
                           "\"decrypt\": \"yes\","
-                          "\"filename\": \"" + name + "-" +
-                          timeStr + ".bak\"} }";
+                          "\"source\":\"create\","
+                          "\"key\":\"" + sessionPassword + "\","
+                          "\"filename\":\"" + name + "-" + timeStr + ".bak\"} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1200,9 +1201,10 @@ void DBBDaemonGui::addBackup()
     std::string name = this->ui->deviceNameLabel->text().toStdString();
     std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
     
-    std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
-                          "\"filename\": \"" + name + "-" +
-                          timeStr + ".bak\"} }";
+    std::string command = "{\"backup\":{"
+                          "\"encrypt\": \"yes\","
+                          "\"key\":\"" + sessionPassword + "\","
+                          "\"filename\":\"" + name + "-" + timeStr + ".bak\"}}";
 
     DBB::LogPrint("Adding a backup (%s)\n", timeStr.c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1246,7 +1248,10 @@ void DBBDaemonGui::eraseAllBackups()
 
 void DBBDaemonGui::verifyBackup(const QString& backupFilename)
 {
-    std::string command = "{\"backup\" : { \"decrypt\": \"yes\", \"check\" : \"" + backupFilename.toStdString() + "\" } }";
+    std::string command = "{\"backup\":{"
+                          "\"decrypt\": \"yes\","
+                          "\"key\":\"" + sessionPassword + "\","
+                          "\"check\":\"" + backupFilename.toStdString() + "\"}}";
 
     DBB::LogPrint("Verify single backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1275,8 +1280,10 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
-                                                                                         "\"decrypt\": \"yes\" } }";
+    std::string command = "{\"seed\":{"
+                          "\"decrypt\": \"yes\","
+                          "\"key\": \"" + sessionPassword + "\","
+                          "\"source\":\"" + backupFilename.toStdString() + "\"}}";
 
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
