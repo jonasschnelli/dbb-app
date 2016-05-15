@@ -997,7 +997,7 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before enabling two-factor authentication. After, app pairing and the micro SD card slot (wallet backup and recovery) will be disabled. They can be re-enabled only by resetting and erasing the device. Proceed?"), QMessageBox::Yes | QMessageBox::No);
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Do you have a backup?\nIs mobile app verification working?\n\n2FA mode DISABLES backups and mobile app pairing. The device must be ERASED to exit 2FA mode!\n\nProceed?"), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::No)
         return;
 
