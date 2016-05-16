@@ -667,7 +667,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
         else
         {
             //no verification device connected, start QRCode based verification
-            QMessageBox::warning(this, tr(""), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the transaction by scanning the sequence of QR codes."), QMessageBox::Ok);
+            QMessageBox::warning(this, tr(""), tr("No mobile app detected. Manually verify the transaction by scanning the sequence of QR codes with a paired Digital Bitbox mobile app."), QMessageBox::Ok);
         }
 
     }
@@ -1562,7 +1562,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     verificationDialog = new VerificationDialog();
 
                 verificationDialog->show();
-                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the address by scanning QR codes."), responseMutable.write());
+                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("No mobile app detected. Manually verify the address by scanning QR codes with a paired Digital Bitbox mobile app."), responseMutable.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
