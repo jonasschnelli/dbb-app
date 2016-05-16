@@ -735,7 +735,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="pairDeviceButton">
            <property name="text">
-            <string>Pair Device</string>
+            <string>Connect Mobile App</string>
            </property>
           </widget>
          </item>
