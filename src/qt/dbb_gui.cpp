@@ -926,7 +926,7 @@ std::string DBBDaemonGui::getBackupString()
     std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
 
     std::stringstream ss;
-    ss << name << "-" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d-%H-%M-%S");
+    ss << name << "-" << DBB::putTime(in_time_t, "%Y-%m-%d-%H-%M-%S");
     return ss.str();
 }
 
