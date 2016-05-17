@@ -919,6 +919,7 @@ void DBBDaemonGui::seedHardware()
 
     std::string command = "{\"seed\" : {\"source\" :\"create\","
                           "\"decrypt\": \"yes\","
+                          "\"key\":\"" + sessionPassword + "\","
                           "\"filename\": \"" + getBackupString() + ".bak\"} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1194,6 +1195,7 @@ void DBBDaemonGui::addBackup()
 {
     std::string backupFilename = getBackupString();
     std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
+                          "\"key\":\"" + sessionPassword + "\","
                           "\"filename\": \"" + backupFilename + ".bak\"} }";
 
     DBB::LogPrint("Adding a backup (%s)\n", backupFilename.c_str());
@@ -1267,9 +1269,11 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
-                                                                                         "\"decrypt\": \"yes\" } }";
-
+    std::string command = "{\"seed\":{"
+    "\"decrypt\": \"yes\","
+    "\"key\": \"" + sessionPassword + "\","
+    "\"source\":\"" + backupFilename.toStdString() + "\"}}";
+    
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
