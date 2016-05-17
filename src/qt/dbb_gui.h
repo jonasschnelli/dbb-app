@@ -206,6 +206,9 @@ private:
     //wrapper for the DBB USB command action
     bool executeCommandWrapper(const std::string& cmd, const dbb_process_infolayer_style_t layerstyle, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished, const QString& modaltext = "");
 
+    // get a new backup filename
+    std::string getBackupString();
+
     //== Copay Wallet ==
     void hidePaymentProposalsWidget();
     void executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished);

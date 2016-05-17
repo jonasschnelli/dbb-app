@@ -33,6 +33,7 @@
 #include <ctime>
 #include <chrono>
 #include <fstream>
+#include <iomanip> // put_time
 
 #include <univalue.h>
 #include <btc/bip32.h>
@@ -915,25 +916,27 @@ void DBBDaemonGui::getInfo()
     });
 }
 
+std::string DBBDaemonGui::getBackupString()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // get device name
+    std::string name = this->ui->deviceNameLabel->text().toStdString();
+    std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
+
+    std::stringstream ss;
+    ss << name << "-" << std::put_time(std::localtime(&in_time_t), "%Y-%m-%d-%H-%M-%S");
+    return ss.str();
+}
+
 void DBBDaemonGui::seedHardware()
 {
     DBB::LogPrint("Request device seeding...\n", "");
-    
-    std::time_t rawtime;
-    std::tm* timeinfo;
-    char buffer[80];
-    std::time(&rawtime);
-    timeinfo = std::localtime(&rawtime);
-    std::strftime(buffer, 80, "%Y-%m-%d-%H-%M-%S", timeinfo);
-    std::string timeStr(buffer);
-    
-    std::string name = this->ui->deviceNameLabel->text().toStdString();
-    std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
-    
+
     std::string command = "{\"seed\" : {\"source\" :\"create\","
                           "\"decrypt\": \"yes\","
-                          "\"filename\": \"" + name + "-" +
-                          timeStr + ".bak\"} }";
+                          "\"filename\": \"" + getBackupString() + ".bak\"} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1232,22 +1235,11 @@ void DBBDaemonGui::showBackupDialog()
 
 void DBBDaemonGui::addBackup()
 {
-    std::time_t rawtime;
-    std::tm* timeinfo;
-    char buffer[80];
-    std::time(&rawtime);
-    timeinfo = std::localtime(&rawtime);
-    std::strftime(buffer, 80, "%Y-%m-%d-%H-%M-%S", timeinfo);
-    std::string timeStr(buffer);
-
-    std::string name = this->ui->deviceNameLabel->text().toStdString();
-    std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
-    
+    std::string backupFilename = getBackupString();
     std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
-                          "\"filename\": \"" + name + "-" +
-                          timeStr + ".bak\"} }";
+                          "\"filename\": \"" + backupFilename + ".bak\"} }";
 
-    DBB::LogPrint("Adding a backup (%s)\n", timeStr.c_str());
+    DBB::LogPrint("Adding a backup (%s)\n", backupFilename.c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
