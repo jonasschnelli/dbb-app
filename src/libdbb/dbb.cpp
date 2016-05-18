@@ -303,10 +303,11 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
         textToDecodeAndDecrypt = cmdIn;
 
     std::string base64dec = base64_decode(textToDecodeAndDecrypt);
-    if (base64dec.empty())
+    unsigned int base64_len = base64dec.size();
+
+    if (base64dec.empty() || (base64_len <= DBB_AES_BLOCKSIZE))
         return false;
 
-    unsigned int base64_len = base64dec.size();
     unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
     unsigned char decryptedStream[base64_len - DBB_AES_BLOCKSIZE];
@@ -316,6 +317,10 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
 
     int decrypt_len = 0;
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
+
+    if (base64_len <= DBB_AES_BLOCKSIZE + padlen)
+        return false;
+
     char* dec = (char*)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
     if (!dec) {
         decrypt_len = 0;;
