@@ -303,6 +303,9 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
         textToDecodeAndDecrypt = cmdIn;
 
     std::string base64dec = base64_decode(textToDecodeAndDecrypt);
+    if (base64dec.empty())
+        return false;
+
     unsigned int base64_len = base64dec.size();
     unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
