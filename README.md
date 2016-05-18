@@ -92,6 +92,21 @@ if `libhidapi` is not available, compile it yourself
     sudo make install
 
 
+#### *nix depends secure build (from hash-verified source)
+
+Optionally probably want to create out-of-tree directory to save latest source & built binaries:
+
+    mkdir -p deps-cache/sources/
+
+    git clone https://github.com/digitalbitbox/dbb-app.git
+    cd dbb-app/depends
+    make -j4 BASE_CACHE=(absolute-path-here)/deps-cache/ SOURCES_PATH=(absolute-path-here)/deps-cache/sources/
+    cd ..
+    ./autogen.sh
+    ./configure --prefix=`pwd`/depends/x86_64-pc-linux-gnu --enable-debug --with-gui=qt5
+    make
+
+
 
 ### Basic build steps:
 
