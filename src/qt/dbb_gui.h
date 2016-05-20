@@ -68,6 +68,7 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK,
     DBB_RESPONSE_TYPE_BOOTLOADER_LOCK,
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME,
+    DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE,
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -166,6 +167,7 @@ private:
     QPropertyAnimation* netActivityAnimation;
     QPropertyAnimation* usbActivityAnimation;
     QPropertyAnimation* verificationActivityAnimation;
+    QString deviceName;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
@@ -251,9 +253,9 @@ private slots:
     void hideModalInfo();
     void modalStateChanged(bool state);
     //!show set passworf form
-    void showSetPasswordInfo(bool showCleanInfo = false);
-    //!gets called when the user hits enter (or presses button) in the "set password form"
-    void setPasswordProvided(const QString& newPassword, bool tbiRequired = false);
+    void showSetPasswordInfo(bool newWallet = false);
+    //!gets called when the user presses button in the "set password form"
+    void setPasswordProvided(const QString& newPassword, const QString& extraInput, bool newWallet = false);
     void cleanseLoginAndSetPassword();
 
     //== DBB USB ==
@@ -282,6 +284,7 @@ private slots:
     void upgradeFirmwareDone(bool state);
     //!change device name
     void setDeviceNameClicked();
+    void setDeviceName(dbb_response_type_t response_type);
 
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();

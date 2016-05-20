@@ -331,7 +331,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
     //set password screen
-    connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, bool)));
+    connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, const QString&, bool)));
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
@@ -738,16 +738,30 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-void DBBDaemonGui::showSetPasswordInfo(bool showCleanInfo)
+void DBBDaemonGui::showSetPasswordInfo(bool newWallet)
 {
-    ui->modalBlockerView->showSetPasswordInfo(showCleanInfo);
+    ui->modalBlockerView->showSetPasswordInfo(newWallet);
 }
 
-void DBBDaemonGui::setPasswordProvided(const QString& newPassword, bool tbiRequired)
+void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& extraInput, bool newWallet)
 {
+    dbb_process_infolayer_style_t process; 
+    std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
+    
+    if (newWallet) {
+        deviceName = extraInput;
+        process = DBB_PROCESS_INFOLAYER_STYLE_NO_INFO;
+    } else {
+        if (extraInput.toStdString() != sessionPassword) {
+            showModalInfo(tr("Incorrect old password"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+            return;
+        }
+        process = DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON;
+    }
+
     showModalInfo(tr("Saving Password"));
 
-    if (executeCommandWrapper("{\"password\" : \"" + newPassword.toStdString() + "\"}", tbiRequired ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    if (executeCommandWrapper(command, process, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
@@ -1089,22 +1103,27 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
 void DBBDaemonGui::setDeviceNameClicked()
 {
     bool ok;
-    QString newName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
-    if (!ok || newName.isEmpty())
+    deviceName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
+    if (!ok || deviceName.isEmpty())
         return;
 
-    QRegExp nameMatcher("^[0-9A-Z-_]{4,20}$", Qt::CaseInsensitive);
-    if (!nameMatcher.exactMatch(newName))
+    QRegExp nameMatcher("^[0-9A-Z-_]{1,64}$", Qt::CaseInsensitive);
+    if (!nameMatcher.exactMatch(deviceName))
     {
         showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
         return;
     }
 
-    std::string command = "{\"name\" : \""+newName.toStdString()+"\" }";
-    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
+}
+
+void DBBDaemonGui::setDeviceName(dbb_response_type_t response_type)
+{
+    std::string command = "{\"name\" : \""+deviceName.toStdString()+"\" }";
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, response_type](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
+        emit gotResponse(jsonOut, status, response_type);
     });
 }
 
@@ -1564,10 +1583,13 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
             hideModalInfo();
         }
-        else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME) {
+        else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE) {
             UniValue name = find_value(response, "name");
-            if (name.isStr())
+            if (name.isStr()) {
                 this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
+                if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE)
+                    getInfo();
+            }
         }
         else {
         }
@@ -1637,7 +1659,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
                 cleanseLoginAndSetPassword(); //remove text from set password fields
                 //could not decrypt, password was changed successfully
-                getInfo();
+                setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE);
             } else {
                 QString errorString;
                 UniValue touchbuttonObj = find_value(response, "touchbutton");
