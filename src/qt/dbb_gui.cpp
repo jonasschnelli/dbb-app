@@ -1159,7 +1159,7 @@ void DBBDaemonGui::setDeviceNameClicked()
     if (!ok || deviceName.isEmpty())
         return;
 
-    QRegExp nameMatcher("^[0-9A-Z-_]{1,64}$", Qt::CaseInsensitive);
+    QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
     if (!nameMatcher.exactMatch(deviceName))
     {
         showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
