@@ -268,9 +268,8 @@ private slots:
     void seedHardware();
 
     //== DBB USB / UTILS ==
-    //!show a QRCode of the current local IPv4 address
+    //!get the current local IPv4 address
     QString getIpAddress();
-    void showIPAddressQRCode();
     //!get a random number from the dbb
     void getRandomNumber();
     //!lock the device, disabled "backup", "verifypass" and "seed" command

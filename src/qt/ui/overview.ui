@@ -752,6 +752,19 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
+        <spacer name="verticalSpacer_3">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout3">
@@ -768,111 +781,47 @@ background-color: rgba(240,240,240,255);
             <number>5</number>
            </property>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayoutVersioNameApp">
-             <property name="rightMargin">
+            <layout class="QHBoxLayout" name="horizontalLayout31">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
               <number>5</number>
              </property>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout32">
-               <property name="topMargin">
-                <number>0</number>
+              <widget class="QLabel" name="DBBAppVersionKey">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
                </property>
-               <property name="bottomMargin">
-                <number>5</number>
+               <property name="styleSheet">
+                <string notr="true">color: #888888</string>
                </property>
-               <item>
-                <widget class="QLabel" name="IPAddressKey">
-                 <property name="font">
-                  <font>
-                   <weight>75</weight>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888888</string>
-                 </property>
-                 <property name="text">
-                  <string>IP Address</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="IPAddress">
-                 <property name="text">
-                  <string>TextLabel</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QPushButton" name="ipShowQRCode">
-                 <property name="toolTip">
-                  <string>Show QRCode of your IP-Address</string>
-                 </property>
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="icon">
-                  <iconset>
-                   <normaloff>:/icons/qrcode</normaloff>
-                   <disabledoff>:/icons/qrcode</disabledoff>:/icons/qrcode</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>16</width>
-                   <height>16</height>
-                  </size>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+               <property name="text">
+                <string>App Version:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout31">
-               <property name="topMargin">
-                <number>0</number>
+              <widget class="QLabel" name="DBBAppVersion">
+               <property name="styleSheet">
+                <string notr="true">color: #888888</string>
                </property>
-               <property name="bottomMargin">
-                <number>5</number>
+               <property name="text">
+                <string/>
                </property>
-               <item>
-                <widget class="QLabel" name="DBBAppVersionKey">
-                 <property name="font">
-                  <font>
-                   <weight>75</weight>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888888</string>
-                 </property>
-                 <property name="text">
-                  <string>App Version</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="DBBAppVersion">
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                 <property name="textInteractionFlags">
-                  <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+               <property name="textInteractionFlags">
+                <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -893,48 +842,44 @@ background-color: rgba(240,240,240,255);
             </spacer>
            </item>
            <item>
-            <layout class="QVBoxLayout" name="verticalLayoutVersioName">
-             <property name="rightMargin">
+            <layout class="QHBoxLayout" name="horizontalLayout3">
+             <property name="topMargin">
+              <number>0</number>
+             </property>
+             <property name="bottomMargin">
               <number>5</number>
              </property>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout3">
-               <property name="topMargin">
-                <number>0</number>
+              <widget class="QLabel" name="versionKeyLabel">
+               <property name="font">
+                <font>
+                 <weight>75</weight>
+                 <bold>true</bold>
+                </font>
                </property>
-               <property name="bottomMargin">
-                <number>5</number>
+               <property name="styleSheet">
+                <string notr="true">color: #888888</string>
                </property>
-               <item>
-                <widget class="QLabel" name="versionKeyLabel">
-                 <property name="font">
-                  <font>
-                   <weight>75</weight>
-                   <bold>true</bold>
-                  </font>
-                 </property>
-                 <property name="styleSheet">
-                  <string notr="true">color: #888888</string>
-                 </property>
-                 <property name="text">
-                  <string>Device Version</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QLabel" name="versionLabel">
-                 <property name="text">
-                  <string>TextLabel</string>
-                 </property>
-                 <property name="alignment">
-                  <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
-                 </property>
-                </widget>
-               </item>
-              </layout>
+               <property name="text">
+                <string>Device Version:</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QLabel" name="versionLabel">
+               <property name="styleSheet">
+                <string notr="true">color: #888888</string>
+               </property>
+               <property name="text">
+                <string>TextLabel</string>
+               </property>
+               <property name="alignment">
+                <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+               </property>
+              </widget>
              </item>
             </layout>
            </item>
@@ -947,10 +892,13 @@ background-color: rgba(240,240,240,255);
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
+         <property name="sizeType">
+          <enum>QSizePolicy::Fixed</enum>
+         </property>
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>20</height>
+           <height>24</height>
           </size>
          </property>
         </spacer>
