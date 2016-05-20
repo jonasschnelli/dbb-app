@@ -713,6 +713,13 @@ background-color: rgba(240,240,240,255);
           <number>0</number>
          </property>
          <item>
+          <widget class="QPushButton" name="pairDeviceButton">
+           <property name="text">
+            <string>Connect Mobile App</string>
+           </property>
+          </widget>
+         </item>
+         <item>
           <widget class="QPushButton" name="checkForUpdates">
            <property name="toolTip">
             <string>Check online if there are updates for your DBB App</string>
@@ -729,13 +736,6 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>Upgrade Firmware...</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="pairDeviceButton">
-           <property name="text">
-            <string>Connect Mobile App</string>
            </property>
           </widget>
          </item>
