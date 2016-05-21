@@ -28,6 +28,16 @@
         <file alias="qrcode">res/qrcode.png</file>
         <file alias="devicephone">res/device-phone.png</file>
         <file alias="betabadge">res/betabadgeleft.png</file>
+        <file alias="confirm0">res/confirm0.png</file>
+        <file alias="confirm1">res/confirm1.png</file>
+        <file alias="confirm2">res/confirm2.png</file>
+        <file alias="confirm3">res/confirm3.png</file>
+        <file alias="confirm4">res/confirm4.png</file>
+        <file alias="confirm5">res/confirm5.png</file>
+        <file alias="confirm6">res/confirm6.png</file>
+        <file alias="tx_sent">res/tx_sent.png</file>
+        <file alias="tx_moved">res/tx_moved.png</file>
+        <file alias="tx_received">res/tx_received.png</file>
     </qresource>
     <qresource prefix="/theme">
         <file alias="windowbackground">res/theme/window_background.png</file>
