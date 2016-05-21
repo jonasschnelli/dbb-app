@@ -1033,21 +1033,21 @@ background-color: rgba(240,240,240,255);
           <widget class="QLineEdit" name="sendToAddress">
            <property name="font">
             <font>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="text">
             <string/>
            </property>
            <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
            <property name="readOnly">
             <bool>false</bool>
            </property>
            <property name="placeholderText">
-            <string>to address</string>
+            <string>    To Address</string>
            </property>
           </widget>
          </item>
@@ -1065,26 +1065,29 @@ background-color: rgba(240,240,240,255);
           <widget class="QLineEdit" name="sendAmount">
            <property name="font">
             <font>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="text">
             <string/>
            </property>
            <property name="alignment">
-            <set>Qt::AlignCenter</set>
+            <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
            </property>
            <property name="readOnly">
             <bool>false</bool>
            </property>
            <property name="placeholderText">
-            <string>amount</string>
+            <string>    Amount</string>
            </property>
           </widget>
          </item>
          <item>
           <widget class="QComboBox" name="comboBox">
+           <property name="enabled">
+            <bool>false</bool>
+           </property>
            <item>
             <property name="text">
              <string>BTC</string>
