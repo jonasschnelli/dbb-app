@@ -199,7 +199,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QLabel" name="lastTransactionsTitle">
            <property name="text">
-            <string>Last Transactions</string>
+            <string/>
            </property>
           </widget>
          </item>
@@ -244,23 +244,23 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
+        <spacer name="verticalSpacer_4">
+         <property name="orientation">
+          <enum>Qt::Vertical</enum>
+         </property>
+         <property name="sizeHint" stdset="0">
+          <size>
+           <width>20</width>
+           <height>40</height>
+          </size>
+         </property>
+        </spacer>
+       </item>
+       <item>
         <layout class="QHBoxLayout" name="horizontalLayout_10">
          <property name="bottomMargin">
           <number>10</number>
          </property>
-         <item>
-          <spacer name="horizontalSpacer_7">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
         </layout>
        </item>
       </layout>
