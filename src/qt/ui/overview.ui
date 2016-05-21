@@ -613,6 +613,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="showBackups">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Backup your wallet, load a different wallet, or erase backups.</string>
            </property>
@@ -623,6 +629,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="ledButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Blink LED</string>
            </property>
@@ -640,6 +652,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="seedButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Overwrite the existing wallet with a new wallet</string>
            </property>
@@ -650,6 +668,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="getAddress">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>List wallet addresses and their extended public keys for different BIP32 keypaths</string>
            </property>
@@ -667,6 +691,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="passwordButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Sets a new password</string>
            </property>
@@ -677,11 +707,17 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="getRand">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Generate a random number with the device's onboard high-quality random number generator</string>
            </property>
            <property name="text">
-            <string>Generate Random Number</string>
+            <string>Get Random Number</string>
            </property>
           </widget>
          </item>
@@ -694,6 +730,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="lockDevice">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Enable two-factor authentication. Afterward, a device running the Digital Bitbox mobile app is required to send coins.</string>
            </property>
@@ -704,6 +746,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="eraseButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Erase the device and reset to factory default settings. An inserted micro SD card and the backups it holds are not affected.</string>
            </property>
@@ -724,6 +772,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="pairDeviceButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
             <string>Connect Mobile App</string>
            </property>
@@ -731,6 +785,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="checkForUpdates">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Check online if there are updates for your DBB App</string>
            </property>
@@ -741,6 +801,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="upgradeFirmware">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="toolTip">
             <string>Upgrade the devices firmware</string>
            </property>
