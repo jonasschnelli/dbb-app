@@ -225,7 +225,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
     //: translation: window title
-    setWindowTitle(tr("The Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
+    setWindowTitle(tr("Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
 
     statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
