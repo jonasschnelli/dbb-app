@@ -145,6 +145,9 @@
            <property name="text">
             <string>Balance</string>
            </property>
+           <property name="textInteractionFlags">
+            <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
+           </property>
           </widget>
          </item>
          <item>
@@ -434,6 +437,9 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>-</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
            </property>
           </widget>
          </item>
@@ -1056,6 +1062,9 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>Balance</string>
+           </property>
+           <property name="textInteractionFlags">
+            <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
            </property>
           </widget>
          </item>
