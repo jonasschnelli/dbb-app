@@ -1992,11 +1992,19 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
     singleWallet->updateData(walletResponse);
 
     //TODO, add a monetary amount / unit helper function
-
     QString balance = QString::fromStdString(DBB::formatMoney(singleWallet->totalBalance));
 
     this->ui->balanceLabel->setText(balance);
     this->ui->singleWalletBalance->setText(balance);
+
+    UniValue addressesUV = find_value(walletResponse["balance"], "byAddress");
+    if (addressesUV.isArray()) {
+        for (int i = 0; i < addressesUV.size(); i++) {
+            UniValue address = find_value(addressesUV[i], "address");
+            if (address.get_str() == this->ui->currentAddress->text().toStdString())
+                getNewAddress();
+        }
+    }
 }
 
 void DBBDaemonGui::historyShowTx(QModelIndex index)
