@@ -1733,7 +1733,7 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     if (newAddress.size() <= 0)
         return;
 
-    std::string uri = "bitcoin://"+newAddress;
+    std::string uri = "bitcoin:"+newAddress;
 
     QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
     if (code)
