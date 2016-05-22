@@ -87,7 +87,7 @@
          <item>
           <widget class="ClickableLabel" name="deviceNameLabel" native="true">
            <property name="toolTip">
-            <string>Click to set a new device name</string>
+            <string>Click to set a new device name.</string>
            </property>
            <property name="text" stdset="0">
             <string/>
@@ -636,7 +636,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Blink LED</string>
+            <string>Blink the device's LED.</string>
            </property>
            <property name="text">
             <string>Blink LED</string>
@@ -659,7 +659,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Overwrite the existing wallet with a new wallet</string>
+            <string>Overwrite the existing wallet with a new wallet.</string>
            </property>
            <property name="text">
             <string>Create New Wallet</string>
@@ -675,7 +675,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>List wallet addresses and their extended public keys for different BIP32 keypaths</string>
+            <string>List wallet addresses and their extended public keys for different BIP32 keypaths.</string>
            </property>
            <property name="text">
             <string>List Addresses...</string>
@@ -698,7 +698,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Sets a new password</string>
+            <string>Sets a new device password.</string>
            </property>
            <property name="text">
             <string>Change Password</string>
@@ -714,7 +714,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Generate a random number with the device's onboard high-quality random number generator</string>
+            <string>Generate a random number with the device's onboard high-quality random number generator.</string>
            </property>
            <property name="text">
             <string>Get Random Number</string>
@@ -778,6 +778,9 @@ background-color: rgba(240,240,240,255);
              <height>16777215</height>
             </size>
            </property>
+           <property name="toolTip">
+            <string>Connect this desktop app to the Digital Bitbox mobile app by creating an encrypted communication channel.</string>
+           </property>
            <property name="text">
             <string>Connect Mobile App</string>
            </property>
@@ -792,7 +795,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Check online if there are updates for your DBB App</string>
+            <string>Check online if there are updates for your Digital Bitbox.</string>
            </property>
            <property name="text">
             <string>Check For Updates...</string>
@@ -808,7 +811,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Upgrade the devices firmware</string>
+            <string>Upgrade the devices firmware.</string>
            </property>
            <property name="text">
             <string>Upgrade Firmware...</string>
@@ -1317,7 +1320,7 @@ background-color: rgba(240,240,240,255);
          <item>
           <widget class="QPushButton" name="verifyAddressButton">
            <property name="toolTip">
-            <string>Securely verify this address with the Digital Bitbox mobile app</string>
+            <string>Securely verify this address with the Digital Bitbox mobile app.</string>
            </property>
            <property name="text">
             <string>Verify Address Securely</string>
