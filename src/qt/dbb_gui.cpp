@@ -1334,7 +1334,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
-                    this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
+                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+QString::fromStdString(name.get_str()));
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
