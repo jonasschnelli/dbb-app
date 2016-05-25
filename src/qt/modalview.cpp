@@ -102,12 +102,14 @@ void ModalView::showSetPasswordInfo(bool newWallet)
     ui->setPasswordWidget->setVisible(true);
     ui->passwordWarning->setText("");
     if (newWallet) {
+        ui->uninizializedInfoLabel->setVisible(true);
         ui->setDeviceName->setVisible(true);
         ui->cancelSetPassword->setVisible(false);
         ui->setPasswordOld->setVisible(false);
         ui->setPassword0->setPlaceholderText("Password");
         ui->setDeviceName->setFocus();
     } else {
+        ui->uninizializedInfoLabel->setVisible(false);
         ui->setDeviceName->setVisible(false);
         ui->cancelSetPassword->setVisible(true);
         ui->setPasswordOld->setVisible(true);
