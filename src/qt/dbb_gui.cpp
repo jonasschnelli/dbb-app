@@ -800,9 +800,9 @@ void DBBDaemonGui::modalStateChanged(bool state)
 
 void DBBDaemonGui::updateModalWithQRCode(const QString& string)
 {
-    QRcode *code = QRcode_encodeString(string.toStdString().c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    QRcode *code = QRcode_encodeString(string.toStdString().c_str(), 0, QR_ECLEVEL_M, QR_MODE_8, 1);
     QIcon icon;
-    QRCodeSequence::setIconFromQRCode(code, &icon, 120, 120);
+    QRCodeSequence::setIconFromQRCode(code, &icon, 180, 180);
     ui->modalBlockerView->updateIcon(icon);
     QRcode_free(code);
 }
@@ -1393,7 +1393,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
                     //: translation: warning text if SDCard is insert in productive environment
-                    showModalInfo(tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    showModalInfo(tr("Keep the SD card safe unless doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                     updateModalWithIconName(":/icons/touchhelp_sdcard");
 
                     sdcardWarned = true;
@@ -1735,7 +1735,7 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
 
     std::string uri = "bitcoin:"+newAddress;
 
-    QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_M, QR_MODE_8, 1);
     if (code)
     {
 
