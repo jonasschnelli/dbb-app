@@ -22,13 +22,13 @@ public:
     Ui::ModalView *ui;
 
 signals:
-    void newPasswordAvailable(const QString&, bool);
+    void newPasswordAvailable(const QString&, const QString&, bool);
     void signingShouldProceed(const QString&, void *, const UniValue&, int);
     void modalViewWillShowHide(bool);
 
 public slots:
     void showOrHide(bool state = false);
-    void showSetPasswordInfo(bool showCleanInfo = false);
+    void showSetPasswordInfo(bool newWallet = false);
     void showModalInfo(const QString &info, int helpType);
     void showTransactionVerification(bool twoFAlocked, bool showQRSqeuence = false);
     void setPasswordProvided();
