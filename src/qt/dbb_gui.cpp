@@ -180,7 +180,6 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
-    connect(ui->ipShowQRCode, SIGNAL(clicked()), this, SLOT(showIPAddressQRCode()));
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
     connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
@@ -226,7 +225,7 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
     //: translation: window title
-    setWindowTitle(tr("The Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
+    setWindowTitle(tr("Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
 
     statusBar()->setStyleSheet("background: transparent;");
     this->statusBarButton = new QPushButton(QIcon(":/icons/connected"), "");
@@ -801,9 +800,9 @@ void DBBDaemonGui::modalStateChanged(bool state)
 
 void DBBDaemonGui::updateModalWithQRCode(const QString& string)
 {
-    QRcode *code = QRcode_encodeString(string.toStdString().c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    QRcode *code = QRcode_encodeString(string.toStdString().c_str(), 0, QR_ECLEVEL_M, QR_MODE_8, 1);
     QIcon icon;
-    QRCodeSequence::setIconFromQRCode(code, &icon, 120, 120);
+    QRCodeSequence::setIconFromQRCode(code, &icon, 180, 180);
     ui->modalBlockerView->updateIcon(icon);
     QRcode_free(code);
 }
@@ -939,13 +938,6 @@ QString DBBDaemonGui::getIpAddress()
     }
 
     return ipAddress;
-}
-
-void DBBDaemonGui::showIPAddressQRCode()
-{
-    QString ipAddress = getIpAddress();
-    showModalInfo(tr("Your IP Address:")+" "+ipAddress, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
-    updateModalWithQRCode("{\"ip\":\""+ipAddress+"\"}");
 }
 
 void DBBDaemonGui::getRandomNumber()
@@ -1107,7 +1099,7 @@ void DBBDaemonGui::setDeviceNameClicked()
     if (!ok || deviceName.isEmpty())
         return;
 
-    QRegExp nameMatcher("^[0-9A-Z-_]{1,64}$", Qt::CaseInsensitive);
+    QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
     if (!nameMatcher.exactMatch(deviceName))
     {
         showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
@@ -1342,9 +1334,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
-                    this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
-
-                this->ui->IPAddress->setText(getIpAddress());
+                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+QString::fromStdString(name.get_str()));
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
@@ -1403,7 +1393,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
                     //: translation: warning text if SDCard is insert in productive environment
-                    showModalInfo(tr("Don't keep the SDCard in your Digitalbitbox unless your are doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    showModalInfo(tr("Keep the SD card safe unless doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                     updateModalWithIconName(":/icons/touchhelp_sdcard");
 
                     sdcardWarned = true;
@@ -1743,9 +1733,9 @@ void DBBDaemonGui::updateReceivingAddress(DBBWallet *wallet, const std::string &
     if (newAddress.size() <= 0)
         return;
 
-    std::string uri = "bitcoin://"+newAddress;
+    std::string uri = "bitcoin:"+newAddress;
 
-    QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_L, QR_MODE_8, 1);
+    QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_M, QR_MODE_8, 1);
     if (code)
     {
 
@@ -2031,7 +2021,7 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
 
 void DBBDaemonGui::historyShowTx(QModelIndex index)
 {
-    QString txId = ui->tableWidget->model()->data(ui->tableWidget->model()->index(index.row(),4)).toString();
+    QString txId = ui->tableWidget->model()->data(ui->tableWidget->model()->index(index.row(),0)).toString();
     QDesktopServices::openUrl(QUrl("https://" + QString(DBB_USE_TESTNET ? "testnet." : "") + "blockexplorer.com/tx/"+txId));
 }
 
@@ -2042,17 +2032,44 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     if (!historyAvailable || !history.isArray())
         return;
 
+    transactionTableModel = new  QStandardItemModel(history.size(), 5, this);
 
-    transactionTableModel = new  QStandardItemModel(history.size(),4,this);
-
-    transactionTableModel->setHeaderData( 1, Qt::Horizontal, QObject::tr("Type") );
-    transactionTableModel->setHeaderData( 2, Qt::Horizontal, QObject::tr("Amount") );
-    transactionTableModel->setHeaderData( 3, Qt::Horizontal, QObject::tr("Fees") );
-    transactionTableModel->setHeaderData( 0, Qt::Horizontal, QObject::tr("Date") );
+    transactionTableModel->setHeaderData(0, Qt::Horizontal, QObject::tr("TXID"));
+    transactionTableModel->setHeaderData(1, Qt::Horizontal, QObject::tr("Amount"));
+    transactionTableModel->setHeaderData(2, Qt::Horizontal, QObject::tr("Address"));
+    transactionTableModel->setHeaderData(3, Qt::Horizontal, QObject::tr("Date"));
+    transactionTableModel->setHeaderData(4, Qt::Horizontal, QObject::tr(""));
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
     {
+        QFont font;
+        font.setPointSize(12);
+
+        UniValue actionUV = find_value(obj, "action");
+        UniValue amountUV = find_value(obj, "amount");
+        if (amountUV.isNum())
+        {
+            QString iconName;
+            if (actionUV.isStr())
+                iconName = ":/icons/tx_" + QString::fromStdString(actionUV.get_str());
+            QStandardItem *item = new QStandardItem(QIcon(iconName), QString::fromStdString(DBB::formatMoney(amountUV.get_int64())));
+            item->setToolTip(tr("Double-click for more details"));
+            item->setFont(font);
+            item->setTextAlignment(Qt::AlignRight | Qt::AlignVCenter);
+            transactionTableModel->setItem(cnt, 1, item);
+        }
+
+        UniValue addressUV = find_value(obj["outputs"][0], "address");
+        if (addressUV.isStr())
+        {
+            QStandardItem *item = new QStandardItem(QString::fromStdString(addressUV.get_str()));
+            item->setToolTip(tr("Double-click for more details"));
+            item->setFont(font);
+            item->setTextAlignment(Qt::AlignCenter); 
+            transactionTableModel->setItem(cnt, 2, item);
+        }
+        
         UniValue timeUV = find_value(obj, "time");
         if (timeUV.isNum())
         {
@@ -2060,45 +2077,52 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
             timestamp.setTime_t(timeUV.get_int64());
             QStandardItem *item = new QStandardItem(timestamp.toString(Qt::SystemLocaleShortDate));
             item->setToolTip(tr("Double-click for more details"));
-            transactionTableModel->setItem(cnt, 0, item);
-        }
-
-        UniValue actionUV = find_value(obj, "action");
-        if (actionUV.isStr())
-        {
-            QString iconName = ":/icons/tx_" + QString::fromStdString(actionUV.get_str());
-            QStandardItem *item = new QStandardItem(QIcon(iconName), QString::fromStdString(actionUV.get_str()) );
-            item->setToolTip(tr("Double-click for more details"));
-            transactionTableModel->setItem(cnt, 1, item);
-        }
-
-        UniValue amountUV = find_value(obj, "amount");
-        if (amountUV.isNum())
-        {
-            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(amountUV.get_int64())));
-            item->setToolTip(tr("Double-click for more details"));
-            transactionTableModel->setItem(cnt, 2, item);
-        }
-
-        UniValue feeUV = find_value(obj, "fees");
-        if (feeUV.isNum())
-        {
-            QStandardItem *item = new QStandardItem(QString::fromStdString(DBB::formatMoney(feeUV.get_int64())));
-            item->setToolTip(tr("Double-click for more details"));
+            item->setFont(font);
             transactionTableModel->setItem(cnt, 3, item);
         }
+            
+        UniValue confirmsUV = find_value(obj, "confirmations");
+        {
+            QString iconName;
+            QString tooltip;
+            if (confirmsUV.isNum())
+            {
+                tooltip = QString::number(confirmsUV.get_int());
+                if (confirmsUV.get_int() > 5)
+                    iconName = ":/icons/confirm6";
+                else
+                    iconName = ":/icons/confirm" + QString::number(confirmsUV.get_int());
+            } else {
+                tooltip = "0";
+                iconName = ":/icons/confirm0";
+            }
+            QStandardItem *item = new QStandardItem(QIcon(iconName), "");
+            item->setToolTip(tooltip + tr(" confirmations"));
+            item->setTextAlignment(Qt::AlignCenter); 
+            transactionTableModel->setItem(cnt, 4, item);
+        }
+
         UniValue txidUV = find_value(obj, "txid");
         if (txidUV.isStr())
         {
             QStandardItem *item = new QStandardItem(QString::fromStdString(txidUV.get_str()) );
-            transactionTableModel->setItem(cnt, 4, item);
+            transactionTableModel->setItem(cnt, 0, item);
         }
 
         cnt++;
     }
+  
+    if (!cnt) {
+        ui->tableWidget->setVisible(false);   
+        return;
+    }
 
+    ui->tableWidget->setVisible(true);   
     ui->tableWidget->setModel(transactionTableModel);
-    ui->tableWidget->setColumnHidden(4, true);
+    ui->tableWidget->setColumnHidden(0, true);
+    ui->tableWidget->setColumnWidth(4, 0); // Trick to get column smaller than minimum width
+                                           // when resized in setSectionResizeMode().
+    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
 }
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished)

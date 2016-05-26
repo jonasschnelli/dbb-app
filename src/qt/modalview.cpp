@@ -349,7 +349,7 @@ void ModalView::passwordCheck(const QString& password0)
             ui->setPassword->setEnabled(false);
             return;
         }
-        QRegExp nameMatcher("^[0-9A-Z-_]{1,64}$", Qt::CaseInsensitive);
+        QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
         if (!nameMatcher.exactMatch(ui->setDeviceName->text()))
         {
             ui->passwordWarning->setText(tr("Name has invalid character"));
