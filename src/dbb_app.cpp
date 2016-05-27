@@ -220,13 +220,23 @@ int main(int argc, char** argv)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
 
+    QString bitcoinURL;
+    for (int i = 1; i < argc; i++)
+    {
+        QString arg(argv[i]);
+        if (arg.startsWith("-"))
+            continue;
+
+        if (arg.startsWith("bitcoin:", Qt::CaseInsensitive)) // bitcoin: URI
+            bitcoinURL = arg;
+    }
     QApplication app(argc, argv);
 
     std::string dataDir = DBB::GetDefaultDBBDataDir();
     DBB::CreateDir(dataDir.c_str());
     DBB::OpenDebugLog();
     DBB::LogPrint("\n\n\n\nStarting DBB App %s - %s\n", DBB_PACKAGE_VERSION, VERSION);
-    widget = new DBBDaemonGui(0);
+    widget = new DBBDaemonGui(bitcoinURL);
     widget->show();
     //set style sheets
     app.exec();

@@ -89,7 +89,7 @@ class DBBDaemonGui : public QMainWindow
     Q_OBJECT
 
 public:
-    explicit DBBDaemonGui(QWidget* parent = 0);
+    explicit DBBDaemonGui(const QString& uri, QWidget* parent = 0);
     ~DBBDaemonGui();
 
 public slots:
@@ -137,6 +137,7 @@ signals:
     void checkForUpdateResponseAvailable(const std::string&, long, bool);
 
 private:
+    QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
@@ -284,6 +285,7 @@ private slots:
     //!change device name
     void setDeviceNameClicked();
     void setDeviceName(dbb_response_type_t response_type);
+    void parseBitcoinURI(const QString& bitcoinurl, QString& addressOut, QString& amountOut);
 
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();

@@ -64,7 +64,8 @@ void testfunc(DNSServiceRef, DNSServiceFlags,
 
 }
 
-DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
+DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(parent),
+                                              openedWithBitcoinURI(0),
                                               ui(new Ui::MainWindow),
                                               statusBarButton(0),
                                               statusBarLabelRight(0),
@@ -106,6 +107,9 @@ DBBDaemonGui::DBBDaemonGui(QWidget* parent) : QMainWindow(parent),
     //testnet/mainnet switch
     if (DBB::mapArgs.count("-testnet"))
         DBB_USE_TESTNET = true;
+
+    if (!uri.isEmpty())
+        openedWithBitcoinURI = new QString(uri);
 
 /////////// UI Styling
 #if defined(Q_OS_MAC)
@@ -1119,6 +1123,34 @@ void DBBDaemonGui::setDeviceName(dbb_response_type_t response_type)
     });
 }
 
+void DBBDaemonGui::parseBitcoinURI(const QString& uri, QString& addressOut, QString& amountOut)
+{
+    static const char bitcoinurl[] = "bitcoin:";
+    static const char amountfield[] = "amount=";
+
+    if (uri.startsWith(bitcoinurl, Qt::CaseInsensitive))
+    {
+        // get the part after the "bitcoin:"
+        QString addressWithDetails = uri.mid(strlen(bitcoinurl));
+
+        // form a substring with only the address
+        QString onlyAddress = addressWithDetails.mid(0,addressWithDetails.indexOf("?"));
+
+        // if there is an amount, rip our the string
+        if (addressWithDetails.indexOf(amountfield) != -1)
+        {
+            QString part = addressWithDetails.mid(addressWithDetails.indexOf(amountfield));
+            QString amount = part.mid(strlen(amountfield),part.indexOf("&")-strlen(amountfield));
+
+            // fill amount
+            amountOut = amount;
+        }
+
+        // fill address
+        addressOut = onlyAddress;
+    }
+}
+
 /*
 ////////////////////////
 Address Exporting  Stack
@@ -1415,6 +1447,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     showModalInfo(tr(""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                     updateModalWithIconName(":/icons/touchhelp_initdone");
                     initialWalletSeeding = false;
+                }
+
+                if (openedWithBitcoinURI)
+                {
+                    QString amount;
+                    QString address;
+                    parseBitcoinURI(*openedWithBitcoinURI, address, amount);
+                    delete openedWithBitcoinURI; openedWithBitcoinURI = NULL;
+                    mainSendButtonClicked();
+
+                    this->ui->sendToAddress->setText(address);
+                    this->ui->sendAmount->setText(amount);
                 }
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_MS_MASTER) {
