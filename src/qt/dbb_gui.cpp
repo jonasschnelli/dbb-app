@@ -783,7 +783,7 @@ void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
     
     if (newWallet) {
-        deviceName = extraInput;
+        tempNewDeviceName = extraInput;
         process = DBB_PROCESS_INFOLAYER_STYLE_NO_INFO;
     } else {
         if (extraInput.toStdString() != sessionPassword) {
@@ -918,7 +918,7 @@ std::string DBBDaemonGui::getBackupString()
     auto in_time_t = std::chrono::system_clock::to_time_t(now);
 
     // get device name
-    std::string name = this->ui->deviceNameLabel->text().toStdString();
+    std::string name = deviceName.toStdString();
     std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
 
     std::stringstream ss;
@@ -1147,23 +1147,24 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
 void DBBDaemonGui::setDeviceNameClicked()
 {
     bool ok;
-    deviceName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
-    if (!ok || deviceName.isEmpty())
+    QString tempDeviceName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
+    if (!ok || tempDeviceName.isEmpty())
         return;
 
     QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
-    if (!nameMatcher.exactMatch(deviceName))
+    if (!nameMatcher.exactMatch(tempDeviceName))
     {
         showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
         return;
     }
 
-    setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
+    deviceName = tempDeviceName;
+    setDeviceName(tempDeviceName, DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
 }
 
-void DBBDaemonGui::setDeviceName(dbb_response_type_t response_type)
+void DBBDaemonGui::setDeviceName(const QString &newDeviceName, dbb_response_type_t response_type)
 {
-    std::string command = "{\"name\" : \""+deviceName.toStdString()+"\" }";
+    std::string command = "{\"name\" : \""+newDeviceName.toStdString()+"\" }";
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, response_type](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1379,7 +1380,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
-                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+QString::fromStdString(name.get_str()));
+                {
+                    deviceName = QString::fromStdString(name.get_str());
+                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
+                }
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
@@ -1632,7 +1636,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE) {
             UniValue name = find_value(response, "name");
             if (name.isStr()) {
-                this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
+                deviceName = QString::fromStdString(name.get_str());
+                this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
                 if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE)
                     getInfo();
             }
@@ -1706,7 +1711,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
                 cleanseLoginAndSetPassword(); //remove text from set password fields
                 //could not decrypt, password was changed successfully
-                setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE);
+                setDeviceName(tempNewDeviceName, DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE);
+                tempNewDeviceName = "";
             } else {
                 QString errorString;
                 UniValue touchbuttonObj = find_value(response, "touchbutton");
