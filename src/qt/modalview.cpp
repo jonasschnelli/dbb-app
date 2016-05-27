@@ -233,11 +233,12 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification QR Codes"));
 
+    ui->modalIcon->setVisible(true);
     if (showQRSqeuence)
     {
-        //ui->continueButton->setVisible(true);
+        ui->continueButton->setVisible(true);
         setQrCodeVisibility(true);
-        updateIcon(QIcon());
+        ui->modalIcon->setVisible(false);
         ui->showDetailsButton->setVisible(false);
     }
 
@@ -264,16 +265,17 @@ void ModalView::setQrCodeVisibility(bool state)
         ui->showDetailsButton->setText(tr("Show Verification QR Codes"));
         ui->qrCodeSequence->setVisible(false);
 
-        QIcon newIcon;
-        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Normal);
-        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Disabled);
-        ui->modalIcon->setIcon(newIcon);
+//        QIcon newIcon;
+//        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Normal);
+//        newIcon.addPixmap(QPixmap(txPointer ? ":/icons/touchhelp_smartverification" : ":/icons/touchhelp"), QIcon::Disabled);
+//        ui->modalIcon->setIcon(newIcon);
+        ui->modalIcon->setVisible(true);
     }
     else
     {
         ui->showDetailsButton->setText(tr("Hide Verification Code"));
         ui->qrCodeSequence->setVisible(true);
-        ui->modalIcon->setIcon(QIcon());
+        ui->modalIcon->setVisible(false);
     }
 }
 
@@ -283,7 +285,7 @@ void ModalView::proceedFrom2FAToSigning(const QString &twoFACode)
     ui->abortButton->setVisible(false);
     ui->continueButton->setVisible(false);
 
-    emit signingShouldProceed(twoFACode, txPointer, txData, txType);
+    emit signingShouldProceed(twoFACode, twoFACode.isEmpty() ? NULL : txPointer, txData, txType);
 }
 
 void ModalView::twoFACanclePressed()
@@ -369,6 +371,6 @@ void ModalView::continuePressed()
     {
         setQrCodeVisibility(false);
         ui->continueButton->setVisible(false);
-        emit signingShouldProceed(ui->twoFACode->text(), txPointer, txData, txType);
+        emit signingShouldProceed("", txPointer, txData, txType);
     }
 }

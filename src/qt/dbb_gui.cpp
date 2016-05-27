@@ -644,7 +644,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 {
 
     int amountOfClientsInformed = 0;
-    if (comServer)
+    if (comServer && !comServer->getChannelID().empty())
     {
         amountOfClientsInformed = 1;
         comServer->postNotification(echoStr);
@@ -677,7 +677,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 
 void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, const UniValue& proposalData, int actionType)
 {
-    if (twoFACode.isEmpty())
+    if (twoFACode.isEmpty() && ptr == NULL)
     {
         //cancle pressed
         ui->modalBlockerView->clearTXData();
@@ -687,6 +687,7 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
             comServer->postNotification("{ \"action\" : \"clear\" }");
         return;
     }
+    updateModalWithIconName(":/icons/touchhelp");
     DBBWallet *wallet = (DBBWallet *)ptr;
     PaymentProposalAction(wallet, twoFACode, proposalData, actionType);
     ui->modalBlockerView->clearTXData();
@@ -1551,7 +1552,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2pkh");
 
                 // send verification to verification devices
-                if (comServer)
+                if (comServer && !comServer->getChannelID().empty())
                 {
                     sentToVerificationClients = true;
                     comServer->postNotification(responseMutable.write());
