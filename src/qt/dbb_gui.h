@@ -169,6 +169,7 @@ private:
     QPropertyAnimation* usbActivityAnimation;
     QPropertyAnimation* verificationActivityAnimation;
     QString deviceName;
+    QString tempNewDeviceName;
     std::string sessionPassword;                    //TODO: needs secure space / mem locking
     std::string sessionPasswordDuringChangeProcess; //TODO: needs secure space / mem locking
     std::vector<DBBWallet*> vMultisigWallets;       //!<immutable pointers to the multisig wallet objects (currently only 1)
@@ -292,7 +293,7 @@ private slots:
     void upgradeFirmwareDone(bool state);
     //!change device name
     void setDeviceNameClicked();
-    void setDeviceName(dbb_response_type_t response_type);
+    void setDeviceName(const QString& newDeviceName, dbb_response_type_t response_type);
     void parseBitcoinURI(const QString& bitcoinurl, QString& addressOut, QString& amountOut);
 
     //== ADDRESS EXPORTING ==
