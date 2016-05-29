@@ -104,7 +104,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               walletUpdateTimer(0),
                                               comServer(0),
                                               lastPing(0),
-                                              smartVerificationDeviceConnected(0),
                                               settingsDialog(0),
                                               appMenuBar(0),
                                               updateManager(0)
@@ -632,10 +631,9 @@ void DBBDaemonGui::pingComServer()
     std::time_t now;
     std::time(&now);
 
-    if (lastPing != 0 && lastPing+10 < now)
-    {
+    if (lastPing != 0 && lastPing+10 < now) {
         this->statusBarVDeviceIcon->setVisible(false);
-        smartVerificationDeviceConnected = false;
+        comServer->mobileAppConnected = false;
     }
 
     std::time(&lastPing);
@@ -718,18 +716,18 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
-    if (comServer && smartVerificationDeviceConnected)
+    if (comServer->mobileAppConnected)
     {
         comServer->postNotification(echoStr);
         verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
     }
 
     ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
-    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (smartVerificationDeviceConnected == false));
+    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, !comServer->mobileAppConnected);
 
     if (!cachedDeviceLock)
     {
-        if (smartVerificationDeviceConnected)
+        if (comServer->mobileAppConnected)
         {
             //no follow up action required, clear TX data
             ui->modalBlockerView->clearTXData();
@@ -752,7 +750,7 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
 {
     if (twoFACode.isEmpty() && ptr == NULL)
     {
-        //cancle pressed
+        //cancel pressed
         ui->modalBlockerView->clearTXData();
         hideModalInfo();
         ledClicked(DBB_LED_BLINK_MODE_ABORT);
@@ -1705,8 +1703,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
-            bool sentToVerificationClients = false;
-
             UniValue responseMutable(UniValue::VOBJ);
             UniValue requestXPubKeyUV = find_value(response, "xpub");
             UniValue requestXPubEchoUV = find_value(response, "echo");
@@ -1718,15 +1714,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
                     responseMutable.pushKV("type", "p2pkh");
-
                 // send verification to verification devices
-                if (comServer && smartVerificationDeviceConnected)
-                {
-                    sentToVerificationClients = true;
+                if (comServer->mobileAppConnected)
                     comServer->postNotification(responseMutable.write());
-                }
             }
-            if (!sentToVerificationClients)
+            if (!comServer->mobileAppConnected)
             {
                 if (!verificationDialog)
                     verificationDialog = new VerificationDialog();
@@ -1764,13 +1756,9 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             if (randomNumObjUV.isStr()) {
                 showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObjUV.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                 QString errorString;
-                if (randomNumEchoUV.isStr()) {
-                    // send verification to verification devices
-                    if (comServer)
-                    {
-                        comServer->postNotification(response.write());
-                    }
-                }
+                // send verification to verification devices
+                if (randomNumEchoUV.isStr() && comServer->mobileAppConnected)
+                    comServer->postNotification(response.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -2765,9 +2753,9 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
     {
         lastPing = 0;
-        smartVerificationDeviceConnected = true;
         this->statusBarVDeviceIcon->setToolTip(tr("Verification Device Connected"));
         this->statusBarVDeviceIcon->setVisible(true);
+        comServer->mobileAppConnected = true;
     }
 }
 

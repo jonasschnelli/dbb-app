@@ -64,6 +64,9 @@ public:
     void *ctx;
 
     long nSequence; //!< current sequence number for outgoing push messages
+    
+    /* updated depending on response to 'ping' command */
+    bool mobileAppConnected;
 
     /* change/set the smart verification server URL */
     void setURL(const std::string& newUrl) { comServerURL = newUrl; }
