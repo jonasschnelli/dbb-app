@@ -62,6 +62,7 @@ DBBComServer::DBBComServer(const std::string& comServerURLIn) : longPollThread(0
     channelID.clear();
     parseMessageCB = nullptr;
     nSequence = 0;
+    mobileAppConnected = false;
 }
 
 DBBComServer::~DBBComServer()

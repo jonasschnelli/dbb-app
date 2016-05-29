@@ -559,8 +559,10 @@ void DBBDaemonGui::pingComServer()
     std::time_t now;
     std::time(&now);
 
-    if (lastPing != 0 && lastPing+10 < now)
+    if (lastPing != 0 && lastPing+10 < now) {
         this->statusBarVDeviceIcon->setVisible(false);
+        comServer->mobileAppConnected = false;
+    }
 
     std::time(&lastPing);
     comServer->postNotification("{ \"action\" : \"ping\" }");
@@ -644,7 +646,7 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
 {
 
     int amountOfClientsInformed = 0;
-    if (comServer && !comServer->getChannelID().empty())
+    if (comServer && comServer->mobileAppConnected)
     {
         amountOfClientsInformed = 1;
         comServer->postNotification(echoStr);
@@ -679,7 +681,7 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
 {
     if (twoFACode.isEmpty() && ptr == NULL)
     {
-        //cancle pressed
+        //cancel pressed
         ui->modalBlockerView->clearTXData();
         hideModalInfo();
         ledClicked();
@@ -1552,7 +1554,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2pkh");
 
                 // send verification to verification devices
-                if (comServer && !comServer->getChannelID().empty())
+                if (comServer && comServer->mobileAppConnected)
                 {
                     sentToVerificationClients = true;
                     comServer->postNotification(responseMutable.write());
@@ -2585,9 +2587,9 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
     else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
     {
         lastPing = 0;
-        smartVerificationDeviceConnected = true;
         this->statusBarVDeviceIcon->setToolTip(tr("Verification Device Connected"));
         this->statusBarVDeviceIcon->setVisible(true);
+        comServer->mobileAppConnected = true;
     }
 }
 

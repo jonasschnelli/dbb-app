@@ -226,7 +226,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
 
     showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
     ui->modalInfoLabelLA->setText(longString);
-    ui->abortButton->setVisible(twoFAlocked);
+    ui->abortButton->setVisible(twoFAlocked || showQRSqeuence);
     ui->qrCodeSequence->setData(txEcho);
     ui->modalInfoLabel->setVisible(true);
     ui->modalInfoLabelLA->setVisible(true);

@@ -178,7 +178,6 @@ private:
 
     DBB::DBBConfigdata *configData; //!< configuration data model
     DBBComServer *comServer;
-    bool smartVerificationDeviceConnected;
     std::time_t lastPing;
 
     //== Plug / Unplug ==
