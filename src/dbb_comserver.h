@@ -63,6 +63,9 @@ public:
     void *ctx;
 
     long nSequence; //!< current sequence number for outgoing push messages
+    
+    /* updated depending on response to 'ping' command */
+    bool mobileAppConnected;
 
     /* generates a new encryption key => new AES key, new channel ID */
     bool generateNewKey();
