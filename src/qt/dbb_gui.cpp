@@ -102,7 +102,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               walletUpdateTimer(0),
                                               checkingForUpdates(0),
                                               comServer(0),
-                                              lastPing(0)
+                                              lastPing(0),
+                                              smartVerificationDeviceConnected(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -564,7 +565,10 @@ void DBBDaemonGui::pingComServer()
     std::time(&now);
 
     if (lastPing != 0 && lastPing+10 < now)
+    {
         this->statusBarVDeviceIcon->setVisible(false);
+        smartVerificationDeviceConnected = false;
+    }
 
     std::time(&lastPing);
     comServer->postNotification("{ \"action\" : \"ping\" }");
@@ -646,21 +650,18 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
-
-    int amountOfClientsInformed = 0;
-    if (comServer && !comServer->getChannelID().empty())
+    if (comServer && smartVerificationDeviceConnected)
     {
-        amountOfClientsInformed = 1;
         comServer->postNotification(echoStr);
         verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
     }
 
     ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
-    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (amountOfClientsInformed == 0));
+    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (smartVerificationDeviceConnected == false));
 
     if (!cachedDeviceLock)
     {
-        if (amountOfClientsInformed > 0)
+        if (smartVerificationDeviceConnected)
         {
             //no follow up action required, clear TX data
             ui->modalBlockerView->clearTXData();
@@ -1596,7 +1597,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2pkh");
 
                 // send verification to verification devices
-                if (comServer && !comServer->getChannelID().empty())
+                if (comServer && smartVerificationDeviceConnected)
                 {
                     sentToVerificationClients = true;
                     comServer->postNotification(responseMutable.write());
@@ -2579,13 +2580,6 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &ecdhRequest)
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFYPASS_ECDH);
     });
     showModalInfo("Pairing Verification Device");
-}
-
-void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
-{
-    DBB::LogPrint("Verification devices changed, new: %d\n", amountOfClients);
-    this->statusBarVDeviceIcon->setToolTip(tr("%1 Verification Device(s) Connected").arg(amountOfClients));
-    this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
 }
 
 void DBBDaemonGui::comServerMessageParse(const QString& msg)

@@ -367,7 +367,6 @@ private slots:
     //== Smart Verification Pairing ==
     //!send a ecdh pairing request with pubkey to the DBB
     void sendECDHPairingRequest(const std::string &ecdhRequest);
-    void amountOfPairingDevicesChanged(int amountOfClients);
     void pairSmartphone();
     void comServerMessageParse(const QString& msg);
 
