@@ -16,7 +16,7 @@
 #include <fstream>
 
 static const char *bwsDefaultBackendURL = "https://bws.bitpay.com/bws/api";
-static const char *comServerDefaultURL = "https://bitcoin.jonasschnelli.ch/dbb/server.php";
+static const char *comServerDefaultURL = "https://digitalbitbox.com/smartverification/";
 
 static const char *kVERSION = "version";
 static const char *kCOM_CHANNEL_ID = "comserverchannelid";

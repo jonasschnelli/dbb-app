@@ -283,7 +283,7 @@ bool DBBComServer::postNotification(const std::string& payload)
         keyS.clear();
 
         // send the payload
-        SendRequest("post", "https://bitcoin.jonasschnelli.ch/dbb/server.php", "c=data&s="+std::to_string(nSequence)+"&uuid="+channelID+"&dt=0&pl="+encryptedPayload, response, httpStatusCode);
+        SendRequest("post", comServerURL, "c=data&s="+std::to_string(nSequence)+"&uuid="+channelID+"&dt=0&pl="+encryptedPayload, response, httpStatusCode);
         nSequence++; // increase the sequence number
 
         // ignore the response for now
