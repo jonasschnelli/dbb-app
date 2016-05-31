@@ -708,7 +708,7 @@ void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, cons
         //cancle pressed
         ui->modalBlockerView->clearTXData();
         hideModalInfo();
-        ledClicked();
+        ledClicked(DBB_LED_BLINK_MODE_ABORT);
         if (comServer)
             comServer->postNotification("{ \"action\" : \"clear\" }");
         return;
@@ -920,12 +920,18 @@ void DBBDaemonGui::eraseClicked()
     }
 }
 
-void DBBDaemonGui::ledClicked()
+void DBBDaemonGui::ledClicked(dbb_led_blink_mode_t mode)
 {
-    executeCommandWrapper("{\"led\" : \"toggle\"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    std::string command;
+    if (mode == DBB_LED_BLINK_MODE_BLINK)
+        command = "{\"led\" : \"blink\"}";
+    else if (mode == DBB_LED_BLINK_MODE_ABORT)
+        command = "{\"led\" : \"abort\"}";
+    else 
+        return;
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
-
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_LED_BLINK);
     });
 }
