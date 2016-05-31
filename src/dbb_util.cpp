@@ -410,4 +410,18 @@ int LogPrintStr(const std::string &str)
     }
     return ret;
 }
+
+std::string putTime( const std::time_t& time, const std::string& format )
+{
+    char mbstr[100];
+    if ( std::strftime( mbstr, sizeof(mbstr), format.c_str(), std::localtime( &time ) ) )
+    {
+        return mbstr;
+    }
+    else
+    {
+        throw std::invalid_argument("wrong format");
+    } 
+}
+
 }

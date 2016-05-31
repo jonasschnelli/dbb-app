@@ -50,7 +50,19 @@ if ENABLE_DBB_APP
 bin_PROGRAMS += dbb-app
 
 dbb_app_CONFIG_INCLUDES=-I$(builddir)/config
-dbb_app_SOURCES = dbb_app.h dbb_app.cpp dbb_util.h dbb_util.cpp dbb_wallet.h dbb_wallet.cpp dbb_netthread.h dbb_netthread.cpp
+dbb_app_SOURCES = \
+  dbb_app.h \
+  dbb_app.cpp \
+  dbb_util.h \
+  dbb_util.cpp \
+  dbb_wallet.h \
+  dbb_wallet.cpp \
+  dbb_netthread.h \
+  dbb_netthread.cpp \
+  dbb_comserver.h \
+  dbb_comserver.cpp \
+  dbb_configdata.h
+
 dbb_app_CPPFLAGS = $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
@@ -71,9 +83,6 @@ QT_FORMS_UI = \
 DBB_GUI_H = \
 	qt/paymentproposal.h \
     qt/signconfirmationdialog.h \
-    qt/dbb_websocketserver.h \
-    qt/bonjourserviceregister.h \
-    qt/bonjourrecord.h \
     qt/getaddressdialog.h \
     qt/qrcodesequence.h \
     qt/verificationdialog.h \
@@ -84,8 +93,6 @@ DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
     qt/backupdialog.cpp \
     qt/signconfirmationdialog.cpp \
-    qt/dbb_websocketserver.cpp \
-    qt/bonjourserviceregister.cpp \
     qt/getaddressdialog.cpp \
     qt/qrcodesequence.cpp \
     qt/verificationdialog.cpp \
@@ -97,8 +104,6 @@ QT_MOC_CPP = \
 	qt/moc_paymentproposal.cpp \
     qt/moc_backupdialog.cpp \
     qt/moc_signconfirmationdialog.cpp \
-    qt/moc_dbb_websocketserver.cpp \
-    qt/moc_bonjourserviceregister.cpp \
     qt/moc_getaddressdialog.cpp \
     qt/moc_qrcodesequence.cpp \
     qt/moc_verificationdialog.cpp \

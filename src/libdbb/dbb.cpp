@@ -28,6 +28,11 @@
 
 #include <btc/hash.h>
 
+//defined in libbtc sha2.h
+extern "C" {
+    extern void hmac_sha512(const uint8_t* key, const uint32_t keylen, const uint8_t* msg, const uint32_t msglen, uint8_t* hmac);
+}
+
 #define HID_MAX_BUF_SIZE 5120
 
 #ifdef DBB_ENABLE_DEBUG
@@ -266,34 +271,48 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
     return true;
 }
 
-bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut)
+bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& password, std::string& stringOut, bool stretch)
 {
     unsigned char passwordSha256[BTC_HASH_LENGTH];
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    if (stretch)
+        btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    else
+        memcpy(passwordSha256, password.c_str(), password.size());
 
     memcpy(aesKey, passwordSha256, DBB_AES_KEYSIZE);
 
-    //decrypt result: TODO:
-    UniValue valRead(UniValue::VSTR);
-    if (!valRead.read(cmdIn))
-        throw std::runtime_error("failed deserializing json");
+    std::string textToDecodeAndDecrypt;
+    if (stretch)
+    {
+        UniValue valRead(UniValue::VSTR);
+        if (!valRead.read(cmdIn))
+            throw std::runtime_error("failed deserializing json");
 
-    UniValue input = find_value(valRead, "input");
-    if (!input.isNull() && input.isObject()) {
-        UniValue error = find_value(input, "error");
-        if (!error.isNull() && error.isStr())
-            throw std::runtime_error("Error decrypting: " + error.get_str());
+        UniValue input = find_value(valRead, "input");
+        if (!input.isNull() && input.isObject()) {
+            UniValue error = find_value(input, "error");
+            if (!error.isNull() && error.isStr())
+                throw std::runtime_error("Error decrypting: " + error.get_str());
+        }
+
+        UniValue ctext = find_value(valRead, "ciphertext");
+        if (ctext.isNull())
+            throw std::runtime_error("failed deserializing json");
+
+        textToDecodeAndDecrypt = ctext.get_str();
     }
+    else
+        textToDecodeAndDecrypt = cmdIn;
 
-    UniValue ctext = find_value(valRead, "ciphertext");
-    if (ctext.isNull())
-        throw std::runtime_error("failed deserializing json");
-
-    std::string base64dec = base64_decode(ctext.get_str());
+    std::string base64dec = base64_decode(textToDecodeAndDecrypt);
     unsigned int base64_len = base64dec.size();
+
+    if (base64dec.empty() || (base64_len <= DBB_AES_BLOCKSIZE))
+        return false;
+
     unsigned char* base64dec_c = (unsigned char*)base64dec.c_str();
 
     unsigned char decryptedStream[base64_len - DBB_AES_BLOCKSIZE];
@@ -303,6 +322,10 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
 
     int decrypt_len = 0;
     int padlen = decryptedStream[base64_len - DBB_AES_BLOCKSIZE - 1];
+
+    if (base64_len <= DBB_AES_BLOCKSIZE + padlen)
+        return false;
+
     char* dec = (char*)malloc(base64_len - DBB_AES_BLOCKSIZE - padlen + 1); // +1 for null termination
     if (!dec) {
         decrypt_len = 0;;
@@ -329,7 +352,7 @@ bool decryptAndDecodeCommand(const std::string& cmdIn, const std::string& passwo
     return true;
 }
 
-bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut)
+bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password, std::string& base64strOut, bool stretch)
 {
     if (password.empty())
         return false;
@@ -340,7 +363,10 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
     unsigned char aesIV[DBB_AES_BLOCKSIZE];
     unsigned char aesKey[DBB_AES_KEYSIZE];
 
-    btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    if (stretch)
+        btc_hash((const uint8_t *)password.c_str(), password.size(), passwordSha256);
+    else
+        memcpy(passwordSha256, password.c_str(), password.size());
 
     //set random IV
     getRandIV(aesIV);
@@ -373,5 +399,51 @@ bool encryptAndEncodeCommand(const std::string& cmd, const std::string& password
     base64strOut = base64_encode(enc_cat, inpadlen + DBB_AES_BLOCKSIZE);
 
     return true;
+}
+
+void pbkdf2_hmac_sha512(const uint8_t *pass, int passlen, uint8_t *key, int keylen)
+{
+    uint32_t i, j, k;
+    uint8_t f[BACKUP_KEY_PBKDF2_HMACLEN], g[BACKUP_KEY_PBKDF2_HMACLEN];
+    uint32_t blocks = keylen / BACKUP_KEY_PBKDF2_HMACLEN;
+
+    static uint8_t salt[BACKUP_KEY_PBKDF2_SALTLEN + 4];
+    memset(salt, 0, sizeof(salt));
+    memcpy(salt, BACKUP_KEY_PBKDF2_SALT, strlen(BACKUP_KEY_PBKDF2_SALT));
+
+    if (keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1)) {
+        blocks++;
+    }
+    for (i = 1; i <= blocks; i++) {
+        salt[BACKUP_KEY_PBKDF2_SALTLEN    ] = (i >> 24) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 1] = (i >> 16) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 2] = (i >> 8) & 0xFF;
+        salt[BACKUP_KEY_PBKDF2_SALTLEN + 3] = i & 0xFF;
+        hmac_sha512(pass, passlen, salt, BACKUP_KEY_PBKDF2_SALTLEN + 4, g);
+        memcpy(f, g, BACKUP_KEY_PBKDF2_HMACLEN);
+        for (j = 1; j < BACKUP_KEY_PBKDF2_ROUNDS; j++) {
+            hmac_sha512(pass, passlen, g, BACKUP_KEY_PBKDF2_HMACLEN, g);
+            for (k = 0; k < BACKUP_KEY_PBKDF2_HMACLEN; k++) {
+                f[k] ^= g[k];
+            }
+        }
+        if (i == blocks && (keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1))) {
+            memcpy(key + BACKUP_KEY_PBKDF2_HMACLEN * (i - 1), f, keylen & (BACKUP_KEY_PBKDF2_HMACLEN - 1));
+        } else {
+            memcpy(key + BACKUP_KEY_PBKDF2_HMACLEN * (i - 1), f, BACKUP_KEY_PBKDF2_HMACLEN);
+        }
+    }
+    memset(f, 0, sizeof(f));
+    memset(g, 0, sizeof(g));
+}
+
+std::string getStretchedBackupHexKey(const std::string &passphrase)
+{
+
+    assert(passphrase.size() > 0);
+
+    uint8_t key[BACKUP_KEY_PBKDF2_HMACLEN];
+    pbkdf2_hmac_sha512((const uint8_t *)&passphrase[0], passphrase.size(), key, sizeof(key));
+    return DBB::HexStr(key, key+sizeof(key));
 }
 }

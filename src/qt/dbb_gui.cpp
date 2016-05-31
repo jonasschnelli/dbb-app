@@ -19,18 +19,21 @@
 #include <QFontDatabase>
 #include <QGraphicsOpacityEffect>
 #include <QtNetwork/QHostInfo>
+#include <QDateTime>
 
 #include "ui/ui_overview.h"
 #include <dbb.h>
+#include "libdbb/crypto.h"
 
 #include "dbb_util.h"
 #include "dbb_netthread.h"
-#include "bonjourserviceregister.h"
+#include "serialize.h"
 
 #include <cstdio>
 #include <ctime>
 #include <chrono>
 #include <fstream>
+#include <iomanip> // put_time
 
 #include <univalue.h>
 #include <btc/bip32.h>
@@ -51,15 +54,21 @@ static std::string ca_file;
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 extern void setFirmwareUpdateHID(bool state);
 
-DBBDaemonGui::~DBBDaemonGui()
+// static C based callback which gets called if the com server gets a message
+static void comServerCallback(DBBComServer* cs, const std::string& str, void *ctx)
 {
-    delete bonjourRegister;
+    // will be called on the com server thread
+    if (ctx)
+    {
+        DBBDaemonGui *gui = (DBBDaemonGui *)ctx;
+
+        // emits signal "comServerIncommingMessage"
+        QMetaObject::invokeMethod(gui, "comServerIncommingMessage", Qt::QueuedConnection,
+                                  Q_ARG(QString, QString::fromStdString(str)));
+    }
 }
 
-void testfunc(DNSServiceRef, DNSServiceFlags,
-              DNSServiceErrorType errorCode, const char *name,
-              const char *regtype, const char *domain,
-              void *data)
+DBBDaemonGui::~DBBDaemonGui()
 {
 
 }
@@ -73,7 +82,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               backupDialog(0),
                                               getAddressDialog(0),
                                               verificationDialog(0),
-                                              websocketServer(0),
                                               processCommand(0),
                                               deviceConnected(0),
                                               deviceReadyToInteract(0),
@@ -92,7 +100,10 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               shouldKeepBootloaderState(0),
                                               touchButtonInfo(0),
                                               walletUpdateTimer(0),
-                                              checkingForUpdates(0)
+                                              checkingForUpdates(0),
+                                              comServer(0),
+                                              lastPing(0),
+                                              smartVerificationDeviceConnected(0)
 {
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
@@ -182,6 +193,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
@@ -213,11 +225,12 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 
     connect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
 
-
+    connect(this, SIGNAL(comServerIncommingMessage(const QString&)), this, SLOT(comServerMessageParse(const QString&)));
 
     // create backup dialog instance
     backupDialog = new BackupDialog(0);
     connect(backupDialog, SIGNAL(addBackup()), this, SLOT(addBackup()));
+    connect(backupDialog, SIGNAL(verifyBackup(const QString&)), this, SLOT(verifyBackup(const QString&)));
     connect(backupDialog, SIGNAL(eraseAllBackups()), this, SLOT(eraseAllBackups()));
     connect(backupDialog, SIGNAL(eraseBackup(const QString&)), this, SLOT(eraseBackup(const QString&)));
     connect(backupDialog, SIGNAL(restoreFromBackup(const QString&)), this, SLOT(restoreBackup(const QString&)));
@@ -339,10 +352,16 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
 
-    //create the single and multisig wallet
+    //get the default data dir
     std::string dataDir = DBB::GetDefaultDBBDataDir();
+
+    //load the configuration file
+    configData = new DBB::DBBConfigdata(dataDir+"/config.dat");
+    configData->read();
+
+    //create the single and multisig wallet
     singleWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
-    singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'" : "m/44'/0'"));
+    singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'/0'" : "m/44'/0'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath(DBB::GetArg("-mskeypath","m/100'/45'/0'"));
 
@@ -354,26 +373,31 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     vMultisigWallets.push_back(copayWallet);
 
 
+    processCommand = false;
     deviceConnected = false;
     resetInfos();
+
     //set status bar connection status
     uiUpdateDeviceState();
     changeConnectedState(DBB::isConnectionOpen(), DBB::deviceAvailable());
 
-
-    processCommand = false;
-
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
-    //create a local websocket server
-    websocketServer = new WebsocketServer(WEBSOCKET_PORT, false);
-    connect(websocketServer, SIGNAL(ecdhPairingRequest(const std::string&)), this, SLOT(sendECDHPairingRequest(const std::string&)));
-    connect(websocketServer, SIGNAL(amountOfConnectionsChanged(int)), this, SLOT(amountOfPairingDevicesChanged(int)));
-
-    //announce service over mDNS
-    bonjourRegister = new BonjourServiceRegister(this);
-    bonjourRegister->registerService(BonjourRecord("Digital Bitbox App Websocket", QLatin1String("_dbb._tcp."), QString()), WEBSOCKET_PORT);
+    //connect to the com server
+    comServer = new DBBComServer(configData->comServerURL);
+#if defined(__linux__) || defined(__unix__)
+    // set the CA file in case we are compliling for linux
+    comServer->setCAFile(ca_file);
+#endif
+    comServer->setParseMessageCB(comServerCallback, this);
+    if (configData->comServerChannelID.size() > 0)
+    {
+        comServer->setChannelID(configData->comServerChannelID);
+        comServer->setEncryptionKey(configData->encryptionKey);
+        comServer->startLongPollThread();
+        pingComServer();
+    }
 
     walletUpdateTimer = new QTimer(this);
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
@@ -503,8 +527,6 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         cachedDeviceLock = false;
         //hide modal dialog and abort possible ecdh pairing
         hideModalInfo();
-        if (websocketServer)
-            websocketServer->abortECDHPairing();
 
         //clear some infos
         sdcardWarned = false;
@@ -533,8 +555,24 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
 void DBBDaemonGui::updateTimerFired()
 {
     SingleWalletUpdateWallets(false);
+    pingComServer();
 }
 
+
+void DBBDaemonGui::pingComServer()
+{
+    std::time_t now;
+    std::time(&now);
+
+    if (lastPing != 0 && lastPing+10 < now)
+    {
+        this->statusBarVDeviceIcon->setVisible(false);
+        smartVerificationDeviceConnected = false;
+    }
+
+    std::time(&lastPing);
+    comServer->postNotification("{ \"action\" : \"ping\" }");
+}
 /*
  /////////////////
  UI Action Stack
@@ -612,21 +650,18 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
-
-    int amountOfClientsInformed = 0;
-    if (websocketServer)
+    if (comServer && smartVerificationDeviceConnected)
     {
-        amountOfClientsInformed = websocketServer->sendStringToAllClients(echoStr);
-        if (amountOfClientsInformed > 0)
-            verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+        comServer->postNotification(echoStr);
+        verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
     }
 
     ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
-    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (amountOfClientsInformed == 0));
+    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, (smartVerificationDeviceConnected == false));
 
     if (!cachedDeviceLock)
     {
-        if (amountOfClientsInformed > 0)
+        if (smartVerificationDeviceConnected)
         {
             //no follow up action required, clear TX data
             ui->modalBlockerView->clearTXData();
@@ -637,25 +672,27 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
         else
         {
             //no verification device connected, start QRCode based verification
-            QMessageBox::warning(this, tr(""), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the transaction by scanning the sequence of QR codes."), QMessageBox::Ok);
+            QMessageBox::warning(this, tr(""), tr("No mobile app detected. Manually verify the transaction by scanning the sequence of QR codes with a paired Digital Bitbox mobile app."), QMessageBox::Ok);
         }
 
     }
     else
-        updateModalWithIconName(":/icons/twofahelp");
+        updateModalWithIconName(":/icons/touchhelp_smartverification");
 }
 
 void DBBDaemonGui::proceedVerification(const QString& twoFACode, void *ptr, const UniValue& proposalData, int actionType)
 {
-    updateModalWithIconName(":/icons/touchhelp");
-
-    if (ptr == NULL && twoFACode.isEmpty())
+    if (twoFACode.isEmpty() && ptr == NULL)
     {
         //cancle pressed
         ui->modalBlockerView->clearTXData();
         hideModalInfo();
+        ledClicked();
+        if (comServer)
+            comServer->postNotification("{ \"action\" : \"clear\" }");
         return;
     }
+    updateModalWithIconName(":/icons/touchhelp");
     DBBWallet *wallet = (DBBWallet *)ptr;
     PaymentProposalAction(wallet, twoFACode, proposalData, actionType);
     ui->modalBlockerView->clearTXData();
@@ -752,7 +789,7 @@ void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
     
     if (newWallet) {
-        deviceName = extraInput;
+        tempNewDeviceName = extraInput;
         process = DBB_PROCESS_INFOLAYER_STYLE_NO_INFO;
     } else {
         if (extraInput.toStdString() != sessionPassword) {
@@ -881,11 +918,34 @@ void DBBDaemonGui::getInfo()
     });
 }
 
+std::string DBBDaemonGui::getBackupString()
+{
+    auto now = std::chrono::system_clock::now();
+    auto in_time_t = std::chrono::system_clock::to_time_t(now);
+
+    // get device name
+    std::string name = deviceName.toStdString();
+    std::replace(name.begin(), name.end(), ' ', '_'); // default name has spaces, but spaces forbidden in backup file names
+
+    std::stringstream ss;
+    ss << name << "-" << DBB::putTime(in_time_t, "%Y-%m-%d-%H-%M-%S");
+    return ss.str();
+}
+
 void DBBDaemonGui::seedHardware()
 {
+    if (sessionPassword.empty() || sessionPassword.size() > 64)
+        return;
+
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+
     DBB::LogPrint("Request device seeding...\n", "");
-    std::string command = "{\"seed\" : {\"source\" :\"create\","
-                          "\"decrypt\": \"yes\" } }";
+    std::string command = "{\"seed\" : {"
+                                "\"source\" :\"create\","
+                                "\"decrypt\": \"yes\","
+                                "\"key\": \""+hashHex+"\","
+                                "\"filename\": \"" + getBackupString() + ".bak\""
+                            "} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -946,7 +1006,7 @@ QString DBBDaemonGui::getIpAddress()
 
 void DBBDaemonGui::getRandomNumber()
 {
-    executeCommandWrapper("{\"random\" : \"true\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"random\" : \"pseudo\" }", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RANDOM_NUM);
@@ -955,7 +1015,7 @@ void DBBDaemonGui::getRandomNumber()
 
 void DBBDaemonGui::lockDevice()
 {
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Be sure to backup your wallet and pair the mobile app before enabling two-factor authentication. After, app pairing and the micro SD card slot (wallet backup and recovery) will be disabled. They can be re-enabled only by resetting and erasing the device. Proceed?"), QMessageBox::Yes | QMessageBox::No);
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Do you have a backup?\nIs mobile app verification working?\n\n2FA mode DISABLES backups and mobile app pairing. The device must be ERASED to exit 2FA mode!\n\nProceed?"), QMessageBox::Yes | QMessageBox::No);
     if (reply == QMessageBox::No)
         return;
 
@@ -1099,23 +1159,24 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
 void DBBDaemonGui::setDeviceNameClicked()
 {
     bool ok;
-    deviceName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
-    if (!ok || deviceName.isEmpty())
+    QString tempDeviceName = QInputDialog::getText(this, "", tr("Enter device name"), QLineEdit::Normal, "", &ok);
+    if (!ok || tempDeviceName.isEmpty())
         return;
 
     QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
-    if (!nameMatcher.exactMatch(deviceName))
+    if (!nameMatcher.exactMatch(tempDeviceName))
     {
         showModalInfo(tr("The device name must only contain alphanumeric characters and - or _"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
         return;
     }
 
-    setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
+    deviceName = tempDeviceName;
+    setDeviceName(tempDeviceName, DBB_RESPONSE_TYPE_SET_DEVICE_NAME);
 }
 
-void DBBDaemonGui::setDeviceName(dbb_response_type_t response_type)
+void DBBDaemonGui::setDeviceName(const QString &newDeviceName, dbb_response_type_t response_type)
 {
-    std::string command = "{\"name\" : \""+deviceName.toStdString()+"\" }";
+    std::string command = "{\"name\" : \""+newDeviceName.toStdString()+"\" }";
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this, response_type](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1184,21 +1245,13 @@ void DBBDaemonGui::showBackupDialog()
 
 void DBBDaemonGui::addBackup()
 {
-    std::time_t rawtime;
-    std::tm* timeinfo;
-    char buffer[80];
-
-    std::time(&rawtime);
-    timeinfo = std::localtime(&rawtime);
-
-    std::strftime(buffer, 80, "%Y-%m-%d-%H-%M-%S", timeinfo);
-    std::string timeStr(buffer);
-
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+    std::string backupFilename = getBackupString();
     std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
-                          "\"filename\": \"backup-" +
-                          timeStr + ".bak\"} }";
+                          "\"key\":\"" + hashHex + "\","
+                          "\"filename\": \"" + backupFilename + ".bak\"} }";
 
-    DBB::LogPrint("Adding a backup (%s)\n", timeStr.c_str());
+    DBB::LogPrint("Adding a backup (%s)\n", backupFilename.c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
@@ -1269,9 +1322,12 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    std::string command = "{\"seed\" : {\"source\" :\"" + backupFilename.toStdString() + "\","
-                                                                                         "\"decrypt\": \"yes\" } }";
-
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+    std::string command = "{\"seed\" : {"
+                                "\"source\" :\"" + backupFilename.toStdString() + "\","
+                                "\"decrypt\": \"yes\","
+                                "\"key\":\""+hashHex+"\""
+                            "} }";
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1366,7 +1422,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 if (version.isStr())
                     this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
                 if (name.isStr())
-                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+QString::fromStdString(name.get_str()));
+                {
+                    deviceName = QString::fromStdString(name.get_str());
+                    this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
+                }
 
                 this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
 
@@ -1531,7 +1590,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Join Wallet Error"), tr("Error joining Copay Wallet (%1)").arg(errorString));
             }
         } else if (tag == DBB_RESPONSE_TYPE_XPUB_VERIFY) {
-            bool sentToWebsocketClients = false;
+            bool sentToVerificationClients = false;
 
             UniValue responseMutable(UniValue::VOBJ);
             UniValue requestXPubKeyUV = find_value(response, "xpub");
@@ -1544,22 +1603,24 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
                 if (subtag == DBB_ADDRESS_STYLE_P2PKH)
                     responseMutable.pushKV("type", "p2pkh");
-                if (websocketServer->sendStringToAllClients(responseMutable.write()) > 0)
+
+                // send verification to verification devices
+                if (comServer && smartVerificationDeviceConnected)
                 {
-                    sentToWebsocketClients = true;
-                    verificationActivityAnimation->start(QAbstractAnimation::KeepWhenStopped);
+                    sentToVerificationClients = true;
+                    comServer->postNotification(responseMutable.write());
                 }
 
 
 
             }
-            if (!sentToWebsocketClients)
+            if (!sentToVerificationClients)
             {
                 if (!verificationDialog)
                     verificationDialog = new VerificationDialog();
 
                 verificationDialog->show();
-                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("A device running the Digital Bitbox mobile app is not detected on the WiFi network. Instead, you can verify the address by scanning QR codes."), responseMutable.write());
+                verificationDialog->setData(tr("Securely Verify Your Receiving Address"), tr("No mobile app detected. Manually verify the address by scanning QR codes with a paired Digital Bitbox mobile app."), responseMutable.write());
             }
         } else if (tag == DBB_RESPONSE_TYPE_LIST_BACKUP && backupDialog) {
             UniValue backupObj = find_value(response, "backup");
@@ -1586,9 +1647,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_ERASE_BACKUP && backupDialog) {
             listBackup();
         } else if (tag == DBB_RESPONSE_TYPE_RANDOM_NUM) {
-            UniValue randomNumObj = find_value(response, "random");
-            if (randomNumObj.isStr()) {
-                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObj.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+            UniValue randomNumObjUV = find_value(response, "random");
+            UniValue randomNumEchoUV = find_value(response, "echo");
+            if (randomNumObjUV.isStr()) {
+                showModalInfo("<strong>"+tr("Random hexadecimal number")+"</strong><br /><br />"+QString::fromStdString(randomNumObjUV.get_str()+""), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                QString errorString;
+                if (randomNumEchoUV.isStr()) {
+                    // send verification to verification devices
+                    if (comServer)
+                    {
+                        comServer->postNotification(response.write());
+                    }
+                }
             }
         } else if (tag == DBB_RESPONSE_TYPE_DEVICE_LOCK) {
             bool suc = false;
@@ -1620,7 +1690,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE) {
             UniValue name = find_value(response, "name");
             if (name.isStr()) {
-                this->ui->deviceNameLabel->setText(QString::fromStdString(name.get_str()));
+                deviceName = QString::fromStdString(name.get_str());
+                this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
                 if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE)
                     getInfo();
             }
@@ -1635,7 +1706,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 showAlert(tr("Error"), tr("Verification Device Pairing Failed"));
             }
             hideModalInfo();
-            websocketServer->sendDataToClientInECDHParingState(response);
+            if (comServer)
+                comServer->postNotification(response.write());
         }
 
         if (tag == DBB_RESPONSE_TYPE_CREATE_WALLET) {
@@ -1693,7 +1765,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
                 cleanseLoginAndSetPassword(); //remove text from set password fields
                 //could not decrypt, password was changed successfully
-                setDeviceName(DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE);
+                setDeviceName(tempNewDeviceName, DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE);
+                tempNewDeviceName = "";
             } else {
                 QString errorString;
                 UniValue touchbuttonObj = find_value(response, "touchbutton");
@@ -2500,21 +2573,16 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
     setNetLoading(true);
 }
 
-#pragma mark - WebSocket Stack (ECDH)
+#pragma mark - Smart Verification Stack (ECDH / ComServer)
 
-void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
+void DBBDaemonGui::sendECDHPairingRequest(const std::string &ecdhRequest)
 {
     if (!deviceReadyToInteract)
         return;
 
-    //:translation: accept pairing rquest message box
-    QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to accept a pairing request?"), QMessageBox::Yes | QMessageBox::No);
-    if (reply == QMessageBox::No)
-        return;
-
     DBB::LogPrint("Paring request\n", "");
 
-    executeCommandWrapper("{\"verifypass\": {\"ecdh\" : \"" + pubkey + "\"}}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper("{\"verifypass\": "+ecdhRequest+"}", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_VERIFYPASS_ECDH);
@@ -2522,14 +2590,77 @@ void DBBDaemonGui::sendECDHPairingRequest(const std::string &pubkey)
     showModalInfo("Pairing Verification Device");
 }
 
-void DBBDaemonGui::amountOfPairingDevicesChanged(int amountOfClients)
+void DBBDaemonGui::comServerMessageParse(const QString& msg)
 {
-    DBB::LogPrint("Verification devices changed, new: %d\n", amountOfClients);
-    this->statusBarVDeviceIcon->setToolTip(tr("%1 Verification Device(s) Connected").arg(amountOfClients));
-    this->statusBarVDeviceIcon->setVisible((amountOfClients > 0));
+    // pass in a push message from the communication server
+    // will be called on main thread
+
+    // FIXME: only send a ECDH request if the messages is a ECDH p-req.
+    UniValue json;
+    json.read(msg.toStdString());
+
+    //check the type of the notification
+    UniValue possiblePINObject = find_value(json, "pin");
+    UniValue possibleECDHObject = find_value(json, "ecdh");
+    UniValue possibleIDObject = find_value(json, "id");
+    UniValue possibleRandomObject = find_value(json, "random");
+    UniValue possibleActionObject = find_value(json, "action");
+    if (possiblePINObject.isStr())
+    {
+        //feed the modal view with the 2FA code
+        QString pinCode = QString::fromStdString(possiblePINObject.get_str());
+        if (pinCode == "abort")
+            pinCode.clear();
+
+        ui->modalBlockerView->proceedFrom2FAToSigning(pinCode);
+    }
+    else if (possibleECDHObject.isStr())
+    {
+        sendECDHPairingRequest(msg.toStdString());
+    }
+    else if (possibleIDObject.isStr())
+    {
+        if (possibleIDObject.get_str() == "success")
+            hideModalInfo();
+    }
+    else if (possibleRandomObject.isStr())
+    {
+        if (possibleRandomObject.get_str() == "clear")
+            hideModalInfo();
+    }
+    else if (possibleActionObject.isStr() && possibleActionObject.get_str() == "pong")
+    {
+        lastPing = 0;
+        smartVerificationDeviceConnected = true;
+        this->statusBarVDeviceIcon->setToolTip(tr("Verification Device Connected"));
+        this->statusBarVDeviceIcon->setVisible(true);
+    }
 }
 
-#pragma mark - Update Check
+void DBBDaemonGui::pairSmartphone()
+{
+    //create a new channel id and encryption key
+    if (!comServer->getChannelID().empty())
+    {
+        QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to pair with a new device?"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::No)
+            return;
+    }
+
+    comServer->generateNewKey();
+    configData->comServerChannelID = comServer->getChannelID();
+    configData->encryptionKey = comServer->getEncryptionKey();
+    configData->write();
+    comServer->setChannelID(configData->comServerChannelID);
+    comServer->startLongPollThread();
+    pingComServer();
+
+    QString pairingData = QString::fromStdString(comServer->getPairData());
+    showModalInfo(pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    updateModalWithQRCode(pairingData);
+}
+
+#pragma mark - Update Check (FIXME: refactor to own class)
 
 static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
 {
@@ -2552,11 +2683,14 @@ bool DBBDaemonGui::SendRequest(const std::string& method,
     curl = curl_easy_init();
     if (curl) {
         struct curl_slist* chunk = NULL;
-        chunk = curl_slist_append(chunk, "Content-Type: application/json");
+        chunk = curl_slist_append(chunk, "Content-Type: text/plain");
         res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
         curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
         if (method == "post")
+        {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+            curl_easy_setopt(curl, CURLOPT_POST, 1L);
+        }
 
         if (method == "delete") {
             curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());

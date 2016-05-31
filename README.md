@@ -4,6 +4,10 @@
 ## DBB-APP
 A QT based application for the [Digital Bitbox](https://digitalbitbox.com) hardware wallet. The application support managing your dbb device (create new wallet, backup, set 2FA key, etc.). It also supports co-signing together with a [Bitpay Copay Wallet](http://copay.io).
 
+## WARNING
+Current master is not compatible with the available Smart-Verificaction (2FA App) apps on the app stores.
+
+Please use the git tag v0.2.1 or build the 2FA app yourself.
 
 ## dbb-app
 The dbb-app Qt app will be built if qt5 is available on your system or if `--with-gui=qt5` has been set. 

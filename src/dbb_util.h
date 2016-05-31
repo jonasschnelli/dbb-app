@@ -12,6 +12,7 @@
 #include <mutex>
 #include <vector>
 
+
 #ifdef WIN32
 #include <windows.h>
 #include "mingw/mingw.mutex.h"
@@ -95,5 +96,6 @@ void LogPrintDebug(const std::string &fmt, Args... args )
     LogPrintStr(std::string( buf.get(), buf.get() + size - 1 ));
 }
 
+std::string putTime( const std::time_t& time, const std::string& format );
 }
 #endif // LIBDBB_UTIL_H
