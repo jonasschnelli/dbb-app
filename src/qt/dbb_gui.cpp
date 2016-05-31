@@ -934,12 +934,18 @@ std::string DBBDaemonGui::getBackupString()
 
 void DBBDaemonGui::seedHardware()
 {
-    DBB::LogPrint("Request device seeding...\n", "");
+    if (sessionPassword.empty() || sessionPassword.size() > 64)
+        return;
 
-    std::string command = "{\"seed\" : {\"source\" :\"create\","
-                          "\"decrypt\": \"yes\","
-                          "\"key\":\"" + sessionPassword + "\","
-                          "\"filename\": \"" + getBackupString() + ".bak\"} }";
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+
+    DBB::LogPrint("Request device seeding...\n", "");
+    std::string command = "{\"seed\" : {"
+                                "\"source\" :\"create\","
+                                "\"decrypt\": \"yes\","
+                                "\"key\": \""+hashHex+"\","
+                                "\"filename\": \"" + getBackupString() + ".bak\""
+                            "} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
@@ -1239,9 +1245,10 @@ void DBBDaemonGui::showBackupDialog()
 
 void DBBDaemonGui::addBackup()
 {
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
     std::string backupFilename = getBackupString();
     std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
-                          "\"key\":\"" + sessionPassword + "\","
+                          "\"key\":\"" + hashHex + "\","
                           "\"filename\": \"" + backupFilename + ".bak\"} }";
 
     DBB::LogPrint("Adding a backup (%s)\n", backupFilename.c_str());
@@ -1315,11 +1322,12 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    std::string command = "{\"seed\":{"
-    "\"decrypt\": \"yes\","
-    "\"key\": \"" + sessionPassword + "\","
-    "\"source\":\"" + backupFilename.toStdString() + "\"}}";
-    
+    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+    std::string command = "{\"seed\" : {"
+                                "\"source\" :\"" + backupFilename.toStdString() + "\","
+                                "\"decrypt\": \"yes\","
+                                "\"key\":\""+hashHex+"\""
+                            "} }";
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
