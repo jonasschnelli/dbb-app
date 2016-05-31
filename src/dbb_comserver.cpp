@@ -157,6 +157,7 @@ bool DBBComServer::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
+        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
 #if defined(__linux__) || defined(__unix__)
         //need to libcurl, load it once, set the CA path at runtime
