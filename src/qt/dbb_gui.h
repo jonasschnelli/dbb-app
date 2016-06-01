@@ -24,11 +24,17 @@
 #include "mingw/mingw.thread.h"
 #endif
 
+#include "config/_dbb-config.h"
+
 #include "dbb_app.h"
 #include "dbb_configdata.h"
 #include "dbb_wallet.h"
 
 #include "dbb_comserver.h"
+
+#ifdef DBB_USE_MULTIMEDIA
+#include "qrcodescanner.h"
+#endif
 
 #include "backupdialog.h"
 #include "getaddressdialog.h"
@@ -182,6 +188,10 @@ private:
     bool smartVerificationDeviceConnected;
     std::time_t lastPing;
 
+#ifdef DBB_USE_MULTIMEDIA
+    DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
+#endif
+    
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
     void deviceIsReadyToInteract();
@@ -378,6 +388,11 @@ private slots:
 
     //== CA/SSL management==
     std::string getCAFile();
+
+    //== QRCode Scanner==
+    void showQrCodeScanner();
+    void qrCodeFound(const QString& payload);
+
 };
 
 #endif

@@ -72,6 +72,12 @@ AC_DEFUN([BITCOIN_QT_INIT],[
     [use_dbus=$withval],
     [use_dbus=auto])
 
+  AC_ARG_WITH([qtmultimedia],
+    [AS_HELP_STRING([--with-qtmultimedia],
+    [enable QtMultimedia support (default is yes if qt is enabled and QtMultimedia is found)])],
+    [use_multimedia=$withval],
+    [use_multimedia=auto])
+		
   AC_SUBST(QT_TRANSLATION_DIR,$qt_translation_path)
 ])
 
@@ -234,6 +240,13 @@ AC_DEFUN([BITCOIN_QT_CONFIGURE],[
     if test x$use_dbus = xyes && test x$have_qt_dbus = xno; then
       AC_MSG_ERROR("libQtDBus not found. Install libQtDBus or remove --with-qtdbus.")
     fi
+		qt_enable_multimedia=no
+    if test x$use_multimedia != xno && test x$have_qt_multimedia = xyes; then
+      qt_enable_multimedia=yes
+    fi
+    if test x$use_multimedia = xyes && test x$have_qt_multimedia = xno; then
+      AC_MSG_ERROR("libQtMultimedia not found. Install libQtMultimedia or remove --with-multimedia.")
+    fi
     if test x$LUPDATE = x; then
       AC_MSG_WARN("lupdate is required to update qt translations")
     fi
@@ -248,6 +261,8 @@ AC_DEFUN([BITCOIN_QT_CONFIGURE],[
   AC_SUBST(QT_LDFLAGS)
   AC_SUBST(QT_DBUS_INCLUDES)
   AC_SUBST(QT_DBUS_LIBS)
+  AC_SUBST(QT_MULTIMEDIA_INCLUDES)
+  AC_SUBST(QT_MULTIMEDIA_LIBS)
   AC_SUBST(QT_TEST_INCLUDES)
   AC_SUBST(QT_TEST_LIBS)
   AC_SUBST(QT_SELECT, qt${bitcoin_qt_got_major_vers})
@@ -400,6 +415,10 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITH_PKGCONFIG],[
       if test x$use_dbus != xno; then
         PKG_CHECK_MODULES([QT_DBUS], [${QT_LIB_PREFIX}DBus], [QT_DBUS_INCLUDES="$QT_DBUS_CFLAGS"; have_qt_dbus=yes], [have_qt_dbus=no])
       fi
+      if test x$use_multimedia != xno; then
+        PKG_CHECK_MODULES([QT_MULTIMEDIA], [${QT_LIB_PREFIX}Multimedia], [QT_MULTIMEDIA_INCLUDES="$QT_MULTIMEDIA_CFLAGS"; have_qt_multimedia=yes], [have_qt_multimedia=no])
+      fi
+			
     ])
   ])
   true; dnl
@@ -419,7 +438,7 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   TEMP_LIBS="$LIBS"
   BITCOIN_QT_CHECK([
     if test x$qt_include_path != x; then
-      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtTest -I$qt_include_path/QtDBus"
+      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtMultimedia -I$qt_include_path/QtTest -I$qt_include_path/QtDBus"
       CPPFLAGS="$QT_INCLUDES $CPPFLAGS"
     fi
   ])
@@ -482,6 +501,15 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
       AC_CHECK_LIB([${QT_LIB_PREFIX}DBus],      [main],, have_qt_dbus=no)
       AC_CHECK_HEADER([QtDBus],, have_qt_dbus=no)
       QT_DBUS_LIBS="$LIBS"
+    fi
+    if test x$use_multimedia != xno; then
+      LIBS=
+      if test x$qt_lib_path != x; then
+        LIBS="-L$qt_lib_path"
+      fi
+      AC_CHECK_LIB([${QT_LIB_PREFIX}Multimedia],      [main],, have_qt_multimedia=no)
+      AC_CHECK_HEADER([QtMultimedia],, have_qt_multimedia=no)
+      QT_MULTIMEDIA_LIBS="$LIBS"
     fi
   ])
   CPPFLAGS="$TEMP_CPPFLAGS"

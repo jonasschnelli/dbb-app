@@ -121,6 +121,22 @@ QT_MOC = \
   qt/modalview.moc \
   qt/clickablelabel.moc
 
+
+if USE_MULTIMEDIA
+DBB_GUI_H += qt/qrcodescanner.h \
+  qt/quirc/lib/quirc_internal.h \
+  qt/quirc/lib/quirc.h
+
+DBB_GUI_CPP += qt/qrcodescanner.cpp \
+  qt/quirc/lib/decode.c \
+  qt/quirc/lib/identify.c \
+  qt/quirc/lib/quirc.c \
+  qt/quirc/lib/version_db.c
+
+QT_MOC_CPP += qt/moc_qrcodescanner.cpp
+QT_MOC += qt/qrcodescanner.moc
+endif
+
 QT_FORMS_H=$(join $(dir $(QT_FORMS_UI)),$(addprefix ui_, $(notdir $(QT_FORMS_UI:.ui=.h))))
 
 $(QT_MOC): $(QT_FORMS_H)
@@ -132,11 +148,11 @@ if TARGET_WINDOWS
 dbb_app_SOURCES += qt/res/dbb-app-res.rc
 endif
 
-dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) -I$(srcdir)/qt
+dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) $(QT_MULTIMEDIA_INCLUDES) -I$(srcdir)/qt
 dbb_app_CXXFLAGS = $(AM_CXXFLAGS) $(QT_PIE_FLAGS)
 ##dbb_app_LDFLAGS += -pthread $(QT_LDFLAGS) -pthread
 dbb_app_LDFLAGS += $(RELDFLAGS) $(AM_LDFLAGS) $(QT_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QR_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) -lcurl $(LINUX_LIBS)
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QT_MULTIMEDIA_LIBS) $(QR_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) -lcurl $(LINUX_LIBS)
 dbb_app_LIBTOOLFLAGS = --tag CXX
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
