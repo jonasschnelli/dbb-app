@@ -5,7 +5,10 @@
 #include "qrcodescanner.h"
 
 #include <QGraphicsView>
+
+#if QT_VERSION >= 0x050300
 #include <QCameraInfo>
+#endif
 
 #if QT_VERSION >= 0x050500
 #include <QCameraViewfinderSettings>
@@ -168,8 +171,12 @@ bool CameraFrameGrabber::present(const QVideoFrame &frame)
 
 bool DBBQRCodeScanner::availability()
 {
+#if QT_VERSION >= 0x050300
     QList<QCameraInfo> cameras = QCameraInfo::availableCameras();
     return !cameras.empty();
+#else
+    return true;
+#endif
 }
 
 DBBQRCodeScanner::~DBBQRCodeScanner()

@@ -103,9 +103,12 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               checkingForUpdates(0),
                                               comServer(0),
                                               lastPing(0),
-                                              smartVerificationDeviceConnected(0),
-                                              qrCodeScanner(0)
+                                              smartVerificationDeviceConnected(0)
 {
+#ifdef DBB_USE_MULTIMEDIA
+    qrCodeScanner = NULL;
+#endif
+
 #if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
 #endif
@@ -177,15 +180,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     qRegisterMetaType<dbb_response_type_t>("dbb_response_type_t");
     qRegisterMetaType<std::vector<std::string> >("std::vector<std::string>");
     qRegisterMetaType<DBBWallet*>("DBBWallet *");
-
-    // initiaize QRCode scanner
-    if (DBBQRCodeScanner::availability())
-    {
-        qrCodeScanner = new DBBQRCodeScanner(this);
-        ui->qrCodeButton->setEnabled(true);
-    }
-    else
-        ui->qrCodeButton->setEnabled(false);
     
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
@@ -209,9 +203,23 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
     connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
+
+#ifdef DBB_USE_MULTIMEDIA
     // connect QRCode Scanner
+    // initiaize QRCode scanner
+    if (DBBQRCodeScanner::availability())
+    {
+        qrCodeScanner = new DBBQRCodeScanner(this);
+        ui->qrCodeButton->setEnabled(true);
+    }
+    else
+        ui->qrCodeButton->setEnabled(false);
+    
     connect(ui->qrCodeButton, SIGNAL(clicked()),this,SLOT(showQrCodeScanner()));
     connect(qrCodeScanner, SIGNAL(QRCodeFound(const QString&)), this, SLOT(qrCodeFound(const QString&)));
+#else
+    ui->qrCodeButton->setVisible(false);
+#endif
 
     // connect custom signals
     connect(this, SIGNAL(XPubForCopayWalletIsAvailable(int)), this, SLOT(getRequestXPubKeyForCopay(int)));
@@ -2832,15 +2840,18 @@ std::string DBBDaemonGui::getCAFile()
 
 void DBBDaemonGui::showQrCodeScanner()
 {
+#ifdef DBB_USE_MULTIMEDIA
     if (!qrCodeScanner)
         return;
 
     qrCodeScanner->show();
     qrCodeScanner->setScannerActive(true);
+#endif
 }
 
 void DBBDaemonGui::qrCodeFound(const QString &payload)
 {
+#ifdef DBB_USE_MULTIMEDIA
     static const char bitcoinurl[] = "bitcoin:";
     static const char amountfield[] = "amount=";
 
@@ -2868,4 +2879,5 @@ void DBBDaemonGui::qrCodeFound(const QString &payload)
         qrCodeScanner->setScannerActive(false);
         qrCodeScanner->hide();
     }
+#endif
 }

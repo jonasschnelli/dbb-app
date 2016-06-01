@@ -312,6 +312,9 @@ else
 fi
 
 if test x$bitcoin_enable_qt = xyes; then
+  if test x$qt_enable_multimedia != xno; then
+    AC_DEFINE([USE_MULTIMEDIA],[1],[Define if QtMultimedia support should be compiled in])
+  fi
 AC_DEFINE_UNQUOTED([ENABLE_QT],[1],[Define to 1 to enable Qt Gui])
 AC_DEFINE_UNQUOTED([ENABLE_DBB_APP],[1],[Define to 1 to enable the dbb app])
 fi
@@ -327,6 +330,8 @@ AM_CONDITIONAL([ENABLE_DBB_APP],[test x$bitcoin_enable_qt = xyes])
 fi
 AM_CONDITIONAL([ENABLE_QT],[test x$bitcoin_enable_qt = xyes])
 AM_CONDITIONAL([ENABLE_DAEMON],[test x$enable_daemon = xyes])
+
+AM_CONDITIONAL([USE_MULTIMEDIA],[test x$qt_enable_multimedia = xyes])
 
 if test "x$enable_hid_report_shift" != xno; then
   AC_DEFINE_UNQUOTED([ENABLE_HID_REPORT_SHIFT],[1],[Define to 1 to enable the HID REPORT 1 byte shift])
@@ -354,12 +359,13 @@ AC_OUTPUT
 
 echo ""
 echo "Options used to compile and link:"
-echo "  CC       = $CC"
-echo "  CFLAGS   = $CFLAGS"
-echo "  CPPFLAGS = $CPPFLAGS"
-echo "  CXX      = $CXX"
-echo "  CXXFLAGS = $CXXFLAGS"
-echo "  LDFLAGS  = $LDFLAGS"
-echo "  HIDRPSHFT= $enable_hid_report_shift"
-echo "  HIDLIB   = $usinghidlib"
+echo "  CC            = $CC"
+echo "  CFLAGS        = $CFLAGS"
+echo "  CPPFLAGS      = $CPPFLAGS"
+echo "  CXX           = $CXX"
+echo "  CXXFLAGS      = $CXXFLAGS"
+echo "  LDFLAGS       = $LDFLAGS"
+echo "  HIDRPSHFT     = $enable_hid_report_shift"
+echo "  HIDLIB        = $usinghidlib"
+echo "  QRCODE-READER = $qt_enable_multimedia"
 echo ""
