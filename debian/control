@@ -1,0 +1,32 @@
+Source: dbb-app
+Section: utils
+Priority: optional
+Maintainer: Jonas Schnelli <ppa@jonasschnelli.ch>
+Build-Depends: debhelper (>= 9),
+  devscripts,
+  automake,
+  libtool,
+  libcurl4-openssl-dev,
+  libudev-dev,
+  libqrencode-dev,
+  libhidapi-dev,
+  libqt5gui5,
+  libqt5core5a,
+  libqt5dbus5,
+  qttools5-dev,
+  qttools5-dev-tools,
+  qtmultimedia5-dev,
+  libgstreamer-plugins-base0.10,
+  libqt5multimedia5,
+  libqt5multimedia5-plugins
+Standards-Version: 3.9.6
+Homepage: http://digitalbitbox.com
+#Vcs-Git: git://anonscm.debian.org/collab-maint/dbb-app.git
+#Vcs-Browser: https://anonscm.debian.org/gitweb/?p=collab-maint/dbb-app.git;a=summary
+
+Package: dbb-app
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Digitalbitbox Desktop Application
+ The DBB-APP allows you to control your DBB hardware wallet
+
