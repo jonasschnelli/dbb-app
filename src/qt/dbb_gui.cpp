@@ -965,7 +965,7 @@ void DBBDaemonGui::seedHardware()
                                 "\"source\" :\"create\","
                                 "\"decrypt\": \"yes\","
                                 "\"key\": \""+hashHex+"\","
-                                "\"filename\": \"" + getBackupString() + ".bak\""
+                                "\"filename\": \"" + getBackupString() + ".pdf\""
                             "} }";
 
     executeCommandWrapper(command, (cachedWalletAvailableState) ? DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON : DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1270,7 +1270,7 @@ void DBBDaemonGui::addBackup()
     std::string backupFilename = getBackupString();
     std::string command = "{\"backup\" : {\"encrypt\" :\"yes\","
                           "\"key\":\"" + hashHex + "\","
-                          "\"filename\": \"" + backupFilename + ".bak\"} }";
+                          "\"filename\": \"" + backupFilename + ".pdf\"} }";
 
     DBB::LogPrint("Adding a backup (%s)\n", backupFilename.c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
