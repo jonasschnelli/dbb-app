@@ -2677,7 +2677,7 @@ void DBBDaemonGui::pairSmartphone()
     pingComServer();
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
-    showModalInfo(pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    showModalInfo(tr("Scan the QR code using the Digital Bitbox mobile app."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     updateModalWithQRCode(pairingData);
 }
 
