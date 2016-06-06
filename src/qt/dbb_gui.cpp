@@ -1343,7 +1343,12 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+    bool ok;
+    QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
+    if (!ok || tempBackupPassword.isEmpty())
+        return;
+
+    std::string hashHex = DBB::getStretchedBackupHexKey(tempBackupPassword.toStdString());
     std::string command = "{\"seed\" : {"
                                 "\"source\" :\"" + backupFilename.toStdString() + "\","
                                 "\"decrypt\": \"yes\","
