@@ -41,6 +41,7 @@
 #include "paymentproposal.h"
 #include "signconfirmationdialog.h"
 #include "verificationdialog.h"
+#include "settingsdialog.h"
 
 #define WALLET_POLL_TIME 25000
 
@@ -155,6 +156,7 @@ private:
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
     VerificationDialog* verificationDialog;
+    SettingsDialog* settingsDialog;
     QTimer *walletUpdateTimer;
     QStandardItemModel *transactionTableModel;
     QLabel* statusBarLabelLeft;
@@ -384,6 +386,11 @@ private slots:
     void sendECDHPairingRequest(const std::string &ecdhRequest);
     void pairSmartphone();
     void comServerMessageParse(const QString& msg);
+
+    //== Expert settings ==
+    //!show experts settings dialog
+    void showExpertSettings();
+    void updateSettings();
 
     //== UPDATE CHECKER ==
     bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);

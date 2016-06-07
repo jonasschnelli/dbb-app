@@ -69,6 +69,11 @@ const std::string& DBBWallet::baseKeypath()
     return _baseKeypath;
 }
 
+void DBBWallet::setBackendURL(const std::string& backendUrl)
+{
+    client.setBaseURL(backendUrl);
+}
+
 void DBBWallet::setCAFile(const std::string& ca_file_in)
 {
     client.setCAFile(ca_file_in);

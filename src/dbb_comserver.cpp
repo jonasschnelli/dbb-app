@@ -192,7 +192,7 @@ bool DBBComServer::shouldCancelLongPoll()
     // detects if a long poll needs to be cancled
     // because user have switched the channel
     std::unique_lock<std::mutex> lock(cs_com);
-    return (currentLongPollChannelID != channelID);
+    return (currentLongPollChannelID != channelID || currentLongPollURL != comServerURL);
 }
 
 void DBBComServer::startLongPollThread()
@@ -207,6 +207,7 @@ void DBBComServer::startLongPollThread()
         std::string response;
         long httpStatusCode;
         long sequence = 0;
+        int errorCounts = 0;
         UniValue jsonOut;
 
         while(1)
@@ -217,14 +218,30 @@ void DBBComServer::startLongPollThread()
                 // we store the channel ID to detect channelID changes during long poll 
                 std::unique_lock<std::mutex> lock(cs_com);
                 currentLongPollChannelID = channelID;
+                currentLongPollURL = comServerURL;
             }
-            SendRequest("post", comServerURL, "c=gd&uuid="+currentLongPollChannelID+"&dt=0&s="+std::to_string(sequence), response, httpStatusCode);
+            SendRequest("post", currentLongPollURL, "c=gd&uuid="+currentLongPollChannelID+"&dt=0&s="+std::to_string(sequence), response, httpStatusCode);
             sequence++;
+
+            if (httpStatusCode >= 300)
+            {
+                errorCounts++;
+                if (errorCounts > 5)
+                {
+                    DBB::LogPrintDebug("Error, can't connect to the smart verification server");
+                    // wait 10 seconds before the next try
+                    std::this_thread::sleep_for(std::chrono::milliseconds(10000));
+                }
+                else
+                    std::this_thread::sleep_for(std::chrono::milliseconds(2000));
+            }
+            else
+                errorCounts = 0;
 
             // ignore the response if the channel has been switched (re-pairing)
             {
                 std::unique_lock<std::mutex> lock(cs_com);
-                if (currentLongPollChannelID != channelID)
+                if (currentLongPollChannelID != channelID || currentLongPollURL != comServerURL)
                     continue;
             }
 

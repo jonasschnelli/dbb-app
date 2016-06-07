@@ -40,7 +40,7 @@ class DBBComServer
 {
 private:
     DBBNetThread* longPollThread; //!< the thread to handle the long polling (will run endless)
-    const std::string comServerURL; //!< the url to call
+    std::string comServerURL; //!< the url to call
     std::string ca_file; //<!ca_file to use
 
     /* send a synchronous http request */
@@ -53,6 +53,7 @@ public:
     std::mutex cs_com;
     std::string channelID; //!< channel ID (hash of the encryption pubkey)
     std::string currentLongPollChannelID; //!< channel ID that is currently in polling
+    std::string currentLongPollURL; //!< comserver URL that is currently in polling
 
     /* encryption key (32byte ECC key), will be used to derive the AES key and the channel ID */
     std::vector<unsigned char> encryptionKey;
@@ -63,6 +64,9 @@ public:
     void *ctx;
 
     long nSequence; //!< current sequence number for outgoing push messages
+
+    /* change/set the smart verification server URL */
+    void setURL(const std::string& newUrl) { comServerURL = newUrl; }
 
     /* generates a new encryption key => new AES key, new channel ID */
     bool generateNewKey();

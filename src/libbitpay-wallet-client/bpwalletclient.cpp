@@ -64,6 +64,12 @@ BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : 
     filenameBase.clear();
 }
 
+void BitPayWalletClient::setBaseURL(const std::string& baseURLnew)
+{
+    std::unique_lock<std::recursive_mutex> lock(this->cs_client);
+    baseURL = baseURLnew;
+}
+
 void BitPayWalletClient::setFilenameBase(const std::string& filenameBaseIn)
 {
     if (filenameBaseIn.size() > 0)

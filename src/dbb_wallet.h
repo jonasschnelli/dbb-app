@@ -47,6 +47,8 @@ public:
     void setBaseKeypath(const std::string& keypath);
     const std::string& baseKeypath();
 
+    void setBackendURL(const std::string& backendUrl);
+
     void setCAFile(const std::string& caFile);
 };
 
