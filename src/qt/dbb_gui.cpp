@@ -2255,17 +2255,18 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         cnt++;
     }
   
-    if (!cnt) {
-        ui->tableWidget->setVisible(false);   
-        return;
-    }
-
-    ui->tableWidget->setVisible(true);   
     ui->tableWidget->setModel(transactionTableModel);
     ui->tableWidget->setColumnHidden(0, true);
-    ui->tableWidget->setColumnWidth(4, 0); // Trick to get column smaller than minimum width
-                                           // when resized in setSectionResizeMode().
-    ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+
+    if (cnt) {
+        ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
+        ui->tableWidget->setColumnHidden(4, false);
+        ui->tableWidget->setColumnWidth(4, 0); // Trick to get column smaller than minimum width
+                                               // when resized in setSectionResizeMode().
+    } else {
+        ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
+        ui->tableWidget->setColumnHidden(4, true);
+    }
 }
 
 void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, std::function<void(bool, std::string&)> cmdFinished)
