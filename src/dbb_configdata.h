@@ -16,7 +16,7 @@
 #include <fstream>
 
 static const char *bwsDefaultBackendURL = "https://bws.bitpay.com/bws/api";
-static const char *comServerDefaultURL = "https://digitalbitbox.com/smartverification/";
+static const char *comServerDefaultURL = "https://digitalbitbox.com/smartverification/index.php";
 
 static const char *kVERSION = "version";
 static const char *kCOM_CHANNEL_ID = "comserverchannelid";
@@ -30,7 +30,7 @@ namespace DBB
 // simple model/controller class for persistance use settings
 // uses JSON/file as persistance store
 class DBBConfigdata {
-public:
+private:
     static const int CURRENT_VERSION=1;
     std::string filename;
 
@@ -40,6 +40,7 @@ public:
     std::string comServerChannelID;
     std::vector<unsigned char> encryptionKey;
 
+public:
     DBBConfigdata(const std::string& filenameIn)
     {
         bwsBackendURL = std::string(bwsDefaultBackendURL);
@@ -51,12 +52,34 @@ public:
         memset(&encryptionKey[0], 0, 32);
     }
 
+    std::string getComServerURL() { return comServerURL; }
+    void setComServerURL(const std::string& newURL) { comServerURL = newURL; }
+
+    std::string getComServerChannelID() { return comServerChannelID; }
+    void setComServerChannelID(const std::string& newID) { comServerChannelID = newID; }
+
+    std::vector<unsigned char> getComServerEncryptionKey() { return encryptionKey; }
+    void setComServerEncryptionKey(const std::vector<unsigned char>& newKey) { encryptionKey = newKey; }
+
+    std::string getBWSBackendURL() { return bwsBackendURL; }
+    void setBWSBackendURL(const std::string& newURL) { bwsBackendURL = newURL; }
+
+    std::string getDefaultBWSULR() { return bwsDefaultBackendURL; }
+    std::string getDefaultComServerULR() { return comServerDefaultURL; }
+
     bool write()
     {
         UniValue objData(UniValue::VOBJ);
         objData.pushKV(kVERSION, version);
         objData.pushKV(kENC_PKEY, base64_encode(&encryptionKey[0], 32));
         objData.pushKV(kCOM_CHANNEL_ID, comServerChannelID);
+
+        if (bwsBackendURL != bwsDefaultBackendURL)
+            objData.pushKV(kBWS_URL, bwsBackendURL);
+
+        if (comServerURL != comServerDefaultURL)
+            objData.pushKV(kCOMSERVER_URL, comServerURL);
+
         std::string json = objData.write();
         FILE* writeFile = fopen(filename.c_str(), "w");
         if (writeFile) {

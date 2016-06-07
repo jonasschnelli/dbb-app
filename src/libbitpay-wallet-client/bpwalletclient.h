@@ -66,6 +66,9 @@ public:
     BitPayWalletClient(std::string dataDirIn, bool testnetIn = false);
     ~BitPayWalletClient();
 
+    //!set the base URL (for the BWS)
+    void setBaseURL(const std::string& newBaseURL);
+
     //!set the filename-base to store local data
     void setFilenameBase(const std::string& filenameBaseIn);
 

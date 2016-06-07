@@ -78,7 +78,8 @@ QT_FORMS_UI = \
   qt/ui/getaddressdialog.ui \
   qt/ui/verificationdialog.ui \
   qt/ui/qrcodesequence.ui \
-  qt/ui/modalview.ui
+  qt/ui/modalview.ui \
+  qt/ui/settingsdialog.ui
 	
 DBB_GUI_H = \
 	qt/paymentproposal.h \
@@ -87,7 +88,8 @@ DBB_GUI_H = \
     qt/qrcodesequence.h \
     qt/verificationdialog.h \
     qt/modalview.h \
-    qt/clickablelabel.h
+    qt/clickablelabel.h \
+    qt/settingsdialog.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
@@ -97,7 +99,8 @@ DBB_GUI_CPP = \
     qt/qrcodesequence.cpp \
     qt/verificationdialog.cpp \
     qt/modalview.cpp \
-    qt/clickablelabel.cpp
+    qt/clickablelabel.cpp \
+    qt/settingsdialog.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
@@ -108,7 +111,8 @@ QT_MOC_CPP = \
     qt/moc_qrcodesequence.cpp \
     qt/moc_verificationdialog.cpp \
     qt/moc_modalview.cpp \
-    qt/moc_clickablelabel.cpp
+    qt/moc_clickablelabel.cpp \
+    qt/moc_settingsdialog.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
@@ -119,7 +123,8 @@ QT_MOC = \
   qt/qrcodesequence.moc \
   qt/verificationdialog.moc \
   qt/modalview.moc \
-  qt/clickablelabel.moc
+  qt/clickablelabel.moc \
+  qt/settingsdialog.moc
 
 
 if USE_MULTIMEDIA

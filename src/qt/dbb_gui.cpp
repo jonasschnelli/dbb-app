@@ -103,7 +103,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               checkingForUpdates(0),
                                               comServer(0),
                                               lastPing(0),
-                                              smartVerificationDeviceConnected(0)
+                                              smartVerificationDeviceConnected(0),
+                                              settingsDialog(0)
 {
 #ifdef DBB_USE_MULTIMEDIA
     qrCodeScanner = NULL;
@@ -198,6 +199,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
+    connect(ui->showExpertSettings, SIGNAL(clicked()), this, SLOT(showExpertSettings()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
@@ -392,7 +394,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 #endif
 
     vMultisigWallets.push_back(copayWallet);
-
+    updateSettings(); //update backends
 
     processCommand = false;
     deviceConnected = false;
@@ -406,16 +408,16 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
 
     //connect to the com server
-    comServer = new DBBComServer(configData->comServerURL);
+    comServer = new DBBComServer(configData->getComServerURL());
 #if defined(__linux__) || defined(__unix__)
     // set the CA file in case we are compliling for linux
     comServer->setCAFile(ca_file);
 #endif
     comServer->setParseMessageCB(comServerCallback, this);
-    if (configData->comServerChannelID.size() > 0)
+    if (configData->getComServerChannelID().size() > 0)
     {
-        comServer->setChannelID(configData->comServerChannelID);
-        comServer->setEncryptionKey(configData->encryptionKey);
+        comServer->setChannelID(configData->getComServerChannelID());
+        comServer->setEncryptionKey(configData->getComServerEncryptionKey());
         comServer->startLongPollThread();
         pingComServer();
     }
@@ -1850,8 +1852,15 @@ void DBBDaemonGui::getNewAddress()
             std::string keypath;
 
             singleWallet->client.GetNewAddress(address, keypath);
-            singleWallet->rewriteKeypath(keypath);
-            emit walletAddressIsAvailable(this->singleWallet, address, keypath);
+            if (address.size())
+            {
+                singleWallet->rewriteKeypath(keypath);
+                emit walletAddressIsAvailable(this->singleWallet, address, keypath);
+            }
+            else
+            {
+                emit shouldShowAlert("Error", tr("Could not load a new address"));
+            }
 
             thread->completed();
         });
@@ -2681,16 +2690,36 @@ void DBBDaemonGui::pairSmartphone()
     }
 
     comServer->generateNewKey();
-    configData->comServerChannelID = comServer->getChannelID();
-    configData->encryptionKey = comServer->getEncryptionKey();
+    configData->setComServerChannelID(comServer->getChannelID());
+    configData->setComServerEncryptionKey(comServer->getEncryptionKey());
     configData->write();
-    comServer->setChannelID(configData->comServerChannelID);
+    comServer->setChannelID(configData->getComServerChannelID());
     comServer->startLongPollThread();
     pingComServer();
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
     showModalInfo(pairingData, DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     updateModalWithQRCode(pairingData);
+}
+
+void DBBDaemonGui::showExpertSettings()
+{
+    if (!settingsDialog)
+    {
+        settingsDialog = new SettingsDialog(this, configData);
+        connect(settingsDialog, SIGNAL(settingsDidChange()), this, SLOT(updateSettings()));
+    }
+
+    settingsDialog->show();
+}
+
+void DBBDaemonGui::updateSettings()
+{
+    vMultisigWallets[0]->setBackendURL(configData->getBWSBackendURL());
+    singleWallet->setBackendURL(configData->getBWSBackendURL());
+
+    if (comServer)
+        comServer->setURL(configData->getComServerURL());
 }
 
 #pragma mark - Update Check (FIXME: refactor to own class)
