@@ -90,6 +90,11 @@ typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON_WARNING
 } dbb_process_infolayer_style_t;
 
+typedef enum DBB_LED_BLINK_MODE {
+    DBB_LED_BLINK_MODE_BLINK,
+    DBB_LED_BLINK_MODE_ABORT
+} dbb_led_blink_mode_t;
+
 class DBBDaemonGui : public QMainWindow
 {
     Q_OBJECT
@@ -281,7 +286,7 @@ private slots:
     //== DBB USB ==
     //!function is user whishes to erase the DBB
     void eraseClicked();
-    void ledClicked();
+    void ledClicked(dbb_led_blink_mode_t mode = DBB_LED_BLINK_MODE_BLINK);
     //!get basic informations about the connected DBB
     void getInfo();
     //!seed the wallet, flush everything and create a new bip32 entropy
