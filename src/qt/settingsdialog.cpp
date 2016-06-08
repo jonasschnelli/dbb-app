@@ -9,6 +9,7 @@ ui(new Ui::SettingsDialog)
 
     connect(this->ui->resetDefaultsButton, SIGNAL(clicked()), this, SLOT(resetDefaults()));
     connect(this->ui->saveButton, SIGNAL(clicked()), this, SLOT(close()));
+    connect(this->ui->cancelButton, SIGNAL(clicked()), this, SLOT(cancel()));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -22,15 +23,24 @@ void SettingsDialog::resetDefaults()
     ui->smartVerificationURL->setText(QString::fromStdString(configData->getDefaultComServerULR()));
 }
 
+void SettingsDialog::cancel()
+{
+    cancleOnClose = true;
+    close();
+}
+
 void SettingsDialog::showEvent(QShowEvent* event)
 {
+    cancleOnClose = false;
     loadSettings();
     QWidget::showEvent(event);
 }
 
 void SettingsDialog::closeEvent(QCloseEvent *event)
 {
-    storeSettings();
+    if (!cancleOnClose)
+        storeSettings();
+
     QWidget::closeEvent(event);
 }
 

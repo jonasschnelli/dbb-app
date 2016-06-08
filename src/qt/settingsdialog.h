@@ -17,6 +17,7 @@ class SettingsDialog : public QDialog
 
 public slots:
     void resetDefaults();
+    void cancel();
 
 public:
     explicit SettingsDialog(QWidget *parent = 0, DBB::DBBConfigdata* configData = NULL);
@@ -32,6 +33,7 @@ private:
     Ui::SettingsDialog *ui;
     void loadSettings();
     void storeSettings();
+    bool cancleOnClose;
 };
 
 #endif //DBB_APP_SETTINGSDIALOG_H
