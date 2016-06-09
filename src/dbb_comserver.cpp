@@ -213,7 +213,7 @@ void DBBComServer::startLongPollThread()
         while(1)
         {
             response = "";
-            httpStatusCode = 0;
+            httpStatusCode = 400;
             {
                 // we store the channel ID to detect channelID changes during long poll 
                 std::unique_lock<std::mutex> lock(cs_com);
