@@ -261,6 +261,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     // create get address dialog
     getAddressDialog = new GetAddressDialog(0);
     connect(getAddressDialog, SIGNAL(shouldGetXPub(const QString&)), this, SLOT(getAddressGetXPub(const QString&)));
+    connect(getAddressDialog, SIGNAL(verifyGetAddress(const QString&)), this, SLOT(getAddressVerify(const QString&)));
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
@@ -1257,6 +1258,11 @@ void DBBDaemonGui::showGetAddressDialog()
 void DBBDaemonGui::getAddressGetXPub(const QString& keypath)
 {
     getXPub(keypath.toStdString(), DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS, DBB_ADDRESS_STYLE_P2PKH);
+}
+
+void DBBDaemonGui::getAddressVerify(const QString& keypath)
+{
+    getXPub(keypath.toStdString(), DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_P2PKH);
 }
 
 /*

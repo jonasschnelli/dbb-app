@@ -18,8 +18,6 @@ ui(new Ui::GetAddressDialog), _baseKeypath(DBB_DEFAULT_KEYPATH)
 {
     ui->setupUi(this);
 
-
-    ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
     ui->address->setFrame(false);
 
     //connect buttons to slots
@@ -27,6 +25,12 @@ ui(new Ui::GetAddressDialog), _baseKeypath(DBB_DEFAULT_KEYPATH)
     connect(ui->kpCustom, SIGNAL(clicked()), this, SLOT(addressBaseDataChanged()));
     connect(ui->childIndex, SIGNAL(valueChanged(int)), this, SLOT(addressBaseDataChanged()));
     connect(ui->keypath, SIGNAL(editingFinished()), this, SLOT(keypathEditFinished()));
+    connect(ui->verifyGetAddressesButton, SIGNAL(clicked()), this, SLOT(verifyGetAddressButtonPressed()));
+}
+
+void GetAddressDialog::verifyGetAddressButtonPressed()
+{
+    emit verifyGetAddress(getCurrentKeypath());
 }
 
 void GetAddressDialog::showEvent(QShowEvent * event)
@@ -147,8 +151,6 @@ void GetAddressDialog::setBaseKeypath(const std::string& keypath)
     _baseKeypath = keypath;
     if(_baseKeypath.back() != '/')
         _baseKeypath += "/0/";
-
-    ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
 }
 
 GetAddressDialog::~GetAddressDialog()

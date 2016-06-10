@@ -22,9 +22,11 @@ public:
     ~GetAddressDialog();
 
 signals:
+    void verifyGetAddress(const QString& keypath);
     void shouldGetXPub(const QString& keypath);
 
 public slots:
+    void verifyGetAddressButtonPressed();
     void addressBaseDataChanged();
     void setLoading(bool state);
     void updateAddress(const UniValue &xpubResult);

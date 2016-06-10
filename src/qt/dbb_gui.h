@@ -316,6 +316,7 @@ private slots:
     //== ADDRESS EXPORTING ==
     void showGetAddressDialog();
     void getAddressGetXPub(const QString& keypath);
+    void getAddressVerify(const QString& keypath);
 
     //== DBB USB / BACKUP ==
     void showBackupDialog();

@@ -7,7 +7,7 @@
     <x>0</x>
     <y>0</y>
     <width>380</width>
-    <height>460</height>
+    <height>500</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -28,7 +28,7 @@
      <x>0</x>
      <y>0</y>
      <width>380</width>
-     <height>460</height>
+     <height>500</height>
     </rect>
    </property>
    <property name="styleSheet">
@@ -40,7 +40,7 @@
       <x>0</x>
       <y>0</y>
       <width>381</width>
-      <height>461</height>
+      <height>501</height>
      </rect>
     </property>
     <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -97,7 +97,7 @@
          <item>
           <widget class="QRadioButton" name="kpDefault">
            <property name="text">
-            <string>Default (m/44/k)</string>
+            <string>Default (BIP44)</string>
            </property>
            <property name="checked">
             <bool>true</bool>
@@ -122,7 +122,7 @@
           </font>
          </property>
          <property name="text">
-          <string>Address Index (k)</string>
+          <string>Address Index</string>
          </property>
         </widget>
        </item>
@@ -250,7 +250,7 @@
          <property name="sizeHint" stdset="0">
           <size>
            <width>20</width>
-           <height>100</height>
+           <height>200</height>
           </size>
          </property>
         </spacer>
@@ -298,6 +298,16 @@
          </property>
          <property name="readOnly">
           <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item row="3" column="1">
+        <widget class="QPushButton" name="verifyGetAddressesButton">
+         <property name="toolTip">
+          <string>Securely verify this address with the Digital Bitbox mobile app.</string>
+         </property>
+         <property name="text">
+          <string>Verify Address Securely</string>
          </property>
         </widget>
        </item>
