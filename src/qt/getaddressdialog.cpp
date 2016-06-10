@@ -8,9 +8,9 @@
 #include <btc/bip32.h>
 #include <btc/ecc_key.h>
 #include <btc/base58.h>
+#include <qrencode.h>
 
 #define DBB_DEFAULT_KEYPATH "m/44'/0'/0'/0/"
-#define DBB_ALTERNATIVE_KEYPATH "m/0'/0/"
 
 GetAddressDialog::GetAddressDialog(QWidget *parent) :
 QDialog(parent),
@@ -20,11 +20,10 @@ ui(new Ui::GetAddressDialog), _baseKeypath(DBB_DEFAULT_KEYPATH)
 
 
     ui->kpDefault->setText(QString::fromStdString(std::string(_baseKeypath + "k")));
-    ui->kpMK->setText(QString(DBB_ALTERNATIVE_KEYPATH)+"k");
+    ui->address->setFrame(false);
 
     //connect buttons to slots
     connect(ui->kpDefault, SIGNAL(clicked()), this, SLOT(addressBaseDataChanged()));
-    connect(ui->kpMK, SIGNAL(clicked()), this, SLOT(addressBaseDataChanged()));
     connect(ui->kpCustom, SIGNAL(clicked()), this, SLOT(addressBaseDataChanged()));
     connect(ui->childIndex, SIGNAL(valueChanged(int)), this, SLOT(addressBaseDataChanged()));
     connect(ui->keypath, SIGNAL(editingFinished()), this, SLOT(keypathEditFinished()));
@@ -61,7 +60,6 @@ void GetAddressDialog::setLoading(bool state)
     }
 
     ui->kpDefault->setDisabled(state);
-    ui->kpMK->setDisabled(state);
     ui->kpCustom->setDisabled(state);
     ui->childIndex->setDisabled(state);
 
@@ -92,6 +90,31 @@ void GetAddressDialog::updateAddress(const UniValue &xpub)
         btc_hdnode_get_p2pkh_address(&node, &btc_chain_main, outbuf, sizeof(outbuf));
 
         ui->address->setText(QString::fromUtf8(outbuf));
+
+        std::string uri = "bitcoin:";
+        uri.append(outbuf);
+
+        QRcode *code = QRcode_encodeString(uri.c_str(), 0, QR_ECLEVEL_M, QR_MODE_8, 1);
+        if (code)
+        {
+
+            QImage myImage = QImage(code->width + 8, code->width + 8, QImage::Format_RGB32);
+            myImage.fill(0xffffff);
+            unsigned char *p = code->data;
+            for (int y = 0; y < code->width; y++)
+            {
+                for (int x = 0; x < code->width; x++)
+                {
+                    myImage.setPixel(x + 4, y + 4, ((*p & 1) ? 0x0 : 0xffffff));
+                    p++;
+                }
+            }
+            QRcode_free(code);
+
+            QPixmap pixMap = QPixmap::fromImage(myImage).scaled(180, 180);
+            ui->qrCodeGetAddresses->setPixmap(pixMap);
+            ui->qrCodeGetAddresses->setText("");
+        }
     }
 }
 
@@ -113,8 +136,6 @@ QString GetAddressDialog::getCurrentKeypath()
     QString basePath;
     if (ui->kpDefault->isChecked())
         basePath = QString::fromStdString(_baseKeypath);
-    else if (ui->kpMK->isChecked())
-        basePath = DBB_ALTERNATIVE_KEYPATH;
 
     basePath += ui->childIndex->text();
     ui->keypath->setText(basePath);
