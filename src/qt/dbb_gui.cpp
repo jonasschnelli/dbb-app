@@ -1859,7 +1859,7 @@ void DBBDaemonGui::getNewAddress()
             }
             else
             {
-                emit shouldShowAlert("Error", tr("Could not load a new address"));
+                emit shouldShowAlert("Error", tr("Could not set a new Receiving address.\n\nNote that internet access is required in order to track the address on the blockchain and update your balance.\n\nFor advanced use, untracked addresses can be generated offline with the List Addresses button in the Settings tab."));
             }
 
             thread->completed();
