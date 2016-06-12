@@ -114,6 +114,12 @@ case $host in
      AC_CHECK_LIB([iphlpapi],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([crypt32],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([setupapi],      [main],, AC_MSG_ERROR(lib missing))
+
+     #required for multimedia
+     AC_CHECK_LIB([strmiids],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([dmoguids],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([msdmo],      [main],, AC_MSG_ERROR(lib missing))
+
      AC_CHECK_LIB([hidapi],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([curl],      [main],, AC_MSG_ERROR(lib missing))
      
