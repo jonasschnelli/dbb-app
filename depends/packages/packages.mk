@@ -8,8 +8,8 @@ qt_native_packages =
 qt_packages = qrencode
 
 qt_linux_packages= qt expat dbus libxcb xcb_proto libXau xproto freetype fontconfig libX11 xextproto libXext xtrans
-qt_darwin_packages=qt
-qt_mingw32_packages=qt
+qt_darwin_packages=qt_mm
+qt_mingw32_packages=qt_mm
 
 
 wallet_packages=
