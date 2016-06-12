@@ -1447,6 +1447,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 ui->lockDevice->setEnabled(!cachedDeviceLock);
                 ui->seedButton->setEnabled(!cachedDeviceLock);
                 ui->showBackups->setEnabled(!cachedDeviceLock);
+                ui->pairDeviceButton->setEnabled(!cachedDeviceLock);
                 if (cachedDeviceLock)
                     ui->lockDevice->setText(tr("Full 2FA is enabled"));
                 else
