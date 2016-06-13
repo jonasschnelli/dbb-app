@@ -452,6 +452,11 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
 {
     bool stateChanged = deviceConnected != state;
 
+    if (!state && deviceType != DBB::DBB_DEVICE_NO_DEVICE && deviceType != DBB::DBB_DEVICE_UNKNOWN)
+        this->ui->noDeviceConnectedLabel->setText(tr("Device occupied by another program."));
+    else
+        this->ui->noDeviceConnectedLabel->setText(tr("No device connected."));
+
     // special case for firmware upgrades
     if (upgradeFirmwareState && stateChanged)
     {
