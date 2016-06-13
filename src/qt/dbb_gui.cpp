@@ -2203,13 +2203,12 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     if (!historyAvailable || !history.isArray())
         return;
 
-    transactionTableModel = new  QStandardItemModel(history.size(), 5, this);
+    transactionTableModel = new  QStandardItemModel(history.size(), 4, this);
 
     transactionTableModel->setHeaderData(0, Qt::Horizontal, QObject::tr("TXID"));
     transactionTableModel->setHeaderData(1, Qt::Horizontal, QObject::tr("Amount"));
     transactionTableModel->setHeaderData(2, Qt::Horizontal, QObject::tr("Address"));
     transactionTableModel->setHeaderData(3, Qt::Horizontal, QObject::tr("Date"));
-    transactionTableModel->setHeaderData(4, Qt::Horizontal, QObject::tr(""));
 
     int cnt = 0;
     for (const UniValue &obj : history.getValues())
@@ -2242,17 +2241,8 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
         }
         
         UniValue timeUV = find_value(obj, "time");
-        if (timeUV.isNum())
-        {
-            QDateTime timestamp;
-            timestamp.setTime_t(timeUV.get_int64());
-            QStandardItem *item = new QStandardItem(timestamp.toString(Qt::SystemLocaleShortDate));
-            item->setToolTip(tr("Double-click for more details"));
-            item->setFont(font);
-            transactionTableModel->setItem(cnt, 3, item);
-        }
-            
         UniValue confirmsUV = find_value(obj, "confirmations");
+        if (timeUV.isNum())
         {
             QString iconName;
             QString tooltip;
@@ -2267,10 +2257,14 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
                 tooltip = "0";
                 iconName = ":/icons/confirm0";
             }
-            QStandardItem *item = new QStandardItem(QIcon(iconName), "");
+            
+            QDateTime timestamp;
+            timestamp.setTime_t(timeUV.get_int64());
+            QStandardItem *item = new QStandardItem(QIcon(iconName), timestamp.toString(Qt::SystemLocaleShortDate));
             item->setToolTip(tooltip + tr(" confirmations"));
             item->setTextAlignment(Qt::AlignCenter); 
-            transactionTableModel->setItem(cnt, 4, item);
+            item->setFont(font);
+            transactionTableModel->setItem(cnt, 3, item);
         }
 
         UniValue txidUV = find_value(obj, "txid");
@@ -2287,13 +2281,12 @@ void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailab
     ui->tableWidget->setColumnHidden(0, true);
 
     if (cnt) {
-        ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::ResizeToContents);
-        ui->tableWidget->setColumnHidden(4, false);
-        ui->tableWidget->setColumnWidth(4, 0); // Trick to get column smaller than minimum width
-                                               // when resized in setSectionResizeMode().
+        ui->tableWidget->horizontalHeader()->setStretchLastSection(false);
+        ui->tableWidget->horizontalHeader()->setSectionResizeMode(1, QHeaderView::ResizeToContents);
+        ui->tableWidget->horizontalHeader()->setSectionResizeMode(2, QHeaderView::Stretch);
+        ui->tableWidget->horizontalHeader()->setSectionResizeMode(3, QHeaderView::ResizeToContents);
     } else {
         ui->tableWidget->horizontalHeader()->setSectionResizeMode(QHeaderView::Stretch);
-        ui->tableWidget->setColumnHidden(4, true);
     }
 }
 
