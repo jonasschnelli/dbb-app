@@ -971,7 +971,6 @@ void DBBDaemonGui::seedHardware()
     DBB::LogPrint("Request device seeding...\n", "");
     std::string command = "{\"seed\" : {"
                                 "\"source\" :\"create\","
-                                "\"decrypt\": \"yes\","
                                 "\"key\": \""+hashHex+"\","
                                 "\"filename\": \"" + getBackupString() + ".pdf\""
                             "} }";
@@ -1322,7 +1321,16 @@ void DBBDaemonGui::eraseAllBackups()
 
 void DBBDaemonGui::verifyBackup(const QString& backupFilename)
 {
-    std::string command = "{\"backup\" : { \"decrypt\": \"yes\", \"check\" : \"" + backupFilename.toStdString() + "\" } }";
+    bool ok;
+    QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
+    if (!ok || tempBackupPassword.isEmpty())
+        return;
+
+    std::string hashHex = DBB::getStretchedBackupHexKey(tempBackupPassword.toStdString());
+    std::string command = "{\"backup\" : {"
+                "\"check\" :\"" + backupFilename.toStdString() + "\","
+                "\"key\":\""+hashHex+"\""
+                "} }";
 
     DBB::LogPrint("Verify single backup (%s)...\n", backupFilename.toStdString().c_str());
     executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1359,7 +1367,6 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
     std::string hashHex = DBB::getStretchedBackupHexKey(tempBackupPassword.toStdString());
     std::string command = "{\"seed\" : {"
                                 "\"source\" :\"" + backupFilename.toStdString() + "\","
-                                "\"decrypt\": \"yes\","
                                 "\"key\":\""+hashHex+"\""
                             "} }";
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
