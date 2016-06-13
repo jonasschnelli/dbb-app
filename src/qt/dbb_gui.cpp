@@ -261,6 +261,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     // create get address dialog
     getAddressDialog = new GetAddressDialog(0);
     connect(getAddressDialog, SIGNAL(shouldGetXPub(const QString&)), this, SLOT(getAddressGetXPub(const QString&)));
+    connect(getAddressDialog, SIGNAL(verifyGetAddress(const QString&)), this, SLOT(getAddressVerify(const QString&)));
 
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb"));
@@ -1258,6 +1259,11 @@ void DBBDaemonGui::getAddressGetXPub(const QString& keypath)
     getXPub(keypath.toStdString(), DBB_RESPONSE_TYPE_XPUB_GET_ADDRESS, DBB_ADDRESS_STYLE_P2PKH);
 }
 
+void DBBDaemonGui::getAddressVerify(const QString& keypath)
+{
+    getXPub(keypath.toStdString(), DBB_RESPONSE_TYPE_XPUB_VERIFY, DBB_ADDRESS_STYLE_P2PKH);
+}
+
 /*
 /////////////////
 DBB Backup Stack
@@ -1866,7 +1872,7 @@ void DBBDaemonGui::getNewAddress()
             }
             else
             {
-                emit shouldShowAlert("Error", tr("Could not load a new address"));
+                emit shouldShowAlert("Error", tr("Could not set a new Receiving address.\n\nNote that internet access is required in order to track the address on the blockchain and update your balance.\n\nFor advanced use, untracked addresses can be generated offline with the List Addresses button in the Settings tab."));
             }
 
             thread->completed();
