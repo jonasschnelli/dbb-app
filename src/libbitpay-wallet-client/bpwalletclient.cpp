@@ -131,6 +131,7 @@ void BitPayWalletClient::Hash(const std::string& stringIn, uint8_t* hashout)
 // creates a hex signature for the given string
 bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, const uint8_t* privKey, std::string& sigHexOut)
 {
+    bool success = false;
     uint8_t hash[32];
     Hash(stringToHash, hash);
 
@@ -149,16 +150,18 @@ bool BitPayWalletClient::GetCopayerSignature(const std::string& stringToHash, co
 
     btc_key_sign_hash(&key, hash, sig, &outlen);
 
-    assert(btc_pubkey_verify_sig(&pubkey, hash2, sig, outlen) == 1);
+    if (btc_pubkey_verify_sig(&pubkey, hash2, sig, outlen) == 1) {
+        std::vector<unsigned char> signature;
+        signature.assign(sig, sig + outlen);
+        sigHexOut = DBB::HexStr(sig, sig + outlen);
+        success = true;
+    } else {
+        success = false;
+    }
 
     btc_privkey_cleanse(&key);
     btc_pubkey_cleanse(&pubkey);
-
-    std::vector<unsigned char> signature;
-    signature.assign(sig, sig + outlen);
-
-    sigHexOut = DBB::HexStr(sig, sig + outlen);
-    return true;
+    return success;
 };
 
 //set the extended master pub key
@@ -348,7 +351,10 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     std::string proposalHashString = address + "|" + std::to_string(amount) + "|" + "" + "|" + "";
 
     std::string proposalSignature;
-    GetCopayerSignature(proposalHashString, requestKey.privkey, proposalSignature);
+    if (!GetCopayerSignature(proposalHashString, requestKey.privkey, proposalSignature)) {
+        errorOut = "Could not get copayer signature";
+        return false;
+    }
 
     jsonArgs.push_back(Pair("proposalSignature", proposalSignature));
     std::string json = jsonArgs.write();
@@ -978,7 +984,8 @@ std::string BitPayWalletClient::SignRequest(const std::string& method,
     btc_pubkey_init(&pubkey);
     btc_pubkey_from_key(&requestKey, &pubkey);
 
-    assert(btc_pubkey_verify_sig(&pubkey, hash, sig, outlen) == 1);
+    if (btc_pubkey_verify_sig(&pubkey, hash, sig, outlen) != 1)
+        return std::string();
 
     btc_pubkey_cleanse(&pubkey);
 
@@ -1009,46 +1016,51 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         struct curl_slist* chunk = NULL;
         std::string hashOut;
         std::string signature = SignRequest(method, url, args, hashOut);
-        chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
-        chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
-        chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
-        chunk = curl_slist_append(chunk, "Content-Type: application/json");
-        res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
-        if (method == "post")
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+        if (signature.empty()) {
+            BP_LOG_MSG("SignRequest failed.");
+            DBB::LogPrintDebug("SignRequest failed.", "");
+            success = false;
+        } else {
+            chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
+            chunk = curl_slist_append(chunk, ("x-signature: " + signature).c_str());
+            chunk = curl_slist_append(chunk, ("x-client-version: dbb-1.0.0"));
+            chunk = curl_slist_append(chunk, "Content-Type: application/json");
+            res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
+            curl_easy_setopt(curl, CURLOPT_URL, (baseURL + url).c_str());
+            if (method == "post")
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
 
-        if (method == "delete") {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
-            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        }
+            if (method == "delete") {
+                curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
+                curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
+            }
 
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
-        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+            curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
+            curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
+            curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+            curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
 #if defined(__linux__) || defined(__unix__)
-        //need to libcurl, load it once, set the CA path at runtime
-        //we assume only linux needs CA fixing
-        curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
+            //need to libcurl, load it once, set the CA path at runtime
+            //we assume only linux needs CA fixing
+            curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
 #endif
 
 #ifdef DBB_ENABLE_DEBUG
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+            curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
 #endif
 
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-            DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
-            success = false;
-        } else {
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
-            success = true;
+            res = curl_easy_perform(curl);
+            if (res != CURLE_OK) {
+                BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
+                DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
+                success = false;
+            } else {
+                curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
+                success = true;
+            }
         }
-
         curl_slist_free_all(chunk);
         curl_easy_cleanup(curl);
     }
