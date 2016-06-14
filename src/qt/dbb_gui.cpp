@@ -2167,8 +2167,13 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     }
 
     //TODO, add a monetary amount / unit helper function
-    this->ui->multisigBalance->setText(QString::fromStdString(DBB::formatMoney(vMultisigWallets[0]->totalBalance)));
-    this->ui->multisigWalletName->setText(QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
+    QString balance = QString::fromStdString(DBB::formatMoney(vMultisigWallets[0]->totalBalance));
+    this->ui->multisigBalance->setText("<strong>" + balance + "</strong>");
+    //TODO, Copay encrypts the wallet name. Decrypt it and display the name.
+    //      Decryption: use the first 16 bytes of sha256(shared_priv_key) as the AES-CCM key;
+    //      the encrypted name is in a JSON string conforming to the SJCL library format, see:
+    //      https://bitwiseshiftleft.github.io/sjcl/demo/
+    //this->ui->multisigWalletName->setText("<strong>Name:</strong> " + QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
 }
 
 void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)

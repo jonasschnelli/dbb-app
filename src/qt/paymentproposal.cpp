@@ -19,6 +19,7 @@ ui(new Ui::PaymentProposal)
     ui->bgWidget->setStyleSheet("background-color: rgba(0,0,0,15); border: 1px solid gray;");
     ui->amountLabelKey->setStyleSheet("font-weight: bold;");
     ui->feeLabelKey->setStyleSheet("font-weight: bold;");
+    ui->toLabelKey->setStyleSheet("font-weight: bold;");
 
     connect(this->ui->acceptButton, SIGNAL(clicked()), this, SLOT(acceptPressed()));
     connect(this->ui->rejectButton, SIGNAL(clicked()), this, SLOT(rejectPressed()));
@@ -36,7 +37,12 @@ void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, 
     prevProposalID = prevID;
     nextProposalID = nextID;
     
-    UniValue toAddressUni = find_value(proposalData, "toAddress");
+    UniValue toAddressUni;
+    toAddressUni = find_value(proposalData, "toAddress");
+    if (!toAddressUni.isStr()) {
+        toAddressUni = find_value(proposalData["outputs"][0], "toAddress");
+        proposalData.pushKV("toAddress", toAddressUni);
+    }
     if (toAddressUni.isStr())
         this->ui->toLabel->setText(QString::fromStdString(toAddressUni.get_str()));
 
