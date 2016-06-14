@@ -5,6 +5,8 @@
 #include "qrcodescanner.h"
 
 #include <QGraphicsView>
+#include <QCameraViewfinder>
+#include <QtDebug>
 
 #if QT_VERSION >= 0x050300
 #include <QCameraInfo>
@@ -17,6 +19,14 @@
 const static int CAMIMG_WIDTH  = 640;
 const static int CAMIMG_HEIGHT = 480;
 const static int MAX_FPS = 8;
+
+#ifdef Q_OS_WIN
+const static bool NEEDS_H_MIRRORING = true;
+const static bool NEEDS_V_MIRRORING = false;
+#else
+const static bool NEEDS_H_MIRRORING = false;
+const static bool NEEDS_V_MIRRORING = false;
+#endif
 
 void QRCodeScannerThread::setNextImage(const QImage *aImage)
 {
@@ -44,7 +54,10 @@ void QRCodeScannerThread::run()
         //copy out image to unlock asap
         QImage *image = NULL;
         if (nextImage)
-            image = new QImage(*nextImage);
+        {
+            QImage cImage = nextImage->copy();
+            image = new QImage(cImage);
+        }
         mutex.unlock();
 
         if (image)
@@ -74,6 +87,7 @@ void QRCodeScannerThread::run()
                     count = quirc_count(qr);
                     if (count > 0)
                     {
+                        qWarning("found codes : %d", count);
                         struct quirc_code code;
                         struct quirc_data data;
 
@@ -84,6 +98,8 @@ void QRCodeScannerThread::run()
                         {
                             emit QRCodeFound(QString(QLatin1String((const char *)data.payload)));
                         }
+                        else
+                             qWarning("quirc error : %s", quirc_strerror(err));
                     }
                 }
                 quirc_destroy(qr);
@@ -151,8 +167,18 @@ bool CameraFrameGrabber::present(const QVideoFrame &frame)
                                     cloneFrame.height(),
                                     QVideoFrame::imageFormatFromPixelFormat(cloneFrame.pixelFormat()));
 
-
-        const QImage small = image.scaled(CAMIMG_WIDTH,CAMIMG_HEIGHT,Qt::KeepAspectRatio);
+        QImage copyI;
+        if (NEEDS_H_MIRRORING || NEEDS_V_MIRRORING)
+        {
+            QTransform transform;
+            transform.rotate(180);
+            copyI = image.mirrored(NEEDS_H_MIRRORING, NEEDS_V_MIRRORING).transformed(transform).copy();
+        }
+        else
+        {
+            copyI = image.copy();
+        }
+        const QImage small = copyI.scaled(CAMIMG_WIDTH,CAMIMG_HEIGHT,Qt::KeepAspectRatio);
         double height = small.height();
         imageSize = small.size();
 
@@ -203,16 +229,19 @@ DBBQRCodeScanner::DBBQRCodeScanner(QWidget *parent)
     cam = new QCamera();
 
 #if QT_VERSION >= 0x050500
+#ifndef Q_OS_WIN
+    // o
     // if compile agaist Qt5, reduce framerate
     QCameraViewfinderSettings settings;
     settings.setMaximumFrameRate(MAX_FPS);
     cam->setViewfinderSettings(settings);
 #endif
+#endif
 
     // create the framegrabber viewfinder
     frameGrabber = new CameraFrameGrabber(this, pixmapItem);
     cam->setViewfinder(frameGrabber);
-
+    cam->start();
     // create the window/layout
     QSizePolicy sizePolicy(QSizePolicy::Expanding, QSizePolicy::Expanding);
     sizePolicy.setHorizontalStretch(0);

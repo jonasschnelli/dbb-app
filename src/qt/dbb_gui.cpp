@@ -211,14 +211,12 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     // initiaize QRCode scanner
     if (DBBQRCodeScanner::availability())
     {
-        qrCodeScanner = new DBBQRCodeScanner(this);
         ui->qrCodeButton->setEnabled(true);
     }
     else
         ui->qrCodeButton->setEnabled(false);
     
     connect(ui->qrCodeButton, SIGNAL(clicked()),this,SLOT(showQrCodeScanner()));
-    connect(qrCodeScanner, SIGNAL(QRCodeFound(const QString&)), this, SLOT(qrCodeFound(const QString&)));
 #else
     ui->qrCodeButton->setVisible(false);
 #endif
@@ -2890,7 +2888,10 @@ void DBBDaemonGui::showQrCodeScanner()
 {
 #ifdef DBB_USE_MULTIMEDIA
     if (!qrCodeScanner)
-        return;
+    {
+        qrCodeScanner = new DBBQRCodeScanner(this);
+        connect(qrCodeScanner, SIGNAL(QRCodeFound(const QString&)), this, SLOT(qrCodeFound(const QString&)));
+    }
 
     qrCodeScanner->show();
     qrCodeScanner->setScannerActive(true);
@@ -2903,6 +2904,7 @@ void DBBDaemonGui::qrCodeFound(const QString &payload)
     static const char bitcoinurl[] = "bitcoin:";
     static const char amountfield[] = "amount=";
 
+    bool validQRCode = false;
     if (payload.startsWith(bitcoinurl, Qt::CaseInsensitive))
     {
         // get the part after the "bitcoin:"
@@ -2923,9 +2925,13 @@ void DBBDaemonGui::qrCodeFound(const QString &payload)
 
         // fill address
         this->ui->sendToAddress->setText(onlyAddress);
-
-        qrCodeScanner->setScannerActive(false);
-        qrCodeScanner->hide();
+        validQRCode = true;
     }
+
+    qrCodeScanner->setScannerActive(false);
+    qrCodeScanner->hide();
+
+    if (!validQRCode)
+        showAlert(tr("Invalid Bitcoin QRCode"), tr("The scanned QRCode does not contain a valid Bitcoin address."));
 #endif
 }

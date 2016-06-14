@@ -135,7 +135,7 @@ AC_DEFUN([BITCOIN_QT_CONFIGURE],[
       if test x$TARGET_OS = xwindows; then
         _BITCOIN_QT_CHECK_STATIC_PLUGINS([Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin)],[-lqwindows])
         if test x$use_multimedia != xno; then
-          QT_LIBS="-ldsengine $QT_LIBS"
+          QT_LIBS="-ldsengine -lqtmedia_audioengine -lqtaudio_windows $QT_LIBS"
         fi
         AC_DEFINE(QT_QPA_PLATFORM_WINDOWS, 1, [Define this symbol if the qt platform is windows])
       elif test x$TARGET_OS = xlinux; then
@@ -272,6 +272,8 @@ AC_DEFUN([BITCOIN_QT_CONFIGURE],[
   AC_SUBST(QT_DBUS_LIBS)
   AC_SUBST(QT_MULTIMEDIA_INCLUDES)
   AC_SUBST(QT_MULTIMEDIA_LIBS)
+  AC_SUBST(QT_MULTIMEDIAWIDGETS_INCLUDES)
+  AC_SUBST(QT_MULTIMEDIAWIDGETS_LIBS)
   AC_SUBST(QT_TEST_INCLUDES)
   AC_SUBST(QT_TEST_LIBS)
   AC_SUBST(QT_SELECT, qt${bitcoin_qt_got_major_vers})
@@ -357,6 +359,9 @@ AC_DEFUN([_BITCOIN_QT_FIND_STATIC_PLUGINS],[
         if test -d "$qt_plugin_path/mediaservice"; then
           QT_LIBS="$QT_LIBS -L$qt_plugin_path/mediaservice"
         fi
+        if test -d "$qt_plugin_path/audio"; then
+          QT_LIBS="$QT_LIBS -L$qt_plugin_path/audio"
+        fi
       fi
      m4_ifdef([PKG_CHECK_MODULES],[
      if test x$use_pkgconfig = xyes; then
@@ -375,6 +380,7 @@ AC_DEFUN([_BITCOIN_QT_FIND_STATIC_PLUGINS],[
     if test x$qt_plugin_path != x; then
       QT_LIBS="$QT_LIBS -L$qt_plugin_path/accessible"
       QT_LIBS="$QT_LIBS -L$qt_plugin_path/mediaservice"
+			QT_LIBS="$QT_LIBS -L$qt_plugin_path/audio"
       QT_LIBS="$QT_LIBS -L$qt_plugin_path/codecs"
     fi
   fi
@@ -430,6 +436,7 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITH_PKGCONFIG],[
       fi
       if test x$use_multimedia != xno; then
         PKG_CHECK_MODULES([QT_MULTIMEDIA], [${QT_LIB_PREFIX}Multimedia], [QT_MULTIMEDIA_INCLUDES="$QT_MULTIMEDIA_CFLAGS"; have_qt_multimedia=yes], [have_qt_multimedia=no])
+        PKG_CHECK_MODULES([QT_MULTIMEDIAWIDGETS], [${QT_LIB_PREFIX}MultimediaWidgets], [QT_MULTIMEDIAWIDGETS_INCLUDES="$QT_MULTIMEDIAWIDGETS_CFLAGS"; have_qt_multimediawidgets=yes], [have_qt_multimedia=no])
         if test x$TARGET_OS = xdarwin; then
           AX_CHECK_LINK_FLAG([[-framework AVFoundation]],[QT_LIBS="$QT_LIBS -framework AVFoundation"],[AC_MSG_ERROR(could not avfoundation framework)])
           AX_CHECK_LINK_FLAG([[-framework QuartzCore]],[QT_LIBS="$QT_LIBS -framework QuartzCore"],[AC_MSG_ERROR(could not QuarzCore framework)])
@@ -455,7 +462,10 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   TEMP_LIBS="$LIBS"
   BITCOIN_QT_CHECK([
     if test x$qt_include_path != x; then
-      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtMultimedia -I$qt_include_path/QtTest -I$qt_include_path/QtDBus"
+      QT_INCLUDES="-I$qt_include_path -I$qt_include_path/QtCore -I$qt_include_path/QtGui -I$qt_include_path/QtWidgets -I$qt_include_path/QtNetwork -I$qt_include_path/QtTest -I$qt_include_path/QtDBus"
+      if test x$use_multimedia != xno; then
+        QT_INCLUDES="$QT_INCLUDES -I$qt_include_path/QtMultimedia -I$qt_include_path/QtMultimediaWidgets"
+      fi
       CPPFLAGS="$QT_INCLUDES $CPPFLAGS"
     fi
   ])
@@ -500,6 +510,7 @@ AC_DEFUN([_BITCOIN_QT_FIND_LIBS_WITHOUT_PKGCONFIG],[
   if test x$use_multimedia != xno; then
     have_qt_multimedia=yes
     BITCOIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Multimedia],[main],,BITCOIN_QT_FAIL(lib$QT_LIB_PREFIXMultimedia not found)))
+    BITCOIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}MultimediaWidgets],[main],,BITCOIN_QT_FAIL(lib$QT_LIB_PREFIXMultimediaWidgets not found)))
   fi
   if test x$bitcoin_qt_got_major_vers = x5; then
     BITCOIN_QT_CHECK(AC_CHECK_LIB([${QT_LIB_PREFIX}Widgets],[main],,BITCOIN_QT_FAIL(lib$QT_LIB_PREFIXWidgets not found)))
