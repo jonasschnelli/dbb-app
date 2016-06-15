@@ -2167,7 +2167,10 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     }
 
     //TODO, add a monetary amount / unit helper function
-    QString balance = QString::fromStdString(DBB::formatMoney(vMultisigWallets[0]->totalBalance));
+    QString balance = "-";
+    if (vMultisigWallets[0]->totalBalance >= 0)
+        balance = QString::fromStdString(DBB::formatMoney(vMultisigWallets[0]->totalBalance));
+
     this->ui->multisigBalance->setText("<strong>" + balance + "</strong>");
     //TODO, Copay encrypts the wallet name. Decrypt it and display the name.
     //      Decryption: use the first 16 bytes of sha256(shared_priv_key) as the AES-CCM key;
@@ -2181,7 +2184,9 @@ void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
     singleWallet->updateData(walletResponse);
 
     //TODO, add a monetary amount / unit helper function
-    QString balance = QString::fromStdString(DBB::formatMoney(singleWallet->totalBalance));
+    QString balance = "";
+    if (singleWallet->totalBalance >= 0)
+        balance = QString::fromStdString(DBB::formatMoney(singleWallet->totalBalance));
 
     this->ui->balanceLabel->setText(balance);
     this->ui->singleWalletBalance->setText(balance);

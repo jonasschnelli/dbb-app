@@ -9,6 +9,7 @@
 void DBBWallet::updateData(const UniValue& walletResponse)
 {
     availableBalance = 0;
+    totalBalance = -1;
     walletRemoteName = "";
     currentPaymentProposals = UniValue(UniValue::VNULL);
 
