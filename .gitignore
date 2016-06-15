@@ -81,3 +81,10 @@ src/qt/*.moc
 src/qt/moc_*.cpp
 src/qt/ui/ui_*.h
 src/qt/qrc_*.cpp
+
+# QT Creator
+*.autosave
+
+# VIM specific
+*.swo
+*.swp

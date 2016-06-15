@@ -342,13 +342,13 @@ background-color: rgba(240,240,240,255);
       </property>
       <layout class="QVBoxLayout" name="copayVLayout">
        <property name="spacing">
-        <number>0</number>
+        <number>5</number>
        </property>
        <property name="leftMargin">
         <number>10</number>
        </property>
        <property name="topMargin">
-        <number>10</number>
+        <number>15</number>
        </property>
        <property name="rightMargin">
         <number>10</number>
@@ -365,9 +365,21 @@ background-color: rgba(240,240,240,255);
           <number>0</number>
          </property>
          <item>
-          <widget class="QLabel" name="multisigWalletNameKey">
+          <widget class="QLabel" name="multisigWalletName">
+           <property name="minimumSize">
+            <size>
+             <width>200</width>
+             <height>0</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
-            <string>Wallet Name</string>
+            <string></string>
            </property>
           </widget>
          </item>
@@ -388,8 +400,8 @@ background-color: rgba(240,240,240,255);
           <widget class="QLabel" name="multisigBalanceKey">
            <property name="font">
             <font>
-             <weight>75</weight>
-             <bold>true</bold>
+             <weight>50</weight>
+             <bold>false</bold>
             </font>
            </property>
            <property name="text">
@@ -400,20 +412,13 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayoutWalletInfos" stretch="0,0,0">
+        <layout class="QHBoxLayout" name="horizontalLayoutWalletInfos" stretch="0,0">
          <property name="spacing">
           <number>0</number>
          </property>
          <property name="topMargin">
           <number>0</number>
          </property>
-         <item>
-          <widget class="QLabel" name="multisigWalletName">
-           <property name="text">
-            <string>-</string>
-           </property>
-          </widget>
-         </item>
          <item>
           <spacer name="horizontalSpacer_2">
            <property name="orientation">
@@ -446,19 +451,12 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
-        <widget class="Line" name="line_2">
-         <property name="orientation">
-          <enum>Qt::Horizontal</enum>
-         </property>
-        </widget>
-       </item>
-       <item>
         <layout class="QVBoxLayout" name="verticalLayout_2">
          <property name="spacing">
           <number>10</number>
          </property>
          <property name="topMargin">
-          <number>30</number>
+          <number>10</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
@@ -539,6 +537,12 @@ background-color: rgba(240,240,240,255);
          </property>
          <item>
           <widget class="QPushButton" name="joinCopayWallet">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
             <string>Join Copay Wallet</string>
            </property>
@@ -546,6 +550,12 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="checkProposals">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
            <property name="text">
             <string>Check Proposals</string>
            </property>
@@ -1131,13 +1141,13 @@ background-color: rgba(240,240,240,255);
          </item>
          <item>
           <widget class="QPushButton" name="qrCodeButton">
-          <property name="toolTip">
-              <string>Scan QRCode</string>
-          </property>
+           <property name="toolTip">
+            <string>Scan QRCode</string>
+           </property>
            <property name="icon">
-               <iconset>
-                   <normaloff>:/icons/qrcode</normaloff>
-                   <disabledoff>:/icons/qrcode</disabledoff>:/icons/qrcode</iconset>
+            <iconset>
+             <normaloff>:/icons/qrcode</normaloff>
+             <disabledoff>:/icons/qrcode</disabledoff>:/icons/qrcode</iconset>
            </property>
           </widget>
          </item>
