@@ -61,7 +61,9 @@ dbb_app_SOURCES = \
   dbb_netthread.cpp \
   dbb_comserver.h \
   dbb_comserver.cpp \
-  dbb_configdata.h
+  dbb_configdata.h \
+  dbb_ca.h \
+  dbb_ca.cpp
 
 dbb_app_CPPFLAGS = $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
@@ -89,7 +91,8 @@ DBB_GUI_H = \
     qt/verificationdialog.h \
     qt/modalview.h \
     qt/clickablelabel.h \
-    qt/settingsdialog.h
+    qt/settingsdialog.h \
+    qt/update.h
 
 DBB_GUI_CPP = \
 	qt/paymentproposal.cpp \
@@ -100,7 +103,8 @@ DBB_GUI_CPP = \
     qt/verificationdialog.cpp \
     qt/modalview.cpp \
     qt/clickablelabel.cpp \
-    qt/settingsdialog.cpp
+    qt/settingsdialog.cpp \
+    qt/update.cpp
 
 QT_MOC_CPP = \
 	qt/moc_dbb_gui.cpp \
@@ -112,7 +116,8 @@ QT_MOC_CPP = \
     qt/moc_verificationdialog.cpp \
     qt/moc_modalview.cpp \
     qt/moc_clickablelabel.cpp \
-    qt/moc_settingsdialog.cpp
+    qt/moc_settingsdialog.cpp \
+    qt/moc_update.cpp
 
 QT_MOC = \
   qt/dbb_gui.moc \
@@ -124,7 +129,8 @@ QT_MOC = \
   qt/verificationdialog.moc \
   qt/modalview.moc \
   qt/clickablelabel.moc \
-  qt/settingsdialog.moc
+  qt/settingsdialog.moc \
+  qt/update.moc
 
 
 if USE_MULTIMEDIA

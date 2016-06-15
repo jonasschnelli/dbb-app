@@ -28,6 +28,7 @@
 
 #include "dbb_app.h"
 #include "dbb_configdata.h"
+#include "update.h"
 #include "dbb_wallet.h"
 
 #include "dbb_comserver.h"
@@ -145,14 +146,12 @@ signals:
     //emitted when a wallet join process was done
     void joinCopayWalletDone(DBBWallet *);
 
-    //emitted when check-for-updates response is available
-    void checkForUpdateResponseAvailable(const std::string&, long, bool);
-
     void comServerIncommingMessage(const QString& msg);
 
 private:
     QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;
+    DBBUpdateManager *updateManager;
     QMenuBar *appMenuBar;
     QAction *settingsAction;
     BackupDialog* backupDialog;
@@ -178,7 +177,6 @@ private:
     bool cachedDeviceLock;
     bool deviceReadyToInteract;
     bool touchButtonInfo;
-    bool checkingForUpdates;
     QPropertyAnimation* loginScreenIndicatorOpacityAnimation;
     QPropertyAnimation* netActivityAnimation;
     QPropertyAnimation* usbActivityAnimation;
@@ -396,15 +394,6 @@ private slots:
     //!show settings dialog
     void showSettings();
     void updateSettings();
-
-    //== UPDATE CHECKER ==
-    bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);
-    void checkForUpdateInBackground();
-    void checkForUpdate(bool reportAlways = true);
-    void parseCheckUpdateResponse(const std::string &response, long statusCode, bool reportAlways);
-
-    //== CA/SSL management==
-    std::string getCAFile();
 
     //== QRCode Scanner==
     void showQrCodeScanner();

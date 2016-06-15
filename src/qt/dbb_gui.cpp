@@ -26,6 +26,7 @@
 #include <dbb.h>
 #include "libdbb/crypto.h"
 
+#include "dbb_ca.h"
 #include "dbb_util.h"
 #include "dbb_netthread.h"
 #include "serialize.h"
@@ -48,8 +49,6 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #endif
-
-static std::string ca_file;
 
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
@@ -101,12 +100,12 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               shouldKeepBootloaderState(0),
                                               touchButtonInfo(0),
                                               walletUpdateTimer(0),
-                                              checkingForUpdates(0),
                                               comServer(0),
                                               lastPing(0),
                                               smartVerificationDeviceConnected(0),
                                               settingsDialog(0),
-                                              appMenuBar(0)
+                                              appMenuBar(0),
+                                              updateManager(0)
 {
 #ifdef DBB_USE_MULTIMEDIA
     qrCodeScanner = NULL;
@@ -118,8 +117,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     ui->setupUi(this);
 
 #if defined(__linux__) || defined(__unix__)
+    std::string ca_file;
     //need to libcurl, load it once, set the CA path at runtime
-    ca_file = getCAFile();
+    ca_file = DBB::getCAFile();
 #endif
 
     //testnet/mainnet switch
@@ -209,7 +209,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
-    connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
     connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
 
@@ -250,8 +249,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this, SIGNAL(shouldShowAlert(const QString&,const QString&)), this, SLOT(showAlert(const QString&,const QString&)));
     connect(this, SIGNAL(changeNetLoading(bool)), this, SLOT(setNetLoading(bool)));
     connect(this, SIGNAL(joinCopayWalletDone(DBBWallet*)), this, SLOT(joinCopayWalletComplete(DBBWallet*)));
-
-    connect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
 
     connect(this, SIGNAL(comServerIncommingMessage(const QString&)), this, SLOT(comServerMessageParse(const QString&)));
 
@@ -431,7 +428,14 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     walletUpdateTimer = new QTimer(this);
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
 
-    QTimer::singleShot(200, this, SLOT(checkForUpdateInBackground()));
+    updateManager = new DBBUpdateManager();
+
+#if defined(__linux__) || defined(__unix__)
+    updateManager->setCAFile(ca_file);
+#endif
+
+    connect(ui->checkForUpdates, SIGNAL(clicked()), updateManager, SLOT(checkForUpdate()));
+    QTimer::singleShot(200, updateManager, SLOT(checkForUpdateInBackground()));
 }
 
 void DBBDaemonGui::createMenuBar()
@@ -2761,163 +2765,6 @@ void DBBDaemonGui::updateSettings()
 
     if (comServer)
         comServer->setURL(configData->getComServerURL());
-}
-
-#pragma mark - Update Check (FIXME: refactor to own class)
-
-static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* userp)
-{
-    ((std::string*)userp)->append((char*)contents, size * nmemb);
-    return size * nmemb;
-}
-
-bool DBBDaemonGui::SendRequest(const std::string& method,
-                                     const std::string& url,
-                                     const std::string& args,
-                                     std::string& responseOut,
-                                     long& httpcodeOut)
-{
-    CURL* curl;
-    CURLcode res;
-
-    bool success = false;
-
-    curl_global_init(CURL_GLOBAL_ALL);
-    curl = curl_easy_init();
-    if (curl) {
-        struct curl_slist* chunk = NULL;
-        chunk = curl_slist_append(chunk, "Content-Type: text/plain");
-        res = curl_easy_setopt(curl, CURLOPT_HTTPHEADER, chunk);
-        curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-        if (method == "post")
-        {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
-            curl_easy_setopt(curl, CURLOPT_POST, 1L);
-        }
-
-        if (method == "delete") {
-            curl_easy_setopt(curl, CURLOPT_POSTFIELDS, args.c_str());
-            curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE");
-        }
-
-        curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
-        curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
-        curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
-        curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
-
-#if defined(__linux__) || defined(__unix__)
-        //need to libcurl, load it once, set the CA path at runtime
-        //we assume only linux needs CA fixing
-        curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
-#endif
-
-#ifdef DBB_ENABLE_DEBUG
-        curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
-#endif
-
-        res = curl_easy_perform(curl);
-        if (res != CURLE_OK) {
-            DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
-            success = false;
-        } else {
-            curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
-            success = true;
-        }
-
-        curl_slist_free_all(chunk);
-        curl_easy_cleanup(curl);
-    }
-    curl_global_cleanup();
-
-    DBB::LogPrintDebug("response: "+responseOut, "");
-    return success;
-};
-
-void DBBDaemonGui::checkForUpdateInBackground()
-{
-    checkForUpdate(false);
-}
-
-void DBBDaemonGui::checkForUpdate(bool reportAlways)
-{
-    if (checkingForUpdates)
-        return;
-
-    DBBNetThread* thread = DBBNetThread::DetachThread();
-    thread->currentThread = std::thread([this, thread, reportAlways]() {
-        std::string response;
-        long httpStatusCode;
-        SendRequest("post", "https://digitalbitbox.com/dbb-app/update.json", "dv="+std::string(VERSION)+"&version="+std::string(DBB_PACKAGE_VERSION), response, httpStatusCode);
-        emit checkForUpdateResponseAvailable(response, httpStatusCode, reportAlways);
-        thread->completed();
-    });
-
-    checkingForUpdates = true;
-}
-
-void DBBDaemonGui::parseCheckUpdateResponse(const std::string &response, long statuscode, bool reportAlways)
-{
-    checkingForUpdates = false;
-
-    UniValue jsonOut;
-    jsonOut.read(response);
-
-    bool updateAvailable = false;
-
-    try {
-        if (jsonOut.isObject())
-        {
-            UniValue subtext = find_value(jsonOut, "msg");
-            UniValue url = find_value(jsonOut, "url");
-            if (subtext.isStr() && url.isStr())
-            {
-                //:translation: accept pairing rquest message box
-                QMessageBox::StandardButton reply = QMessageBox::question(this, "", QString::fromStdString(subtext.get_str()), QMessageBox::Yes | QMessageBox::No);
-                if (reply == QMessageBox::Yes)
-                {
-                    updateAvailable = true;
-                    QString link = QString::fromStdString(url.get_str());
-                    QDesktopServices::openUrl(QUrl(link));
-                    return;
-                }
-            }
-        }
-    } catch (std::exception &e) {
-        DBB::LogPrint("Error while reading update json\n", "");
-    }
-
-    if (!updateAvailable && reportAlways)
-    {
-        showModalInfo(tr("You are up-to-date."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
-    }
-}
-
-static const char *ca_paths[] = {
-    "/etc/ssl/certs/ca-certificates.crt", // Debian/Ubuntu/Gentoo etc.
-    "/etc/ssl/certs/ca-bundle.crt",       // Debian/Ubuntu/Gentoo etc.
-    "/etc/pki/tls/certs/ca-bundle.crt",   // Fedora/RHEL
-    "/etc/ssl/ca-bundle.pem",             // OpenSUSE
-    "/etc/pki/tls/cacert.pem",            // OpenELEC
-};
-
-inline bool file_exists (const char *name) {
-    struct stat buffer;
-    int result = stat(name, &buffer);
-    return (result == 0);
-}
-
-std::string DBBDaemonGui::getCAFile()
-{
-    size_t i = 0;
-    for( i = 0; i < sizeof(ca_paths) / sizeof(ca_paths[0]); i++)
-    {
-        if (file_exists(ca_paths[i]))
-        {
-            return std::string(ca_paths[i]);
-        }
-    }
-    return "";
 }
 
 void DBBDaemonGui::showQrCodeScanner()
