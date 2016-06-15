@@ -28,8 +28,8 @@ libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(LIBBTC_INCLUDES)
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
 
-libbpwalletclient_a_INCLUDES = libbitpay-wallet-client/bpwalletclient.h
-libbpwalletclient_a_SOURCES = libbitpay-wallet-client/bpwalletclient.cpp
+libbpwalletclient_a_INCLUDES = bitpaywalletclient/bpwalletclient.h
+libbpwalletclient_a_SOURCES = bitpaywalletclient/bpwalletclient.cpp
 libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 libbpwalletclient_a_LIBADD = $(LIBBTC) $(UNIVALUE)
  
