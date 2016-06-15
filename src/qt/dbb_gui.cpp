@@ -11,6 +11,7 @@
 #include <QDesktopServices>
 #include <QFileDialog>
 #include <QInputDialog>
+#include <QMenuBar>
 #include <QMessageBox>
 #include <QNetworkInterface>
 #include <QSpacerItem>
@@ -104,7 +105,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               comServer(0),
                                               lastPing(0),
                                               smartVerificationDeviceConnected(0),
-                                              settingsDialog(0)
+                                              settingsDialog(0),
+                                              appMenuBar(0)
 {
 #ifdef DBB_USE_MULTIMEDIA
     qrCodeScanner = NULL;
@@ -182,6 +184,12 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     qRegisterMetaType<std::vector<std::string> >("std::vector<std::string>");
     qRegisterMetaType<DBBWallet*>("DBBWallet *");
     
+    settingsAction = new QAction(tr("&Settings..."), this);
+    settingsAction->setStatusTip(tr("Expert configuration options for DBB-APP"));
+    settingsAction->setMenuRole(QAction::PreferencesRole);
+    connect(settingsAction, SIGNAL(triggered()), this, SLOT(showSettings()));
+    createMenuBar();
+
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
@@ -199,7 +207,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
-    connect(ui->showExpertSettings, SIGNAL(clicked()), this, SLOT(showExpertSettings()));
     ui->upgradeFirmware->setVisible(false);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->checkForUpdates, SIGNAL(clicked()), this, SLOT(checkForUpdate()));
@@ -425,6 +432,20 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
 
     QTimer::singleShot(200, this, SLOT(checkForUpdateInBackground()));
+}
+
+void DBBDaemonGui::createMenuBar()
+{
+#ifdef Q_OS_MAC
+    // Create a decoupled menu bar on Mac which stays even if the window is closed
+    appMenuBar = new QMenuBar();
+#else
+    // Get the main window's menu bar on other platforms
+    appMenuBar = menuBar();
+#endif
+
+    QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
+    settings->addAction(settingsAction);
 }
 
 /*
@@ -2707,7 +2728,7 @@ void DBBDaemonGui::pairSmartphone()
     updateModalWithQRCode(pairingData);
 }
 
-void DBBDaemonGui::showExpertSettings()
+void DBBDaemonGui::showSettings()
 {
     if (!settingsDialog)
     {

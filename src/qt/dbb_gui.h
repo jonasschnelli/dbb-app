@@ -153,6 +153,8 @@ signals:
 private:
     QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;
+    QMenuBar *appMenuBar;
+    QAction *settingsAction;
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
     VerificationDialog* verificationDialog;
@@ -198,6 +200,8 @@ private:
 #ifdef DBB_USE_MULTIMEDIA
     DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
 #endif
+
+    void createMenuBar();
     
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
@@ -388,9 +392,9 @@ private slots:
     void pairSmartphone();
     void comServerMessageParse(const QString& msg);
 
-    //== Expert settings ==
-    //!show experts settings dialog
-    void showExpertSettings();
+    //== settings ==
+    //!show settings dialog
+    void showSettings();
     void updateSettings();
 
     //== UPDATE CHECKER ==
