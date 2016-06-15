@@ -188,7 +188,7 @@ int main(int argc, char** argv)
             //check devices
             enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
 
-            if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE)
+            if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE || deviceType == DBB::DBB_DEVICE_UNKNOWN)
             {
                 bool openSuccess = false;
                 if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER)
@@ -196,21 +196,11 @@ int main(int argc, char** argv)
                 else
                     openSuccess = DBB::openConnection();
 
-                if (openSuccess)
-                {
 #ifdef DBB_ENABLE_QT
                 //TODO, check if this requires locking
                 if (widget)
-                    widget->deviceStateHasChanged(true, deviceType);
+                    widget->deviceStateHasChanged(openSuccess, deviceType);
 #endif
-                }
-                else
-                {
-#ifdef DBB_ENABLE_QT
-                if (widget)
-                    widget->deviceStateHasChanged(false, DBB::DBB_DEVICE_NO_DEVICE);
-#endif
-                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
