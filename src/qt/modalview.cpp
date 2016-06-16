@@ -16,8 +16,8 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->setDeviceName, SIGNAL(returnPressed()), this->ui->setPassword0, SLOT(setFocus()));
     connect(this->ui->setPasswordOld, SIGNAL(returnPressed()), this->ui->setPassword0, SLOT(setFocus()));
     connect(this->ui->setPassword0, SIGNAL(returnPressed()), this->ui->setPassword1, SLOT(setFocus()));
-    connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SLOT(setFocus()));
-    
+    connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
+
     connect(this->ui->setDeviceName, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
     connect(this->ui->setPassword0, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
     connect(this->ui->setPassword1, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
@@ -69,6 +69,7 @@ void ModalView::setPasswordProvided()
 
 void ModalView::cancelSetPasswordProvided()
 {
+    cleanse();
     showOrHide();
 }
 
