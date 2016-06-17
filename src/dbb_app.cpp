@@ -45,7 +45,6 @@
 #include "dbb_util.h"
 
 #include "univalue.h"
-#include "libbitpay-wallet-client/bpwalletclient.h"
 
 #include "hidapi/hidapi.h"
 
@@ -91,9 +90,7 @@ Q_IMPORT_PLUGIN(AVFServicePlugin);
 #endif
 #endif
 
-extern void doubleSha256(char* string, unsigned char* hashOut);
-
-static DBBDaemonGui* widget;
+static DBBDaemonGui* dbbGUI;
 #endif
 
 std::condition_variable queueCondVar;
@@ -198,8 +195,8 @@ int main(int argc, char** argv)
 
 #ifdef DBB_ENABLE_QT
                 //TODO, check if this requires locking
-                if (widget)
-                    widget->deviceStateHasChanged(openSuccess, deviceType);
+                if (dbbGUI)
+                    dbbGUI->deviceStateHasChanged(openSuccess, deviceType);
 #endif
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
@@ -228,8 +225,8 @@ int main(int argc, char** argv)
     DBB::CreateDir(dataDir.c_str());
     DBB::OpenDebugLog();
     DBB::LogPrint("\n\n\n\nStarting DBB App %s - %s\n", DBB_PACKAGE_VERSION, VERSION);
-    widget = new DBBDaemonGui(bitcoinURL);
-    widget->show();
+    dbbGUI = new DBBDaemonGui(bitcoinURL);
+    dbbGUI->show();
     //set style sheets
     app.exec();
 

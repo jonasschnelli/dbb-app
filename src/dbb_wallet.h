@@ -6,7 +6,7 @@
 #define DBB_WALLET_H
 
 #include "univalue.h"
-#include "libbitpay-wallet-client/bpwalletclient.h"
+#include "bitpaywalletclient/bpwalletclient.h"
 
 #include <atomic>
 #include <mutex>
