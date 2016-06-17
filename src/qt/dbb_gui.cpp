@@ -50,6 +50,8 @@
 #include <sys/stat.h>
 #endif
 
+const static bool DBB_FW_UPGRADE_DUMMY_SIGN = false;
+
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 extern void setFirmwareUpdateHID(bool state);
@@ -187,7 +189,10 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     settingsAction = new QAction(tr("&Settings..."), this);
     settingsAction->setStatusTip(tr("Expert configuration options for DBB-APP"));
     settingsAction->setMenuRole(QAction::PreferencesRole);
+    firmwareUpgradeAction = new QAction(tr("&Upgrade Firmware..."), this);
+    firmwareUpgradeAction->setStatusTip(tr("Securely upgrade your DigitalBitbox firmware"));
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(showSettings()));
+    connect(firmwareUpgradeAction, SIGNAL(triggered()), this, SLOT(upgradeFirmware()));
     createMenuBar();
 
     // connect UI
@@ -450,6 +455,9 @@ void DBBDaemonGui::createMenuBar()
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(settingsAction);
+
+    QMenu *upgradeFirmware = appMenuBar->addMenu(tr("&Firmware"));
+    upgradeFirmware->addAction(firmwareUpgradeAction);
 }
 
 /*
@@ -1124,22 +1132,27 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
 
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
             bool upgradeRes = false;
-            // dummy private key to allow current testing
-            // the private key matches the pubkey on the DBB bootloader / FW
-            std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
 
             // load the file
             std::ifstream firmwareFile(possibleFilename, std::ios::binary | std::ios::ate);
             std::streamsize firmwareSize = firmwareFile.tellg();
+            std::string sigStr;
             if (firmwareSize > 0)
             {
                 firmwareFile.seekg(0, std::ios::beg);
 
+                //read signatures
+                if (!DBB_FW_UPGRADE_DUMMY_SIGN)
+                {
+                    sigStr.resize(FIRMWARE_SIGLEN);
+                    firmwareFile.read(&sigStr[0], FIRMWARE_SIGLEN);
+                }
+
+                //read firmware
                 std::vector<char> firmwareBuffer(DBB_APP_LENGTH);
                 unsigned int pos = 0;
                 while (true)
                 {
-                    //read into
                     firmwareFile.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
                     std::streamsize bytes = firmwareFile.gcount();
                     if (bytes == 0)
@@ -1157,16 +1170,24 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
                 std::string hashHex = DBB::HexStr(hashout, hashout+32);
 
-                // sign and get the compact signature
-                btc_key key;
-                btc_privkey_init(&key);
-                std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
-                memcpy(&key.privkey, &privkey[0], 32);
 
-                size_t sizeout = 64;
-                unsigned char sig[sizeout];
-                int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
-                std::string sigStr = DBB::HexStr(sig, sig+sizeout);
+                if (DBB_FW_UPGRADE_DUMMY_SIGN)
+                {
+                    // dummy sign and get the compact signature
+                    // dummy private key to allow current testing
+                    // the private key matches the pubkey on the DBB bootloader / FW
+                    std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
+
+                    btc_key key;
+                    btc_privkey_init(&key);
+                    std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
+                    memcpy(&key.privkey, &privkey[0], 32);
+
+                    size_t sizeout = 64;
+                    unsigned char sig[sizeout];
+                    int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
+                    sigStr = DBB::HexStr(sig, sig+sizeout);
+                }
 
                 emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Hold down the touch button for serval seconds to allow to erase your current firmware and upload the new one.");
                 // send firmware blob to DBB

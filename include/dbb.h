@@ -11,6 +11,7 @@
 #define HID_BL_BUF_SIZE_W 4098
 #define HID_BL_BUF_SIZE_R 256
 #define FIRMWARE_CHUNKSIZE 4096
+#define FIRMWARE_SIGLEN (7*64*2) //7 compact signatures in hex
 #define DBB_APP_LENGTH 225280 //flash size minus bootloader length
 
 #define BACKUP_KEY_PBKDF2_SALT     "Digital Bitbox"
