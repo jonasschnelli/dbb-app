@@ -155,6 +155,9 @@ public:
 
     //!returns true in case of an available xpub/request key
     bool IsSeeded();
+    
+    //!whether or not a Copay wallet was joined with the xpub/request key
+    bool walletJoined;
 
     //!local filename (absolute)
     const std::string localDataFilename(const std::string& dataDir);

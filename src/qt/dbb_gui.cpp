@@ -390,6 +390,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'/0'" : "m/44'/0'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath(DBB::GetArg("-mskeypath","m/100'/45'/0'"));
+    this->ui->noProposalsAvailable->setVisible(false);
 
 #if defined(__linux__) || defined(__unix__)
     singleWallet->setCAFile(ca_file);
@@ -551,20 +552,18 @@ void DBBDaemonGui::resetInfos()
     updateOverviewFlags(false, false, true);
 
     //reset single wallet UI
-    ui->tableWidget->setModel(NULL);
-    ui->balanceLabel->setText("");
-    ui->singleWalletBalance->setText("");
-    ui->qrCode->setIcon(QIcon());
-    ui->qrCode->setToolTip("");
-    ui->keypathLabel->setText("");
-    ui->currentAddress->setText("");
-    
+    this->ui->tableWidget->setModel(NULL);
+    this->ui->balanceLabel->setText("");
+    this->ui->singleWalletBalance->setText("");
+    this->ui->qrCode->setIcon(QIcon());
+    this->ui->qrCode->setToolTip("");
+    this->ui->keypathLabel->setText("");
+    this->ui->currentAddress->setText("");
+
     //reset multisig wallet UI
-    ui->multisigWalletName->setText("");
-    ui->multisigBalance->setText(" -- ");
-    ui->joinCopayWallet->setEnabled(true);
-    ui->proposalsLabel->setText(tr("Current Payment Proposals")); 
-    hidePaymentProposalsWidget(); 
+    hidePaymentProposalsWidget();
+    this->ui->noProposalsAvailable->setVisible(false);
+
 }
 
 void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
@@ -2033,7 +2032,7 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
     // parse invitation code
     BitpayWalletInvitation invitation;
     if (!wallet->client.ParseWalletInvitation(text.toStdString(), invitation)) {
-        showAlert(tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"));
+        showAlert(tr("Invalid Invitation"), tr("Your Copay wallet invitation is invalid"));
         return;
     }
 
@@ -2052,7 +2051,10 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
 
         showAlert(tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)));
     } else {
-        QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfull joined Copay Wallet"), QMessageBox::Ok);
+        QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfully joined Copay wallet"), QMessageBox::Ok);
+        wallet->client.walletJoined = true;
+        wallet->client.SaveLocalData();
+        MultisigUpdateWallets();
     }
 }
 
@@ -2139,8 +2141,6 @@ void DBBDaemonGui::hidePaymentProposalsWidget()
         delete currentPaymentProposalWidget;
         currentPaymentProposalWidget = NULL;
     }
-
-    this->ui->noProposalsAvailable->setVisible(true);
 }
 
 void DBBDaemonGui::updateWallet(DBBWallet* wallet)
@@ -2154,6 +2154,16 @@ void DBBDaemonGui::updateWallet(DBBWallet* wallet)
 void DBBDaemonGui::MultisigUpdateWallets()
 {
     DBBWallet* wallet = vMultisigWallets[0];
+   
+    // Update UI
+    this->ui->joinCopayWallet->setVisible(!wallet->client.walletJoined);
+    this->ui->checkProposals->setVisible(wallet->client.walletJoined);
+    this->ui->multisigWalletName->setVisible(wallet->client.walletJoined);
+    this->ui->multisigBalanceKey->setVisible(wallet->client.walletJoined);
+    this->ui->multisigBalance->setVisible(wallet->client.walletJoined);
+    this->ui->multisigLine->setVisible(wallet->client.walletJoined);
+    this->ui->proposalsLabel->setVisible(wallet->client.walletJoined); 
+
     if (!wallet->client.IsSeeded())
         return;
 
@@ -2200,6 +2210,8 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     if (vMultisigWallets[0]->currentPaymentProposals.isArray()) {
         this->ui->proposalsLabel->setText(tr("Current Payment Proposals (%1)").arg(vMultisigWallets[0]->currentPaymentProposals.size()));
     }
+
+    this->ui->noProposalsAvailable->setVisible(!vMultisigWallets[0]->currentPaymentProposals.size());
 
     //TODO, add a monetary amount / unit helper function
     QString balance = "-";
@@ -2487,8 +2499,6 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue& pendingTxps, cons
             currentPaymentProposalWidget->move(15, 115);
             currentPaymentProposalWidget->show();
             currentPaymentProposalWidget->SetData(vMultisigWallets[0], vMultisigWallets[0]->client.GetCopayerId(), pendingTxps, oneProposal, prevProposalID, nextProposalID);
-
-            this->ui->noProposalsAvailable->setVisible(false);
 
             cnt++;
         }
