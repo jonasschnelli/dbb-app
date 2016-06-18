@@ -550,7 +550,7 @@ void DBBDaemonGui::resetInfos()
 
     updateOverviewFlags(false, false, true);
 
-    //reset wallet
+    //reset single wallet UI
     ui->tableWidget->setModel(NULL);
     ui->balanceLabel->setText("");
     ui->singleWalletBalance->setText("");
@@ -558,6 +558,13 @@ void DBBDaemonGui::resetInfos()
     ui->qrCode->setToolTip("");
     ui->keypathLabel->setText("");
     ui->currentAddress->setText("");
+    
+    //reset multisig wallet UI
+    ui->multisigWalletName->setText("");
+    ui->multisigBalance->setText(" -- ");
+    ui->joinCopayWallet->setEnabled(true);
+    ui->proposalsLabel->setText(tr("Current Payment Proposals")); 
+    hidePaymentProposalsWidget(); 
 }
 
 void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
@@ -1507,7 +1514,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 updateOverviewFlags(cachedWalletAvailableState, cachedDeviceLock, false);
 
-                bool shouldCreateSingleWallet = false;
+                bool shouldCreateWallet = false;
                 if (cachedWalletAvailableState && walletIDUV.isStr())
                 {
                     //initializes wallets (filename, get address, etc.)
@@ -1521,7 +1528,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         updateReceivingAddress(singleWallet, lastAddress, keypath);
 
                         if (singleWallet->client.GetXPubKey().size() <= 0)
-                            shouldCreateSingleWallet = true;
+                            shouldCreateWallet = true;
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
@@ -1529,7 +1536,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         vMultisigWallets[0]->client.LoadLocalData();
                     }
                 }
-                if (shouldCreateSingleWallet)
+                if (shouldCreateWallet)
                 {
                     //: translation: modal info during copay wallet creation
                     showModalInfo(tr("Creating Wallet"));
@@ -1804,12 +1811,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     errorString = QString::fromStdString(errorObj.get_str());
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
-                //remove local wallets
+                // clear wallet information
                 if (singleWallet)
-                    singleWallet->client.RemoveLocalData();
+                    singleWallet->client.setNull();
 
                 if (vMultisigWallets[0])
-                    vMultisigWallets[0]->client.RemoveLocalData();
+                    vMultisigWallets[0]->client.setNull();
 
                 resetInfos();
                 getInfo();
@@ -1821,8 +1828,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
 
                 //remove local wallets
-                singleWallet->client.RemoveLocalData();
-                vMultisigWallets[0]->client.RemoveLocalData();
+                singleWallet->client.setNull();
+                vMultisigWallets[0]->client.setNull();
 
                 resetInfos();
                 getInfo();
