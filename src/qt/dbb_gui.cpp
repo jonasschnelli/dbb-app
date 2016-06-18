@@ -1549,8 +1549,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 {
                     if (sdcard.isBool() && !sdcard.isTrue())
                     {
-                        //: translation: warning text if SDCard needs to be insert for wallet creation
-                        showModalInfo(tr("Please insert a SDCard and replug the device. Initializing the wallet is only possible with a SDCard (otherwise you don't have a backup!)."));
+                        //: translation: warning text if micro SD card needs to be inserted for wallet creation
+                        showModalInfo(tr("Please insert a micro SD card and replug the device. Initializing the wallet is only possible with an SD card. Otherwise, you will not have a backup."));
                         updateModalWithIconName(":/icons/touchhelp_sdcard_in");
                         return;
                     }
@@ -1565,8 +1565,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
-                    //: translation: warning text if SDCard is insert in productive environment
-                    showModalInfo(tr("Keep the SD card safe unless doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    //: translation: warning text if micro SD card is inserted
+                    showModalInfo(tr("Keep the SD card somewhere safe unless doing backups or restores."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                     updateModalWithIconName(":/icons/touchhelp_sdcard");
 
                     sdcardWarned = true;
@@ -1692,9 +1692,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     sentToVerificationClients = true;
                     comServer->postNotification(responseMutable.write());
                 }
-
-
-
             }
             if (!sentToVerificationClients)
             {
