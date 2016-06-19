@@ -77,7 +77,7 @@
     <bool>true</bool>
    </property>
   </widget>
-  <widget class="QWidget" name="setPasswordWidget" native="true">
+  <widget class="QWidget" name="setDeviceWidget" native="true">
    <property name="geometry">
     <rect>
      <x>40</x>
@@ -110,6 +110,33 @@
        <property name="styleSheet">
            <string notr="true">color: white;
                background-color: rgba(0,0,0, 0%)</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="setDeviceNameOnly">
+       <property name="font">
+        <font>
+         <pointsize>20</pointsize>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">background:white;
+                              border:0px;
+                              border-radius: 5px;
+                              padding:4px;</string>
+       </property>
+       <property name="text">
+        <string/>
+       </property>
+       <property name="maxLength">
+        <number>64</number>
+       </property>
+       <property name="echoMode">
+        <enum>QLineEdit::Normal</enum>
+       </property>
+       <property name="placeholderText">
+        <string>Wallet name</string>
        </property>
       </widget>
      </item>
@@ -181,7 +208,7 @@
       </spacer>
      </item>
      <item>
-      <widget class="QLineEdit" name="setPassword0">
+      <widget class="QLineEdit" name="setPasswordNew">
        <property name="font">
         <font>
          <pointsize>20</pointsize>
@@ -205,7 +232,7 @@
       </widget>
      </item>
      <item>
-      <widget class="QLineEdit" name="setPassword1">
+      <widget class="QLineEdit" name="setPasswordRepeat">
        <property name="font">
         <font>
          <pointsize>20</pointsize>
@@ -237,7 +264,7 @@
         <number>0</number>
        </property>
        <item>
-        <widget class="QPushButton" name="setPassword">
+        <widget class="QPushButton" name="setDeviceSubmit">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
            <horstretch>0</horstretch>
@@ -266,7 +293,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="cancelSetPassword">
+        <widget class="QPushButton" name="setDeviceCancel">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Minimum">
            <horstretch>0</horstretch>
@@ -296,7 +323,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="passwordWarning">
+        <widget class="QLabel" name="setDeviceWarning">
          <property name="styleSheet">
           <string notr="true">color: orange;</string>
          </property>
@@ -311,7 +338,7 @@
       </layout>
      </item>
      <item>
-      <widget class="QLabel" name="passwordInfo2">
+      <widget class="QLabel" name="setDevicePasswordInfo">
        <property name="minimumSize">
         <size>
          <width>0</width>
@@ -455,7 +482,7 @@
   </widget>
   <zorder>modalBgWidget</zorder>
   <zorder>modalIcon</zorder>
-  <zorder>setPasswordWidget</zorder>
+  <zorder>setDeviceWidget</zorder>
   <zorder>qrCodeSequence</zorder>
   <zorder>modalInfoLabelLA</zorder>
   <zorder>modalInfoLabel</zorder>

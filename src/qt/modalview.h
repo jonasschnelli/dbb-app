@@ -22,18 +22,23 @@ public:
     Ui::ModalView *ui;
 
 signals:
-    void newPasswordAvailable(const QString&, const QString&, bool);
+    void newPasswordAvailable(const QString&, const QString&);
+    void newDeviceNamePasswordAvailable(const QString&, const QString&);
+    void newDeviceNameAvailable(const QString&);
     void signingShouldProceed(const QString&, void *, const UniValue&, int);
     void modalViewWillShowHide(bool);
 
 public slots:
     void showOrHide(bool state = false);
-    void showSetPasswordInfo(bool newWallet = false);
+    void showSetNewWallet();
+    void showSetPassword();
+    void showSetDeviceNameCreate();
     void showModalInfo(const QString &info, int helpType);
     void showTransactionVerification(bool twoFAlocked, bool showQRSqeuence = false);
-    void setPasswordProvided();
-    void cancelSetPasswordProvided();
+    void deviceSubmitProvided();
+    void deviceCancelProvided();
     void cleanse();
+    void setDeviceHideAll();
     void setText(const QString& text);
     void updateIcon(const QIcon& icon);
 
@@ -44,9 +49,9 @@ public slots:
     void detailButtonAction();
     void okButtonAction();
     void proceedFrom2FAToSigning(const QString &twoFACode);
-    void twoFACanclePressed();
+    void twoFACancelPressed();
 
-    void passwordCheck(const QString& password0);
+    void inputCheck(const QString& sham);
     void continuePressed();
 
 protected:
