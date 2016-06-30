@@ -1518,9 +1518,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 else
                     ui->lockDevice->setText(tr("Enable Full 2FA"));
 
-                //update version and name
-                if (version.isStr())
-                    this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
+                //update version and check for compatibility
+                if (version.isStr()) {
+                    QString v = QString::fromStdString(version.get_str());
+                    if (v.contains(QString("v1.")) || v.contains(QString("v0."))) {
+                        showModalInfo(tr("Your Digital Bitbox uses <strong>old firmware incompatible with this app</strong>. Get the latest firmware at `digitalbitbox.com/firmware`. Upload it using the Options menu item Upgrade Firmware. Because the wallet key paths have changed, coins in a wallet created by an old app cannot be spent using the new app. You must use the old app to send coins to an address in a new wallet created by the new app.<br><br>To be safe, <strong>backup your old wallet</strong> before upgrading.<br>(Older firmware can be reloaded using the same procedure.)<br><br><br>"));
+                        firmwareUpgradeAction->setEnabled(true);
+                        return;
+                    }
+                    this->ui->versionLabel->setText(v);
+                }
+
+                //update device name
                 if (name.isStr())
                 {
                     deviceName = QString::fromStdString(name.get_str());
