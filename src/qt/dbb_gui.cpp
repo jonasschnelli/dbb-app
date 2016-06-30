@@ -457,8 +457,8 @@ void DBBDaemonGui::createMenuBar()
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(settingsAction);
 
-    QMenu *upgradeFirmware = appMenuBar->addMenu(tr("&Firmware"));
-    upgradeFirmware->addAction(firmwareUpgradeAction);
+    QMenu *options = appMenuBar->addMenu(tr("&Options"));
+    options->addAction(firmwareUpgradeAction);
 }
 
 /*
