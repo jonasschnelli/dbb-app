@@ -171,8 +171,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     this->ui->mainSettingsButton->setStyleSheet(buttonCss);
     this->ui->multisigButton->setStyleSheet(msButtonCss);
 
-    this->ui->betaIcon->setAttribute(Qt::WA_TransparentForMouseEvents);
-
     this->ui->balanceLabel->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     this->ui->singleWalletBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     this->ui->multisigBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");

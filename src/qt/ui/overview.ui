@@ -1624,47 +1624,6 @@ background-color: rgba(0,0,0, 0%)</string>
      <bool>true</bool>
     </property>
    </widget>
-   <widget class="QLabel" name="betaIcon">
-    <property name="enabled">
-     <bool>true</bool>
-    </property>
-    <property name="geometry">
-     <rect>
-      <x>0</x>
-      <y>0</y>
-      <width>53</width>
-      <height>53</height>
-     </rect>
-    </property>
-    <property name="minimumSize">
-     <size>
-      <width>53</width>
-      <height>53</height>
-     </size>
-    </property>
-    <property name="maximumSize">
-     <size>
-      <width>53</width>
-      <height>53</height>
-     </size>
-    </property>
-    <property name="styleSheet">
-     <string notr="true">QPushButton:pressed { background-color: transparent; }
-</string>
-    </property>
-    <property name="text">
-     <string notr="true"/>
-    </property>
-    <property name="pixmap">
-     <pixmap resource="../dbbgui.qrc">:/icons/betabadge</pixmap>
-    </property>
-    <property name="scaledContents">
-     <bool>true</bool>
-    </property>
-    <property name="textInteractionFlags">
-     <set>Qt::NoTextInteraction</set>
-    </property>
-   </widget>
    <zorder>titlebar</zorder>
    <zorder>stackedWidget</zorder>
    <zorder>overviewButton</zorder>
@@ -1677,7 +1636,6 @@ background-color: rgba(0,0,0, 0%)</string>
    <zorder>menuBlocker</zorder>
    <zorder>blockerView</zorder>
    <zorder>modalBlockerView</zorder>
-   <zorder>betaIcon</zorder>
   </widget>
   <widget class="QStatusBar" name="statusbar">
    <property name="enabled">
