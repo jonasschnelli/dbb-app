@@ -1996,6 +1996,9 @@ void DBBDaemonGui::createTxProposalPressed()
     if (this->ui->sendAmount->text().size() == 0 || !DBB::ParseMoney(this->ui->sendAmount->text().toStdString(), amount))
         return showAlert("Error", "Invalid amount");
 
+    if (cachedDeviceLock && !comServer->mobileAppConnected)
+        return showAlert("Error", "2FA enabled but no mobile app found online");
+
     this->ui->sendToAddress->clearFocus();
     this->ui->sendAmount->clearFocus();
     DBBNetThread* thread = DBBNetThread::DetachThread();
