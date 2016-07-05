@@ -154,6 +154,7 @@ private:
     DBBUpdateManager *updateManager;
     QMenuBar *appMenuBar;
     QAction *settingsAction;
+    QAction *firmwareUpgradeAction;
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
     VerificationDialog* verificationDialog;

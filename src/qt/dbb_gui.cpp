@@ -50,6 +50,8 @@
 #include <sys/stat.h>
 #endif
 
+const static bool DBB_FW_UPGRADE_DUMMY_SIGN = false;
+
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
 extern void setFirmwareUpdateHID(bool state);
@@ -187,7 +189,11 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     settingsAction = new QAction(tr("&Settings..."), this);
     settingsAction->setStatusTip(tr("Expert configuration options for DBB-APP"));
     settingsAction->setMenuRole(QAction::PreferencesRole);
+    firmwareUpgradeAction = new QAction(tr("&Upgrade Firmware..."), this);
+    firmwareUpgradeAction->setStatusTip(tr("Securely upgrade your DigitalBitbox firmware"));
+    firmwareUpgradeAction->setEnabled(false);
     connect(settingsAction, SIGNAL(triggered()), this, SLOT(showSettings()));
+    connect(firmwareUpgradeAction, SIGNAL(triggered()), this, SLOT(upgradeFirmware()));
     createMenuBar();
 
     // connect UI
@@ -451,6 +457,9 @@ void DBBDaemonGui::createMenuBar()
 
     QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
     settings->addAction(settingsAction);
+
+    QMenu *options = appMenuBar->addMenu(tr("&Options"));
+    options->addAction(firmwareUpgradeAction);
 }
 
 /*
@@ -579,6 +588,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         sessionPassword.clear();
         hideSessionPasswordView();
         setTabbarEnabled(false);
+        firmwareUpgradeAction->setEnabled(false);
         deviceReadyToInteract = false;
         cachedWalletAvailableState = false;
         initialWalletSeeding = false;
@@ -795,6 +805,7 @@ void DBBDaemonGui::passwordAccepted()
     this->ui->passwordLineEdit->setVisible(false);
     this->ui->passwordLineEdit->setText("");
     setTabbarEnabled(true);
+    firmwareUpgradeAction->setEnabled(true);
 }
 
 void DBBDaemonGui::askForSessionPassword()
@@ -1130,22 +1141,28 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
 
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
             bool upgradeRes = false;
-            // dummy private key to allow current testing
-            // the private key matches the pubkey on the DBB bootloader / FW
-            std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
 
             // load the file
             std::ifstream firmwareFile(possibleFilename, std::ios::binary | std::ios::ate);
             std::streamsize firmwareSize = firmwareFile.tellg();
+            std::string sigStr;
             if (firmwareSize > 0)
             {
                 firmwareFile.seekg(0, std::ios::beg);
 
+                //read signatures
+                if (!DBB_FW_UPGRADE_DUMMY_SIGN)
+                {
+                    unsigned char sigByte[FIRMWARE_SIGLEN];
+                    firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
+                    sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+                }
+
+                //read firmware
                 std::vector<char> firmwareBuffer(DBB_APP_LENGTH);
                 unsigned int pos = 0;
                 while (true)
                 {
-                    //read into
                     firmwareFile.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
                     std::streamsize bytes = firmwareFile.gcount();
                     if (bytes == 0)
@@ -1163,18 +1180,25 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
                 std::string hashHex = DBB::HexStr(hashout, hashout+32);
 
-                // sign and get the compact signature
-                btc_key key;
-                btc_privkey_init(&key);
-                std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
-                memcpy(&key.privkey, &privkey[0], 32);
+                if (DBB_FW_UPGRADE_DUMMY_SIGN)
+                {
+                    // dummy sign and get the compact signature
+                    // dummy private key to allow current testing
+                    // the private key matches the pubkey on the DBB bootloader / FW
+                    std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
 
-                size_t sizeout = 64;
-                unsigned char sig[sizeout];
-                int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
-                std::string sigStr = DBB::HexStr(sig, sig+sizeout);
+                    btc_key key;
+                    btc_privkey_init(&key);
+                    std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
+                    memcpy(&key.privkey, &privkey[0], 32);
 
-                emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Hold down the touch button for serval seconds to allow to erase your current firmware and upload the new one.");
+                    size_t sizeout = 64;
+                    unsigned char sig[sizeout];
+                    int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
+                    sigStr = DBB::HexStr(sig, sig+sizeout);
+                }
+
+                emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong>");
                 // send firmware blob to DBB
                 if (DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [this](const std::string& infotext, float progress) {
                     emit shouldUpdateModalInfo(tr("<strong>Upgrading Firmware...</strong><br/><br/>%1% complete").arg(QString::number(progress*100, 'f', 1)));
@@ -1207,13 +1231,13 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     {
         //: translation: successfull firmware update text
         DBB::LogPrint("Firmware successfully upgraded\n", "");
-        showModalInfo(tr("Firmware upgraded successfully. Please unplug/plug your Digital Bitbox."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br>(Do not tap the touch button this time.)"), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
         //: translation: firmware upgrade error
         DBB::LogPrint("Error while upgrading firmware\n", "");
-        showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug/plug your Digital Bitbox."));
+        showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug and replug your Digital Bitbox."));
     }
 
 
@@ -1500,9 +1524,18 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 else
                     ui->lockDevice->setText(tr("Enable Full 2FA"));
 
-                //update version and name
-                if (version.isStr())
-                    this->ui->versionLabel->setText(QString::fromStdString(version.get_str()));
+                //update version and check for compatibility
+                if (version.isStr()) {
+                    QString v = QString::fromStdString(version.get_str());
+                    if (v.contains(QString("v1.")) || v.contains(QString("v0."))) {
+                        showModalInfo(tr("Your Digital Bitbox uses <strong>old firmware incompatible with this app</strong>. Get the latest firmware at `digitalbitbox.com/firmware`. Upload it using the Options menu item Upgrade Firmware. Because the wallet key paths have changed, coins in a wallet created by an old app cannot be spent using the new app. You must use the old app to send coins to an address in a new wallet created by the new app.<br><br>To be safe, <strong>backup your old wallet</strong> before upgrading.<br>(Older firmware can be reloaded using the same procedure.)<br><br><br>"));
+                        firmwareUpgradeAction->setEnabled(true);
+                        return;
+                    }
+                    this->ui->versionLabel->setText(v);
+                }
+
+                //update device name
                 if (name.isStr())
                 {
                     deviceName = QString::fromStdString(name.get_str());
@@ -1577,7 +1610,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 {
                     // unlock bootloader
                     //: translation: modal infotext for guiding user to lock the bootloader
-                    showModalInfo("<strong>Lock Firmware...</strong><br/><br/>You need to lock your Digital Bitbox to protect from further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+                    showModalInfo("<strong>Lock Firmware...</strong><br/><br/>This prevents further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
                     lockBootloader();
                     shouldKeepBootloaderState = false;
                     return;
@@ -1761,7 +1794,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
             upgradeFirmwareState = true;
             shouldKeepBootloaderState = true;
             setFirmwareUpdateHID(true);
-            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplung/plug your Digital Bitbox. Briefly hold the touchbutton to allow upgrading to a new Firmware.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplug and replug your Digital Bitbox.<br>Before the LED turns off, briefly tap the touch button to start the upgrade.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
         }
         else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
             hideModalInfo();
