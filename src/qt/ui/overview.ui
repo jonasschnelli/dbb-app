@@ -471,7 +471,7 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
-        <widget class="Line" name="line_2">
+        <widget class="Line" name="multisigLine">
          <property name="orientation">
           <enum>Qt::Horizontal</enum>
          </property>

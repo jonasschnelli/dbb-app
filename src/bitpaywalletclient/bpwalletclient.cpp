@@ -56,7 +56,7 @@ std::string BitPayWalletClient::ReversePairs(std::string const& src)
     return result;
 }
 
-BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : dataDir(dataDirIn), testnet(testnetIn)
+BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : dataDir(dataDirIn), testnet(testnetIn), walletJoined(false)
 {
     //set the default wallet service
     ca_file = "";
@@ -1105,6 +1105,8 @@ void BitPayWalletClient::SaveLocalData()
         uint32_t lastKnownAddressLength = lastKnownAddressJson.size();
         fwrite(&lastKnownAddressLength, 1, sizeof(lastKnownAddressLength), writeFile);
         fwrite(&lastKnownAddressJson.front(), 1, lastKnownAddressLength, writeFile);
+        
+        fwrite(&walletJoined, 1, sizeof(walletJoined), writeFile);
     }
     fclose(writeFile);
 }
@@ -1146,6 +1148,9 @@ void BitPayWalletClient::LoadLocalData()
                 return;
         } else
             lastKnownAddressJson = "";
+        
+        if (fread(&walletJoined, 1, sizeof(walletJoined), fh) != sizeof(walletJoined))
+            return;
 
         fclose(fh);
     }
@@ -1166,6 +1171,7 @@ void BitPayWalletClient::setNull()
     masterPubKey.clear();
     masterPubKey.clear();
     memset(requestKey.privkey,0, 32);
+    walletJoined = false;
 }
 
 int BitPayWalletClient::CheapRandom()

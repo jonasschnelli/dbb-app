@@ -390,6 +390,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     singleWallet->setBaseKeypath(DBB::GetArg("-keypath", DBB_USE_TESTNET ? "m/44'/1'/0'" : "m/44'/0'/0'"));
     DBBWallet* copayWallet = new DBBWallet(dataDir, DBB_USE_TESTNET);
     copayWallet->setBaseKeypath(DBB::GetArg("-mskeypath","m/100'/45'/0'"));
+    this->ui->noProposalsAvailable->setVisible(false);
 
 #if defined(__linux__) || defined(__unix__)
     singleWallet->setCAFile(ca_file);
@@ -550,14 +551,19 @@ void DBBDaemonGui::resetInfos()
 
     updateOverviewFlags(false, false, true);
 
-    //reset wallet
-    ui->tableWidget->setModel(NULL);
-    ui->balanceLabel->setText("");
-    ui->singleWalletBalance->setText("");
-    ui->qrCode->setIcon(QIcon());
-    ui->qrCode->setToolTip("");
-    ui->keypathLabel->setText("");
-    ui->currentAddress->setText("");
+    //reset single wallet UI
+    this->ui->tableWidget->setModel(NULL);
+    this->ui->balanceLabel->setText("");
+    this->ui->singleWalletBalance->setText("");
+    this->ui->qrCode->setIcon(QIcon());
+    this->ui->qrCode->setToolTip("");
+    this->ui->keypathLabel->setText("");
+    this->ui->currentAddress->setText("");
+
+    //reset multisig wallet UI
+    hidePaymentProposalsWidget();
+    this->ui->noProposalsAvailable->setVisible(false);
+
 }
 
 void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
@@ -1507,7 +1513,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 updateOverviewFlags(cachedWalletAvailableState, cachedDeviceLock, false);
 
-                bool shouldCreateSingleWallet = false;
+                bool shouldCreateWallet = false;
                 if (cachedWalletAvailableState && walletIDUV.isStr())
                 {
                     //initializes wallets (filename, get address, etc.)
@@ -1521,7 +1527,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         updateReceivingAddress(singleWallet, lastAddress, keypath);
 
                         if (singleWallet->client.GetXPubKey().size() <= 0)
-                            shouldCreateSingleWallet = true;
+                            shouldCreateWallet = true;
                     }
                     if (vMultisigWallets[0]->client.getFilenameBase().empty())
                     {
@@ -1529,7 +1535,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         vMultisigWallets[0]->client.LoadLocalData();
                     }
                 }
-                if (shouldCreateSingleWallet)
+                if (shouldCreateWallet)
                 {
                     //: translation: modal info during copay wallet creation
                     showModalInfo(tr("Creating Wallet"));
@@ -1543,8 +1549,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 {
                     if (sdcard.isBool() && !sdcard.isTrue())
                     {
-                        //: translation: warning text if SDCard needs to be insert for wallet creation
-                        showModalInfo(tr("Please insert a SDCard and replug the device. Initializing the wallet is only possible with a SDCard (otherwise you don't have a backup!)."));
+                        //: translation: warning text if micro SD card needs to be inserted for wallet creation
+                        showModalInfo(tr("Please insert a micro SD card and replug the device. Initializing the wallet is only possible with an SD card. Otherwise, you will not have a backup."));
                         updateModalWithIconName(":/icons/touchhelp_sdcard_in");
                         return;
                     }
@@ -1559,8 +1565,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                 if (sdcard.isBool() && sdcard.isTrue() && cachedWalletAvailableState && !sdcardWarned)
                 {
-                    //: translation: warning text if SDCard is insert in productive environment
-                    showModalInfo(tr("Keep the SD card safe unless doing backups or restores"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    //: translation: warning text if micro SD card is inserted
+                    showModalInfo(tr("Keep the SD card somewhere safe unless doing backups or restores."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
                     updateModalWithIconName(":/icons/touchhelp_sdcard");
 
                     sdcardWarned = true;
@@ -1686,9 +1692,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     sentToVerificationClients = true;
                     comServer->postNotification(responseMutable.write());
                 }
-
-
-
             }
             if (!sentToVerificationClients)
             {
@@ -1804,12 +1807,12 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     errorString = QString::fromStdString(errorObj.get_str());
             }
             if (!seedObj.isNull() && seedObj.isStr() && seedObj.get_str() == "success") {
-                //remove local wallets
+                // clear wallet information
                 if (singleWallet)
-                    singleWallet->client.RemoveLocalData();
+                    singleWallet->client.setNull();
 
                 if (vMultisigWallets[0])
-                    vMultisigWallets[0]->client.RemoveLocalData();
+                    vMultisigWallets[0]->client.setNull();
 
                 resetInfos();
                 getInfo();
@@ -1821,8 +1824,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 sessionPasswordDuringChangeProcess.clear();
 
                 //remove local wallets
-                singleWallet->client.RemoveLocalData();
-                vMultisigWallets[0]->client.RemoveLocalData();
+                singleWallet->client.setNull();
+                vMultisigWallets[0]->client.setNull();
 
                 resetInfos();
                 getInfo();
@@ -2026,7 +2029,7 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
     // parse invitation code
     BitpayWalletInvitation invitation;
     if (!wallet->client.ParseWalletInvitation(text.toStdString(), invitation)) {
-        showAlert(tr("Invalid Invitation"), tr("Your Copay Wallet Invitation is invalid"));
+        showAlert(tr("Invalid Invitation"), tr("Your Copay wallet invitation is invalid"));
         return;
     }
 
@@ -2045,7 +2048,10 @@ void DBBDaemonGui::joinMultisigWalletInitiate(DBBWallet* wallet)
 
         showAlert(tr("Copay Wallet Response"), tr("Joining the wallet failed (%1)").arg(QString::fromStdString(additionalErrorText)));
     } else {
-        QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfull joined Copay Wallet"), QMessageBox::Ok);
+        QMessageBox::information(this, tr("Copay Wallet Response"), tr("Successfully joined Copay wallet"), QMessageBox::Ok);
+        wallet->client.walletJoined = true;
+        wallet->client.SaveLocalData();
+        MultisigUpdateWallets();
     }
 }
 
@@ -2132,8 +2138,6 @@ void DBBDaemonGui::hidePaymentProposalsWidget()
         delete currentPaymentProposalWidget;
         currentPaymentProposalWidget = NULL;
     }
-
-    this->ui->noProposalsAvailable->setVisible(true);
 }
 
 void DBBDaemonGui::updateWallet(DBBWallet* wallet)
@@ -2147,6 +2151,16 @@ void DBBDaemonGui::updateWallet(DBBWallet* wallet)
 void DBBDaemonGui::MultisigUpdateWallets()
 {
     DBBWallet* wallet = vMultisigWallets[0];
+   
+    // Update UI
+    this->ui->joinCopayWallet->setVisible(!wallet->client.walletJoined);
+    this->ui->checkProposals->setVisible(wallet->client.walletJoined);
+    this->ui->multisigWalletName->setVisible(wallet->client.walletJoined);
+    this->ui->multisigBalanceKey->setVisible(wallet->client.walletJoined);
+    this->ui->multisigBalance->setVisible(wallet->client.walletJoined);
+    this->ui->multisigLine->setVisible(wallet->client.walletJoined);
+    this->ui->proposalsLabel->setVisible(wallet->client.walletJoined); 
+
     if (!wallet->client.IsSeeded())
         return;
 
@@ -2193,6 +2207,8 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     if (vMultisigWallets[0]->currentPaymentProposals.isArray()) {
         this->ui->proposalsLabel->setText(tr("Current Payment Proposals (%1)").arg(vMultisigWallets[0]->currentPaymentProposals.size()));
     }
+
+    this->ui->noProposalsAvailable->setVisible(!vMultisigWallets[0]->currentPaymentProposals.size());
 
     //TODO, add a monetary amount / unit helper function
     QString balance = "-";
@@ -2480,8 +2496,6 @@ bool DBBDaemonGui::MultisigShowPaymentProposal(const UniValue& pendingTxps, cons
             currentPaymentProposalWidget->move(15, 115);
             currentPaymentProposalWidget->show();
             currentPaymentProposalWidget->SetData(vMultisigWallets[0], vMultisigWallets[0]->client.GetCopayerId(), pendingTxps, oneProposal, prevProposalID, nextProposalID);
-
-            this->ui->noProposalsAvailable->setVisible(false);
 
             cnt++;
         }
