@@ -13,21 +13,24 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
 {
     ui->setupUi(this);
 
-    connect(this->ui->setDeviceName, SIGNAL(returnPressed()), this->ui->setPassword0, SLOT(setFocus()));
-    connect(this->ui->setPasswordOld, SIGNAL(returnPressed()), this->ui->setPassword0, SLOT(setFocus()));
-    connect(this->ui->setPassword0, SIGNAL(returnPressed()), this->ui->setPassword1, SLOT(setFocus()));
-    connect(this->ui->setPassword1, SIGNAL(returnPressed()), this->ui->setPassword, SIGNAL(clicked()));
+    connect(this->ui->setDeviceNameOnly, SIGNAL(returnPressed()), this->ui->setDeviceSubmit, SIGNAL(clicked()));
+    connect(this->ui->setDeviceName, SIGNAL(returnPressed()), this->ui->setPasswordNew, SLOT(setFocus()));
+    connect(this->ui->setPasswordOld, SIGNAL(returnPressed()), this->ui->setPasswordNew, SLOT(setFocus()));
+    connect(this->ui->setPasswordNew, SIGNAL(returnPressed()), this->ui->setPasswordRepeat, SLOT(setFocus()));
+    connect(this->ui->setPasswordRepeat, SIGNAL(returnPressed()), this->ui->setDeviceSubmit, SIGNAL(clicked()));
 
-    connect(this->ui->setDeviceName, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
-    connect(this->ui->setPassword0, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
-    connect(this->ui->setPassword1, SIGNAL(textChanged(const QString&)), this, SLOT(passwordCheck(const QString&)));
+    connect(this->ui->setDeviceNameOnly, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
+    connect(this->ui->setDeviceName, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
+    connect(this->ui->setPasswordOld, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
+    connect(this->ui->setPasswordNew, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
+    connect(this->ui->setPasswordRepeat, SIGNAL(textChanged(const QString&)), this, SLOT(inputCheck(const QString&)));
     
-    connect(this->ui->setPassword, SIGNAL(clicked()), this, SLOT(setPasswordProvided()));
-    connect(this->ui->cancelSetPassword, SIGNAL(clicked()), this, SLOT(cancelSetPasswordProvided()));
-
+    connect(this->ui->setDeviceSubmit, SIGNAL(clicked()), this, SLOT(deviceSubmitProvided()));
+    connect(this->ui->setDeviceCancel, SIGNAL(clicked()), this, SLOT(deviceCancelProvided()));
+    
     connect(this->ui->okButton, SIGNAL(clicked()), this, SLOT(okButtonAction()));
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
-    connect(this->ui->abortButton, SIGNAL(clicked()), this, SLOT(twoFACanclePressed()));
+    connect(this->ui->abortButton, SIGNAL(clicked()), this, SLOT(twoFACancelPressed()));
     connect(this->ui->continueButton, SIGNAL(clicked()), this, SLOT(continuePressed()));
 
     ui->qrCodeSequence->useOnDarkBackground(true);
@@ -50,24 +53,26 @@ void ModalView::cleanse()
 {
     ui->setDeviceName->clear();
     ui->setPasswordOld->clear();
-    ui->setPassword0->clear();
-    ui->setPassword1->clear();
+    ui->setPasswordNew->clear();
+    ui->setPasswordRepeat->clear();
 }
 
-void ModalView::setPasswordProvided()
+void ModalView::deviceSubmitProvided()
 {
-    if (ui->setDeviceName->isVisible())
-        emit newPasswordAvailable(ui->setPassword0->text(), ui->setDeviceName->text(), true);
-    else
-        emit newPasswordAvailable(ui->setPassword0->text(), ui->setPasswordOld->text(), false);
+    if (!ui->setDeviceSubmit->isEnabled())
+        return;
 
-    ui->setDeviceName->setText("");
-    ui->setPasswordOld->setText("");
-    ui->setPassword0->setText("");
-    ui->setPassword1->setText("");
+    if (ui->setDeviceNameOnly->isVisible())
+        emit newDeviceNameAvailable(ui->setDeviceNameOnly->text());
+    else if (ui->setDeviceName->isVisible())
+        emit newDeviceNamePasswordAvailable(ui->setPasswordNew->text(), ui->setDeviceName->text());
+    else
+        emit newPasswordAvailable(ui->setPasswordNew->text(), ui->setPasswordOld->text());
+
+    cleanse();
 }
 
-void ModalView::cancelSetPasswordProvided()
+void ModalView::deviceCancelProvided()
 {
     cleanse();
     showOrHide();
@@ -91,58 +96,79 @@ void ModalView::showOrHide(bool state)
     emit modalViewWillShowHide(false);
 }
 
-void ModalView::showSetPasswordInfo(bool newWallet)
+void ModalView::setDeviceHideAll()
 {
-
+    ui->setDeviceNameOnly->clear();
+    ui->setDeviceName->clear();
+    ui->setPasswordOld->clear();
+    ui->setPasswordNew->clear();
+    ui->setPasswordRepeat->clear();
+    ui->setDeviceWarning->clear();
+    ui->modalInfoLabel->clear();
+    ui->modalInfoLabelLA->clear();
     ui->abortButton->setVisible(false);
     ui->continueButton->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
     ui->showDetailsButton->setVisible(false);
     ui->okButton->setVisible(false);
-    ui->setPasswordWidget->setVisible(true);
-    ui->passwordWarning->setText("");
-    if (newWallet) {
-        ui->uninizializedInfoLabel->setVisible(true);
-        ui->setDeviceName->setVisible(true);
-        ui->cancelSetPassword->setVisible(false);
-        ui->setPasswordOld->setVisible(false);
-        ui->setPassword0->setPlaceholderText("Password");
-        ui->setDeviceName->setFocus();
-    } else {
-        ui->uninizializedInfoLabel->setVisible(false);
-        ui->setDeviceName->setVisible(false);
-        ui->cancelSetPassword->setVisible(true);
-        ui->setPasswordOld->setVisible(true);
-        ui->setPassword0->setPlaceholderText("New password");
-        ui->setPasswordOld->setFocus();
-    }
-    
+    ui->setDeviceWidget->setVisible(false);
+    ui->setPasswordOld->setVisible(false);
+    ui->setPasswordNew->setVisible(false);
+    ui->setPasswordRepeat->setVisible(false);
+    ui->uninizializedInfoLabel->setVisible(false);
+    ui->setDeviceName->setVisible(false);
     ui->modalInfoLabel->setVisible(false);
     ui->modalInfoLabelLA->setVisible(false);
-    ui->modalInfoLabel->setText("");
-    ui->modalInfoLabelLA->setText("");
     ui->modalIcon->setIcon(QIcon());
+    ui->setDeviceNameOnly->setVisible(false);
+    ui->setDevicePasswordInfo->setVisible(false);
+}
 
-    ui->setPassword->setEnabled(false);
+void ModalView::showSetNewWallet()
+{
+    setDeviceHideAll();
     showOrHide(true);
-    ui->setPassword->setEnabled(false);
+    ui->setDeviceWidget->setVisible(true);
+    ui->uninizializedInfoLabel->setVisible(true);
+    ui->setDeviceName->setVisible(true);
+    ui->setPasswordNew->setVisible(true);
+    ui->setPasswordNew->setPlaceholderText("Password");
+    ui->setPasswordRepeat->setVisible(true);
+    ui->setDevicePasswordInfo->setVisible(true);
+    ui->setDeviceName->setFocus();
+    ui->setDeviceSubmit->setEnabled(false);
+}
+
+void ModalView::showSetPassword()
+{
+    setDeviceHideAll();
+    showOrHide(true);
+    ui->setDeviceWidget->setVisible(true);
+    ui->setPasswordOld->setVisible(true);
+    ui->setPasswordNew->setVisible(true);
+    ui->setPasswordNew->setPlaceholderText("New password");
+    ui->setPasswordRepeat->setVisible(true);
+    ui->setDevicePasswordInfo->setVisible(true);
+    ui->setPasswordOld->setFocus();
+    ui->setDeviceSubmit->setEnabled(false);
+}
+
+void ModalView::showSetDeviceNameCreate()
+{
+    setDeviceHideAll();
+    showOrHide(true);
+    ui->setDeviceWidget->setVisible(true);
+    ui->setDeviceNameOnly->setVisible(true);
+    ui->setDeviceNameOnly->setFocus();
+    ui->setDeviceSubmit->setEnabled(false);
 }
 
 void ModalView::showModalInfo(const QString &info, int helpType)
 {
+    setDeviceHideAll();
     showOrHide(true);
-
-    ui->setPasswordWidget->setVisible(false);
-    ui->okButton->setVisible(false);
-    ui->abortButton->setVisible(false);
-    ui->qrCodeSequence->setVisible(false);
-    ui->continueButton->setVisible(false);
-    ui->showDetailsButton->setVisible(false);
-
     ui->modalInfoLabel->setVisible(true);
     ui->modalInfoLabelLA->setVisible(true);
-
-    ui->modalInfoLabelLA->setText("");
     ui->modalInfoLabel->setText(info);
     QWidget* slide = this;
     // setup slide
@@ -289,7 +315,7 @@ void ModalView::proceedFrom2FAToSigning(const QString &twoFACode)
     emit signingShouldProceed(twoFACode, twoFACode.isEmpty() ? NULL : txPointer, txData, txType);
 }
 
-void ModalView::twoFACanclePressed()
+void ModalView::twoFACancelPressed()
 {
     ui->qrCodeSequence->setVisible(false);
     ui->abortButton->setVisible(false);
@@ -332,38 +358,56 @@ void ModalView::keyPressEvent(QKeyEvent* event)
         showOrHide(false);
 }
 
-void ModalView::passwordCheck(const QString& password0)
+void ModalView::inputCheck(const QString& sham)
 {    
-    if (ui->setDeviceName->isVisible())
-    {
-        if (ui->setDeviceName->text().size() < 1)
+    if (ui->setDeviceName->isVisible() || ui->setDeviceNameOnly->isVisible()) {
+        QString name = QString();
+        if (ui->setDeviceName->isVisible()) 
+            name = ui->setDeviceName->text();
+        else if (ui->setDeviceNameOnly->isVisible()) 
+            name = ui->setDeviceNameOnly->text();
+
+        if (name.size() < 1)
         {
-            ui->passwordWarning->setText(tr("Enter a name"));
-            ui->setPassword->setEnabled(false);
+            ui->setDeviceWarning->setText(tr("Enter a name"));
+            ui->setDeviceSubmit->setEnabled(false);
             return;
         }
         QRegExp nameMatcher("^[0-9A-Z-_ ]{1,64}$", Qt::CaseInsensitive);
-        if (!nameMatcher.exactMatch(ui->setDeviceName->text()))
+        if (!nameMatcher.exactMatch(name))
         {
-            ui->passwordWarning->setText(tr("Name has invalid character"));
-            ui->setPassword->setEnabled(false);
+            ui->setDeviceWarning->setText(tr("Name has invalid character"));
+            ui->setDeviceSubmit->setEnabled(false);
             return;
         }
     }
-    if (ui->setPassword0->text().size() < 4 && ui->setPassword0->text().size() > 0)
-    {
-        ui->passwordWarning->setText(tr("Password too short"));
-        ui->setPassword->setEnabled(false);
-        return;
+
+    if (ui->setPasswordOld->isVisible()) {
+        if (ui->setPasswordOld->text().size() < 1)
+        {
+            ui->setDeviceWarning->setText(tr("Enter the old password"));
+            ui->setDeviceSubmit->setEnabled(false);
+            return;
+        }
     }
-    if (ui->setPassword0->text() != ui->setPassword1->text())
-    {
-        ui->setPassword->setEnabled(false);
-        ui->passwordWarning->setText(tr("Password not identical"));
-        return;
+    
+    if (ui->setPasswordNew->isVisible()) {
+        if (ui->setPasswordNew->text().size() < 4)
+        {
+            if (ui->setPasswordNew->text().size() > 0)
+                ui->setDeviceWarning->setText(tr("Password too short"));
+            ui->setDeviceSubmit->setEnabled(false);
+            return;
+        }
+        if (ui->setPasswordNew->text() != ui->setPasswordRepeat->text())
+        {
+            ui->setDeviceSubmit->setEnabled(false);
+            ui->setDeviceWarning->setText(tr("Password not identical"));
+            return;
+        }
     }
-    ui->setPassword->setEnabled(true);
-    ui->passwordWarning->setText("");
+    ui->setDeviceSubmit->setEnabled(true);
+    ui->setDeviceWarning->setText("");
 }
 
 void ModalView::continuePressed()

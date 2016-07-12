@@ -77,6 +77,7 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_BOOTLOADER_LOCK,
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME,
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE,
+    DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE,
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -282,9 +283,11 @@ private slots:
     void hideModalInfo();
     void modalStateChanged(bool state);
     //!show set passworf form
-    void showSetPasswordInfo(bool newWallet = false);
+    void showSetPasswordInfo();
     //!gets called when the user presses button in the "set password form"
-    void setPasswordProvided(const QString& newPassword, const QString& extraInput, bool newWallet = false);
+    void setPasswordProvided(const QString& newPassword, const QString& repeatPassword);
+    //!gets called on device reset
+    void setDeviceNamePasswordProvided(const QString& newPassword, const QString& newName);
     void cleanseLoginAndSetPassword();
 
     //== DBB USB ==
@@ -295,6 +298,8 @@ private slots:
     void getInfo();
     //!seed the wallet, flush everything and create a new bip32 entropy
     void seedHardware();
+    //!update device name before continuing to seed the wallet
+    void seedHardwareWithName();
 
     //== DBB USB / UTILS ==
     //!get the current local IPv4 address
@@ -310,7 +315,9 @@ private slots:
     //!start upgrading the firmware with a file at given location
     void upgradeFirmwareWithFile(const QString& fileName);
     void upgradeFirmwareDone(bool state);
-    //!change device name
+    //!change device name via modal display
+    void setDeviceNameProvided(const QString &name);
+    //!change device name via popup window
     void setDeviceNameClicked();
     void setDeviceName(const QString& newDeviceName, dbb_response_type_t response_type);
     void parseBitcoinURI(const QString& bitcoinurl, QString& addressOut, QString& amountOut);

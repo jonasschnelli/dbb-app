@@ -197,7 +197,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(showSetPasswordInfo()));
-    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardware()));
+    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardwareWithName()));
     connect(ui->refreshButton, SIGNAL(clicked()), this, SLOT(SingleWalletUpdateWallets()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
     connect(ui->verifyAddressButton, SIGNAL(clicked()), this, SLOT(verifyAddress()));
@@ -376,7 +376,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this->ui->passwordLineEdit, SIGNAL(returnPressed()), this, SLOT(passwordProvided()));
 
     //set password screen
-    connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, const QString&, bool)), this, SLOT(setPasswordProvided(const QString&, const QString&, bool)));
+    connect(this->ui->modalBlockerView, SIGNAL(newPasswordAvailable(const QString&, const QString&)), this, SLOT(setPasswordProvided(const QString&, const QString&)));
+    connect(this->ui->modalBlockerView, SIGNAL(newDeviceNamePasswordAvailable(const QString&, const QString&)), this, SLOT(setDeviceNamePasswordProvided(const QString&, const QString&)));
+    connect(this->ui->modalBlockerView, SIGNAL(newDeviceNameAvailable(const QString&)), this, SLOT(setDeviceNameProvided(const QString&)));
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
@@ -612,7 +614,7 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         else if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD)
         {
             hideModalInfo();
-            showSetPasswordInfo(true);
+            this->ui->modalBlockerView->showSetNewWallet();
         }
     }
 }
@@ -843,30 +845,39 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-void DBBDaemonGui::showSetPasswordInfo(bool newWallet)
+void DBBDaemonGui::showSetPasswordInfo()
 {
-    ui->modalBlockerView->showSetPasswordInfo(newWallet);
+    ui->modalBlockerView->showSetPassword();
 }
 
-void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& extraInput, bool newWallet)
+void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& repeatPassword)
 {
-    dbb_process_infolayer_style_t process; 
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
     
-    if (newWallet) {
-        tempNewDeviceName = extraInput;
-        process = DBB_PROCESS_INFOLAYER_STYLE_NO_INFO;
-    } else {
-        if (extraInput.toStdString() != sessionPassword) {
-            showModalInfo(tr("Incorrect old password"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
-            return;
-        }
-        process = DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON;
+    if (repeatPassword.toStdString() != sessionPassword) {
+        showModalInfo(tr("Incorrect old password"), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+        return;
     }
 
     showModalInfo(tr("Saving Password"));
+    if (executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
+    }))
+    {
+        sessionPasswordDuringChangeProcess = sessionPassword;
+        sessionPassword = newPassword.toStdString();
+    }
+}
 
-    if (executeCommandWrapper(command, process, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+void DBBDaemonGui::setDeviceNamePasswordProvided(const QString& newPassword, const QString& newName)
+{
+    tempNewDeviceName = newName;
+    
+    std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
+    showModalInfo(tr("Saving Password"));
+    if (executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_PASSWORD);
@@ -1001,6 +1012,11 @@ std::string DBBDaemonGui::getBackupString()
     std::stringstream ss;
     ss << name << "-" << DBB::putTime(in_time_t, "%Y-%m-%d-%H-%M-%S");
     return ss.str();
+}
+
+void DBBDaemonGui::seedHardwareWithName()
+{
+    ui->modalBlockerView->showSetDeviceNameCreate();
 }
 
 void DBBDaemonGui::seedHardware()
@@ -1237,6 +1253,11 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     }
 
 
+}
+
+void DBBDaemonGui::setDeviceNameProvided(const QString &name)
+{
+    setDeviceName(name, DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE);
 }
 
 void DBBDaemonGui::setDeviceNameClicked()
@@ -1492,7 +1513,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 errorShown = true;
             } else if (errorCodeObj.isNum() && errorCodeObj.get_int() == 101) {
                 sessionPassword.clear();
-                showSetPasswordInfo(true);
+                this->ui->modalBlockerView->showSetNewWallet();
             } else {
                 //password wrong
                 showAlert(tr("Error"), QString::fromStdString(errorMessageObj.get_str()));
@@ -1785,13 +1806,15 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
             hideModalInfo();
         }
-        else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE) {
+        else if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE || tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE) {
             UniValue name = find_value(response, "name");
             if (name.isStr()) {
                 deviceName = QString::fromStdString(name.get_str());
                 this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
                 if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE)
                     getInfo();
+                if (tag == DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE)
+                    seedHardware();
             }
         }
         else {
@@ -1923,7 +1946,7 @@ void DBBDaemonGui::getNewAddress()
             }
             else
             {
-                emit shouldShowAlert("Error", tr("Could not set a new Receiving address.\n\nNote that internet access is required in order to track the address on the blockchain and update your balance.\n\nFor advanced use, untracked addresses can be generated offline with the List Addresses button in the Settings tab."));
+                emit shouldShowAlert("Error", tr("Could not get a new receiving address."));
             }
 
             thread->completed();
