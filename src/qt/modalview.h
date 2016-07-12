@@ -27,6 +27,7 @@ signals:
     void newDeviceNameAvailable(const QString&);
     void signingShouldProceed(const QString&, void *, const UniValue&, int);
     void modalViewWillShowHide(bool);
+    void shouldUpgradeFirmware();
 
 public slots:
     void showOrHide(bool state = false);
@@ -53,6 +54,7 @@ public slots:
 
     void inputCheck(const QString& sham);
     void continuePressed();
+    void upgradeFirmware();
 
 protected:
     virtual void keyPressEvent(QKeyEvent *event);
