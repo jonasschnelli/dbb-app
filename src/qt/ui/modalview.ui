@@ -104,12 +104,12 @@
      </property>
      <item>
       <widget class="QLabel" name="uninizializedInfoLabel">
+       <property name="styleSheet">
+        <string notr="true">color: white;
+               background-color: rgba(0,0,0, 0%)</string>
+       </property>
        <property name="text">
         <string>This device is uninitialized. Please set the device name and the password.</string>
-       </property>
-       <property name="styleSheet">
-           <string notr="true">color: white;
-               background-color: rgba(0,0,0, 0%)</string>
        </property>
       </widget>
      </item>
@@ -480,6 +480,19 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QPushButton" name="upgradeFirmware">
+   <property name="geometry">
+    <rect>
+     <x>150</x>
+     <y>50</y>
+     <width>200</width>
+     <height>32</height>
+    </rect>
+   </property>
+   <property name="text">
+    <string>Upgrade Firmware now...</string>
+   </property>
+  </widget>
   <zorder>modalBgWidget</zorder>
   <zorder>modalIcon</zorder>
   <zorder>setDeviceWidget</zorder>
@@ -487,6 +500,7 @@
   <zorder>modalInfoLabelLA</zorder>
   <zorder>modalInfoLabel</zorder>
   <zorder>widget</zorder>
+  <zorder>upgradeFirmware</zorder>
  </widget>
  <customwidgets>
   <customwidget>

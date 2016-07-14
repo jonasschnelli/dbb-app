@@ -90,7 +90,8 @@ typedef enum DBB_PROCESS_INFOLAYER_STYLE {
     DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON,
     DBB_PROCESS_INFOLAYER_STYLE_REPLUG,
     DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON,
-    DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON_WARNING
+    DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON_WARNING,
+    DBB_PROCESS_INFOLAYER_UPGRADE_FIRMWARE
 } dbb_process_infolayer_style_t;
 
 typedef enum DBB_LED_BLINK_MODE {
@@ -153,9 +154,6 @@ private:
     QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;
     DBBUpdateManager *updateManager;
-    QMenuBar *appMenuBar;
-    QAction *settingsAction;
-    QAction *firmwareUpgradeAction;
     BackupDialog* backupDialog;
     GetAddressDialog* getAddressDialog;
     VerificationDialog* verificationDialog;

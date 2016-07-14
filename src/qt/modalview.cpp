@@ -32,6 +32,7 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->showDetailsButton, SIGNAL(clicked()), this, SLOT(detailButtonAction()));
     connect(this->ui->abortButton, SIGNAL(clicked()), this, SLOT(twoFACancelPressed()));
     connect(this->ui->continueButton, SIGNAL(clicked()), this, SLOT(continuePressed()));
+    connect(this->ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
 
     ui->qrCodeSequence->useOnDarkBackground(true);
     visible = false;
@@ -108,6 +109,8 @@ void ModalView::setDeviceHideAll()
     ui->modalInfoLabelLA->clear();
     ui->abortButton->setVisible(false);
     ui->continueButton->setVisible(false);
+    ui->upgradeFirmware->setVisible(false);
+    ui->upgradeFirmware->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
     ui->showDetailsButton->setVisible(false);
     ui->okButton->setVisible(false);
@@ -208,6 +211,11 @@ void ModalView::showModalInfo(const QString &info, int helpType)
 
         ui->okButton->setVisible(true);
         ui->okButton->setFocus();
+    }
+    else if (helpType == DBB_PROCESS_INFOLAYER_UPGRADE_FIRMWARE)
+    {
+        ui->upgradeFirmware->setVisible(true);
+        ui->upgradeFirmware->setFocus();
     }
     else
     {
@@ -418,4 +426,9 @@ void ModalView::continuePressed()
         ui->continueButton->setVisible(false);
         emit signingShouldProceed("", txPointer, txData, txType);
     }
+}
+
+void ModalView::upgradeFirmware()
+{
+    emit shouldUpgradeFirmware();
 }

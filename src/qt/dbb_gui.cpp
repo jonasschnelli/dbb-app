@@ -105,7 +105,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               comServer(0),
                                               lastPing(0),
                                               settingsDialog(0),
-                                              appMenuBar(0),
                                               updateManager(0)
 {
 #ifdef DBB_USE_MULTIMEDIA
@@ -182,16 +181,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     qRegisterMetaType<dbb_response_type_t>("dbb_response_type_t");
     qRegisterMetaType<std::vector<std::string> >("std::vector<std::string>");
     qRegisterMetaType<DBBWallet*>("DBBWallet *");
-    
-    settingsAction = new QAction(tr("&Settings..."), this);
-    settingsAction->setStatusTip(tr("Expert configuration options for DBB-APP"));
-    settingsAction->setMenuRole(QAction::PreferencesRole);
-    firmwareUpgradeAction = new QAction(tr("&Upgrade Firmware..."), this);
-    firmwareUpgradeAction->setStatusTip(tr("Securely upgrade your DigitalBitbox firmware"));
-    firmwareUpgradeAction->setEnabled(false);
-    connect(settingsAction, SIGNAL(triggered()), this, SLOT(showSettings()));
-    connect(firmwareUpgradeAction, SIGNAL(triggered()), this, SLOT(upgradeFirmware()));
-    createMenuBar();
 
     // connect UI
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
@@ -209,8 +198,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
     connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    connect(ui->openSettings, SIGNAL(clicked()), this, SLOT(showSettings()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
-    ui->upgradeFirmware->setVisible(false);
+    ui->upgradeFirmware->setVisible(true);
     ui->keypathLabel->setVisible(false);//hide keypath label for now (only tooptip)
     connect(ui->tableWidget, SIGNAL(doubleClicked(QModelIndex)),this,SLOT(historyShowTx(QModelIndex)));
     connect(ui->deviceNameLabel, SIGNAL(clicked()),this,SLOT(setDeviceNameClicked()));
@@ -380,6 +370,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this->ui->modalBlockerView, SIGNAL(newDeviceNamePasswordAvailable(const QString&, const QString&)), this, SLOT(setDeviceNamePasswordProvided(const QString&, const QString&)));
     connect(this->ui->modalBlockerView, SIGNAL(newDeviceNameAvailable(const QString&)), this, SLOT(setDeviceNameProvided(const QString&)));
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
+    connect(this->ui->modalBlockerView, SIGNAL(shouldUpgradeFirmware()), this, SLOT(upgradeFirmware()));
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
 
@@ -442,23 +433,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 
     connect(ui->checkForUpdates, SIGNAL(clicked()), updateManager, SLOT(checkForUpdate()));
     QTimer::singleShot(200, updateManager, SLOT(checkForUpdateInBackground()));
-}
-
-void DBBDaemonGui::createMenuBar()
-{
-#ifdef Q_OS_MAC
-    // Create a decoupled menu bar on Mac which stays even if the window is closed
-    appMenuBar = new QMenuBar();
-#else
-    // Get the main window's menu bar on other platforms
-    appMenuBar = menuBar();
-#endif
-
-    QMenu *settings = appMenuBar->addMenu(tr("&Settings"));
-    settings->addAction(settingsAction);
-
-    QMenu *options = appMenuBar->addMenu(tr("&Options"));
-    options->addAction(firmwareUpgradeAction);
 }
 
 /*
@@ -587,7 +561,6 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
         sessionPassword.clear();
         hideSessionPasswordView();
         setTabbarEnabled(false);
-        firmwareUpgradeAction->setEnabled(false);
         deviceReadyToInteract = false;
         cachedWalletAvailableState = false;
         initialWalletSeeding = false;
@@ -803,7 +776,6 @@ void DBBDaemonGui::passwordAccepted()
     this->ui->passwordLineEdit->setVisible(false);
     this->ui->passwordLineEdit->setText("");
     setTabbarEnabled(true);
-    firmwareUpgradeAction->setEnabled(true);
 }
 
 void DBBDaemonGui::askForSessionPassword()
@@ -1542,11 +1514,10 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     ui->lockDevice->setText(tr("Enable Full 2FA"));
 
                 //update version and check for compatibility
-                if (version.isStr()) {
+                if (version.isStr() && !DBB::mapArgs.count("-noversioncheck")) {
                     QString v = QString::fromStdString(version.get_str());
                     if (v.contains(QString("v1.")) || v.contains(QString("v0."))) {
-                        showModalInfo(tr("Your Digital Bitbox uses <strong>old firmware incompatible with this app</strong>. Get the latest firmware at `digitalbitbox.com/firmware`. Upload it using the Options menu item Upgrade Firmware. Because the wallet key paths have changed, coins in a wallet created by an old app cannot be spent using the new app. You must use the old app to send coins to an address in a new wallet created by the new app.<br><br>To be safe, <strong>backup your old wallet</strong> before upgrading.<br>(Older firmware can be reloaded using the same procedure.)<br><br><br>"));
-                        firmwareUpgradeAction->setEnabled(true);
+                        showModalInfo(tr("Your Digital Bitbox uses <strong>old firmware incompatible with this app</strong>. Get the latest firmware at `digitalbitbox.com/firmware`. Upload it using the Options menu item Upgrade Firmware. Because the wallet key paths have changed, coins in a wallet created by an old app cannot be spent using the new app. You must use the old app to send coins to an address in a new wallet created by the new app.<br><br>To be safe, <strong>backup your old wallet</strong> before upgrading.<br>(Older firmware can be reloaded using the same procedure.)<br><br><br>"), DBB_PROCESS_INFOLAYER_UPGRADE_FIRMWARE);
                         return;
                     }
                     this->ui->versionLabel->setText(v);
