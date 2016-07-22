@@ -667,45 +667,6 @@ background-color: rgba(240,240,240,255);
           <number>20</number>
          </property>
          <item>
-          <widget class="QPushButton" name="seedButton">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Overwrite the existing wallet with a new wallet.</string>
-           </property>
-           <property name="text">
-            <string>Create New Wallet</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="getAddress">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>List wallet addresses and their extended public keys for different BIP32 keypaths.</string>
-           </property>
-           <property name="text">
-            <string>List Addresses...</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>20</number>
-         </property>
-         <item>
           <widget class="QPushButton" name="passwordButton">
            <property name="maximumSize">
             <size>
@@ -745,7 +706,7 @@ background-color: rgba(240,240,240,255);
           <number>20</number>
          </property>
          <item>
-          <widget class="QPushButton" name="lockDevice">
+          <widget class="QPushButton" name="seedButton">
            <property name="maximumSize">
             <size>
              <width>200</width>
@@ -753,13 +714,36 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Enable two-factor authentication. Afterward, a device running the Digital Bitbox mobile app is required to send coins.</string>
+            <string>Overwrite the existing wallet with a new wallet.</string>
            </property>
            <property name="text">
-            <string>Enable Full 2FA</string>
+            <string>Create New Wallet</string>
            </property>
           </widget>
          </item>
+         <item>
+          <widget class="QPushButton" name="getAddress">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>List wallet addresses and their extended public keys for different BIP32 keypaths.</string>
+           </property>
+           <property name="text">
+            <string>List Addresses...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_2">
+         <property name="spacing">
+          <number>20</number>
+         </property>
          <item>
           <widget class="QPushButton" name="eraseButton">
            <property name="maximumSize">
@@ -773,32 +757,6 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>Reset Device</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_11">
-         <property name="spacing">
-          <number>20</number>
-         </property>
-         <property name="bottomMargin">
-          <number>0</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="pairDeviceButton">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Connect this desktop app to the Digital Bitbox mobile app by creating an encrypted communication channel.</string>
-           </property>
-           <property name="text">
-            <string>Connect Mobile App</string>
            </property>
           </widget>
          </item>
@@ -821,13 +779,29 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_111">
+        <layout class="QHBoxLayout" name="horizontalLayout_11">
          <property name="spacing">
           <number>20</number>
          </property>
          <property name="bottomMargin">
           <number>0</number>
          </property>
+         <item>
+          <widget class="QPushButton" name="lockDevice">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Enable two-factor authentication. Afterward, a device running the Digital Bitbox mobile app is required to send coins.</string>
+           </property>
+           <property name="text">
+            <string>Enable Full 2FA</string>
+           </property>
+          </widget>
+         </item>
          <item>
           <widget class="QPushButton" name="upgradeFirmware">
            <property name="maximumSize">
@@ -841,6 +815,32 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>Upgrade Firmware...</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <layout class="QHBoxLayout" name="horizontalLayout_111">
+         <property name="spacing">
+          <number>20</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
+         <item>
+          <widget class="QPushButton" name="pairDeviceButton">
+           <property name="maximumSize">
+            <size>
+             <width>200</width>
+             <height>16777215</height>
+            </size>
+           </property>
+           <property name="toolTip">
+            <string>Connect this desktop app to the Digital Bitbox mobile app by creating an encrypted communication channel.</string>
+           </property>
+           <property name="text">
+            <string>Connect Mobile App</string>
            </property>
           </widget>
          </item>
@@ -1477,7 +1477,7 @@ background-color: rgba(240,240,240,255);
      </rect>
     </property>
     <property name="text">
-     <string>Settings</string>
+     <string>Options</string>
     </property>
     <property name="flat">
      <bool>false</bool>
