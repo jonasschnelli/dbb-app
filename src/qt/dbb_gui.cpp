@@ -2163,19 +2163,23 @@ void DBBDaemonGui::updateWallet(DBBWallet* wallet)
         MultisigUpdateWallets();
 }
 
+void DBBDaemonGui::updateUIStateMultisigWallets(bool joined)
+{
+    this->ui->joinCopayWallet->setVisible(!joined);
+    this->ui->checkProposals->setVisible(joined);
+    this->ui->multisigWalletName->setVisible(joined);
+    this->ui->multisigBalanceKey->setVisible(joined);
+    this->ui->multisigBalance->setVisible(joined);
+    this->ui->multisigLine->setVisible(joined);
+    this->ui->proposalsLabel->setVisible(joined); 
+    if (!joined)
+        this->ui->noProposalsAvailable->setVisible(false);
+}
+
 void DBBDaemonGui::MultisigUpdateWallets(bool initialJoin)
 {
     DBBWallet* wallet = vMultisigWallets[0];
-   
-    // Update UI
-    this->ui->joinCopayWallet->setVisible(!wallet->client.walletJoined);
-    this->ui->checkProposals->setVisible(wallet->client.walletJoined);
-    this->ui->multisigWalletName->setVisible(wallet->client.walletJoined);
-    this->ui->multisigBalanceKey->setVisible(wallet->client.walletJoined);
-    this->ui->multisigBalance->setVisible(wallet->client.walletJoined);
-    this->ui->multisigLine->setVisible(wallet->client.walletJoined);
-    this->ui->proposalsLabel->setVisible(wallet->client.walletJoined); 
-
+    updateUIStateMultisigWallets(wallet->client.walletJoined);
     if (!wallet->client.IsSeeded())
         return;
 
@@ -2236,6 +2240,8 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     //      the encrypted name is in a JSON string conforming to the SJCL library format, see:
     //      https://bitwiseshiftleft.github.io/sjcl/demo/
     //this->ui->multisigWalletName->setText("<strong>Name:</strong> " + QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
+    
+    updateUIStateMultisigWallets(vMultisigWallets[0]->client.walletJoined);
 }
 
 void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)

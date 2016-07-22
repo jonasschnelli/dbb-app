@@ -372,6 +372,8 @@ private slots:
     void SingleWalletUpdateWallets(bool showLoading=true);
     //!update the mutisig ui from a getWallets response
     void updateUIMultisigWallets(const UniValue& walletResponse);
+    //!update the mutisig ui state (joined or not)
+    void updateUIStateMultisigWallets(bool joined);
     //!update the singlewallet ui from a getWallets response
     void updateUISingleWallet(const UniValue& walletResponse);
     //!update the single wallet transaction table
