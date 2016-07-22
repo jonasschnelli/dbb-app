@@ -880,13 +880,13 @@ background-color: rgba(240,240,240,255);
          <item>
           <layout class="QHBoxLayout" name="horizontalLayout3">
            <property name="leftMargin">
-            <number>6</number>
+            <number>25</number>
            </property>
            <property name="topMargin">
             <number>0</number>
            </property>
            <property name="rightMargin">
-            <number>6</number>
+            <number>25</number>
            </property>
            <property name="bottomMargin">
             <number>5</number>
