@@ -183,21 +183,24 @@ int main(int argc, char** argv)
         while(1)
         {
             //check devices
-            enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
-
-            if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE || deviceType == DBB::DBB_DEVICE_UNKNOWN)
             {
-                bool openSuccess = false;
-                if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER)
-                    openSuccess = DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R);
-                else
-                    openSuccess = DBB::openConnection();
+                std::unique_lock<std::mutex> lock(cs_queue);
+                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
+
+                if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE || deviceType == DBB::DBB_DEVICE_UNKNOWN)
+                {
+                    bool openSuccess = false;
+                    if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER)
+                        openSuccess = DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R);
+                    else
+                        openSuccess = DBB::openConnection();
 
 #ifdef DBB_ENABLE_QT
-                //TODO, check if this requires locking
-                if (dbbGUI)
-                    dbbGUI->deviceStateHasChanged(openSuccess, deviceType);
+                    //TODO, check if this requires locking
+                    if (dbbGUI)
+                        dbbGUI->deviceStateHasChanged(openSuccess, deviceType);
 #endif
+                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
