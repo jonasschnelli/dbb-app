@@ -227,7 +227,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this, SIGNAL(shouldVerifySigning(DBBWallet*, const UniValue&, int, const std::string&)), this, SLOT(showEchoVerification(DBBWallet*, const UniValue&, int, const std::string&)));
     connect(this, SIGNAL(shouldHideVerificationInfo()), this, SLOT(hideVerificationInfo()));
     connect(this, SIGNAL(signedProposalAvailable(DBBWallet*, const UniValue&, const std::vector<std::string>&)), this, SLOT(postSignaturesForPaymentProposal(DBBWallet*, const UniValue&, const std::vector<std::string>&)));
-    connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&)));
+    connect(this, SIGNAL(getWalletsResponseAvailable(DBBWallet*, bool, const std::string&, bool)), this, SLOT(parseWalletsResponse(DBBWallet*, bool, const std::string&, bool)));
     connect(this, SIGNAL(getTransactionHistoryAvailable(DBBWallet*, bool, const UniValue&)), this, SLOT(updateTransactionTable(DBBWallet*, bool, const UniValue&)));
 
     connect(this, SIGNAL(shouldUpdateWallet(DBBWallet*)), this, SLOT(updateWallet(DBBWallet*)));
@@ -2130,10 +2130,9 @@ void DBBDaemonGui::joinCopayWallet(int walletIndex)
             thread->completed();
         });
 
-
     } else {
-        //set the keys and try to join the wallet
-        joinMultisigWalletInitiate(wallet);
+        //check if already joined a MS wallet. if not, try to join.
+        MultisigUpdateWallets(true);
     }
 }
 
@@ -2164,25 +2163,29 @@ void DBBDaemonGui::updateWallet(DBBWallet* wallet)
         MultisigUpdateWallets();
 }
 
-void DBBDaemonGui::MultisigUpdateWallets()
+void DBBDaemonGui::updateUIStateMultisigWallets(bool joined)
+{
+    this->ui->joinCopayWallet->setVisible(!joined);
+    this->ui->checkProposals->setVisible(joined);
+    this->ui->multisigWalletName->setVisible(joined);
+    this->ui->multisigBalanceKey->setVisible(joined);
+    this->ui->multisigBalance->setVisible(joined);
+    this->ui->multisigLine->setVisible(joined);
+    this->ui->proposalsLabel->setVisible(joined); 
+    if (!joined)
+        this->ui->noProposalsAvailable->setVisible(false);
+}
+
+void DBBDaemonGui::MultisigUpdateWallets(bool initialJoin)
 {
     DBBWallet* wallet = vMultisigWallets[0];
-   
-    // Update UI
-    this->ui->joinCopayWallet->setVisible(!wallet->client.walletJoined);
-    this->ui->checkProposals->setVisible(wallet->client.walletJoined);
-    this->ui->multisigWalletName->setVisible(wallet->client.walletJoined);
-    this->ui->multisigBalanceKey->setVisible(wallet->client.walletJoined);
-    this->ui->multisigBalance->setVisible(wallet->client.walletJoined);
-    this->ui->multisigLine->setVisible(wallet->client.walletJoined);
-    this->ui->proposalsLabel->setVisible(wallet->client.walletJoined); 
-
+    updateUIStateMultisigWallets(wallet->client.walletJoined);
     if (!wallet->client.IsSeeded())
         return;
 
     multisigWalletIsUpdating = true;
-    executeNetUpdateWallet(wallet, true, [wallet, this](bool walletsAvailable, const std::string& walletsResponse) {
-        emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse);
+    executeNetUpdateWallet(wallet, true, [wallet, initialJoin, this](bool walletsAvailable, const std::string& walletsResponse) {
+        emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse, initialJoin);
     });
 }
 
@@ -2237,6 +2240,8 @@ void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
     //      the encrypted name is in a JSON string conforming to the SJCL library format, see:
     //      https://bitwiseshiftleft.github.io/sjcl/demo/
     //this->ui->multisigWalletName->setText("<strong>Name:</strong> " + QString::fromStdString(vMultisigWallets[0]->walletRemoteName));
+    
+    updateUIStateMultisigWallets(vMultisigWallets[0]->client.walletJoined);
 }
 
 void DBBDaemonGui::updateUISingleWallet(const UniValue& walletResponse)
@@ -2391,7 +2396,7 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, s
         setNetLoading(true);
 }
 
-void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse)
+void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse, bool initialJoin)
 {
     setNetLoading(false);
 
@@ -2410,6 +2415,8 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
             else {
                 updateUIMultisigWallets(response);
                 MultisigUpdatePaymentProposals(response);
+                if (initialJoin && !wallet->client.walletJoined)
+                    joinMultisigWalletInitiate(wallet);
             }
         }
     }

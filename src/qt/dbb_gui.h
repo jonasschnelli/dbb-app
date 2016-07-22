@@ -121,7 +121,7 @@ signals:
     //emitted when a response from the DBB is available
     void gotResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag = 0);
     //emitted when a copay getwallet response is available
-    void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
+    void getWalletsResponseAvailable(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse, bool initialJoin = false);
     //emitted when a copay wallet history response is available
     void getTransactionHistoryAvailable(DBBWallet* wallet, bool historyAvailable, const UniValue& historyResponse);
     //emitted when a payment proposal and a given signatures should be verified
@@ -367,11 +367,13 @@ private slots:
     //!update a given wallet object
     void updateWallet(DBBWallet* wallet);
     //!update multisig wallets
-    void MultisigUpdateWallets();
+    void MultisigUpdateWallets(bool initialJoin=false);
     //!update single wallet
     void SingleWalletUpdateWallets(bool showLoading=true);
     //!update the mutisig ui from a getWallets response
     void updateUIMultisigWallets(const UniValue& walletResponse);
+    //!update the mutisig ui state (joined or not)
+    void updateUIStateMultisigWallets(bool joined);
     //!update the singlewallet ui from a getWallets response
     void updateUISingleWallet(const UniValue& walletResponse);
     //!update the single wallet transaction table
@@ -379,7 +381,7 @@ private slots:
     //!show tx in a block explorer
     void historyShowTx(QModelIndex index);
     //!parse single wallet wallet response
-    void parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse);
+    void parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable, const std::string& walletsResponse, bool initialJoin=false);
     //!update payment proposals
     bool MultisigUpdatePaymentProposals(const UniValue& response);
     //!show a single payment proposals with given id

@@ -13,6 +13,16 @@ void DBBWallet::updateData(const UniValue& walletResponse)
     walletRemoteName = "";
     currentPaymentProposals = UniValue(UniValue::VNULL);
 
+    // check if error code exists
+    UniValue code = find_value(walletResponse, "code");
+    if (code.isStr())
+        return;
+    else 
+        if(!client.walletJoined) {
+            client.walletJoined = true;
+            client.SaveLocalData();
+        }
+
     // get balance and name
     UniValue balanceObj = find_value(walletResponse, "balance");
     if (balanceObj.isObject()) {
