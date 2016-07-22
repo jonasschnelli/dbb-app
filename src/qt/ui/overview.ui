@@ -769,10 +769,10 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Check online if there are updates for your Digital Bitbox.</string>
+            <string>Check online for software updates.</string>
            </property>
            <property name="text">
-            <string>Check For Updates...</string>
+            <string>Check for Updates...</string>
            </property>
           </widget>
          </item>
@@ -811,7 +811,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Securely upgrade your DigitalBitbox firmware</string>
+            <string>Securely upgrade your Digital Bitbox firmware.</string>
            </property>
            <property name="text">
             <string>Upgrade Firmware...</string>
@@ -853,7 +853,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Expert configuration options for DBB-APP</string>
+            <string>Expert configuration settings.</string>
            </property>
            <property name="text">
             <string>Settings...</string>
