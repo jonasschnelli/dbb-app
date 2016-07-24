@@ -16,6 +16,7 @@ class DBBUpdateManager : public QWidget
 signals:
     //emitted when check-for-updates response is available
     void checkForUpdateResponseAvailable(const std::string&, long, bool);
+    void updateButtonSetAvailable(bool);
 
 public:
     DBBUpdateManager();

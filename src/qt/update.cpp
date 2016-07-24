@@ -106,7 +106,7 @@ void DBBUpdateManager::checkForUpdate(bool reportAlways)
     thread->currentThread = std::thread([this, thread, reportAlways]() {
         std::string response;
         long httpStatusCode;
-        SendRequest("post", "https://digitalbitbox.com/dbb-app/update.json", "dv="+std::string(VERSION)+"&version="+std::string(DBB_PACKAGE_VERSION), response, httpStatusCode);
+        SendRequest("post", "https://digitalbitbox.com/desktop-app/update.json", "{\"version\":\""+std::string(DBB_PACKAGE_VERSION)+"\",\"target\":\"dbb-app\",\"key\":\"KhT9Lzb6o4EYLOVAqjXVWENt6rVKruFVUVJmtxkXKXG5eDw\"}", response, httpStatusCode);
         emit checkForUpdateResponseAvailable(response, httpStatusCode, reportAlways);
         thread->completed();
     });
@@ -121,33 +121,38 @@ void DBBUpdateManager::parseCheckUpdateResponse(const std::string &response, lon
     UniValue jsonOut;
     jsonOut.read(response);
 
-    bool updateAvailable = false;
-
     try {
         if (jsonOut.isObject())
         {
-            UniValue subtext = find_value(jsonOut, "msg");
+            UniValue subtext = find_value(jsonOut, "message");
             UniValue url = find_value(jsonOut, "url");
             if (subtext.isStr() && url.isStr())
             {
-                //:translation: accept pairing rquest message box
-                QMessageBox::StandardButton reply = QMessageBox::question(this, "", QString::fromStdString(subtext.get_str()), QMessageBox::Yes | QMessageBox::No);
-                if (reply == QMessageBox::Yes)
-                {
-                    updateAvailable = true;
-                    QString link = QString::fromStdString(url.get_str());
-                    QDesktopServices::openUrl(QUrl(link));
+                if (url.get_str().compare("") == 0) {
+                    if (reportAlways)
+                        QMessageBox::information(this, tr(""), QString::fromStdString(subtext.get_str()), QMessageBox::Ok);
+                    emit updateButtonSetAvailable(false);
                     return;
                 }
+
+                if (reportAlways) {
+                    QMessageBox::StandardButton reply = QMessageBox::question(this, "", QString::fromStdString(subtext.get_str()), QMessageBox::Yes | QMessageBox::No);
+                    if (reply == QMessageBox::Yes)
+                    {
+                        QString link = QString::fromStdString(url.get_str());
+                        QDesktopServices::openUrl(QUrl(link));
+                    }
+                    emit updateButtonSetAvailable(false);
+                    return;
+                }
+                else
+                    emit updateButtonSetAvailable(true);
             }
         }
+        if (reportAlways)
+            QMessageBox::warning(this, tr(""), tr("Error while checking for updates."), QMessageBox::Ok);
     } catch (std::exception &e) {
         DBB::LogPrint("Error while reading update json\n", "");
-    }
-
-    if (!updateAvailable && reportAlways)
-    {
-        QMessageBox::information(this, tr(""), tr("You are up-to-date."), QMessageBox::Ok);
     }
 }
 

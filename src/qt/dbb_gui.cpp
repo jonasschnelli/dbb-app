@@ -432,6 +432,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 #endif
 
     connect(ui->checkForUpdates, SIGNAL(clicked()), updateManager, SLOT(checkForUpdate()));
+    connect(updateManager, SIGNAL(updateButtonSetAvailable(bool)), this, SLOT(updateButtonSetAvailable(bool)));
     QTimer::singleShot(200, updateManager, SLOT(checkForUpdateInBackground()));
 }
 
@@ -907,6 +908,18 @@ void DBBDaemonGui::updateModalWithIconName(const QString& filename)
 void DBBDaemonGui::updateOverviewFlags(bool walletAvailable, bool lockAvailable, bool loading)
 {
 
+}
+
+void DBBDaemonGui::updateButtonSetAvailable(bool available)
+{
+    if (available) {
+        this->ui->checkForUpdates->setText(tr("Update Available"));
+        this->ui->checkForUpdates->setStyleSheet("font-weight: bold");
+    }
+    else {
+        this->ui->checkForUpdates->setText(tr("Check for Updates..."));
+        this->ui->checkForUpdates->setStyleSheet("font-weight: normal");
+    }
 }
 
 /*
