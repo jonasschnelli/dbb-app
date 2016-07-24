@@ -126,7 +126,6 @@ public:
             if (encryptionKeyU.isStr())
             {
                 std::string encryptionKeyS = base64_decode(encryptionKeyU.get_str());
-                printf("%s", encryptionKeyS.c_str());
                 encryptionKey.clear();
                 std::copy(encryptionKeyS.begin(), encryptionKeyS.end(), std::back_inserter(encryptionKey));
             }

@@ -2433,7 +2433,6 @@ bool DBBDaemonGui::MultisigUpdatePaymentProposals(const UniValue& response)
         std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
         vMultisigWallets[0]->currentPaymentProposals = pendingTxps;
 
-        printf("pending txps: %s", pendingTxps.write(2, 2).c_str());
         std::vector<UniValue> values = pendingTxps.getValues();
         DBB::LogPrint("Got pending multisig txps (%d)\n", values.size());
         if (values.size() == 0) {
