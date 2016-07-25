@@ -1530,7 +1530,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     this->ui->deviceNameLabel->setText("<strong>Name:</strong> "+deviceName);
                 }
 
-                this->ui->DBBAppVersion->setText("DBB v"+QString(DBB_PACKAGE_VERSION) + "-" + VERSION);
+                this->ui->DBBAppVersion->setText("v"+QString(DBB_PACKAGE_VERSION));
 
                 updateOverviewFlags(cachedWalletAvailableState, cachedDeviceLock, false);
 
