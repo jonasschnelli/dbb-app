@@ -133,24 +133,15 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 #if defined(Q_OS_MAC)
     std::string balanceFontSize = "24pt";
     std::string menuFontSize = "18pt";
-    std::string stdFontSize = "16pt";
-    std::string smallFontSize = "12pt";
 #elif defined(Q_OS_WIN)
-    std::string balanceFontSize = "24pt";
-    std::string menuFontSize = "18pt";
-    std::string stdFontSize = "16pt";
-    std::string smallFontSize = "12pt";
+    std::string balanceFontSize = "20pt";
+    std::string menuFontSize = "16pt";
 #else
     std::string balanceFontSize = "20pt";
     std::string menuFontSize = "14pt";
-    std::string stdFontSize = "12pt";
-    std::string smallFontSize = "10pt";
 #endif
 
     QFontDatabase::addApplicationFont(":/fonts/BebasKai-Regular");
-    QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-ExtraLight");
-    QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-Bold");
-    QFontDatabase::addApplicationFont(":/fonts/SourceSansPro-Black");
     this->setStyleSheet("QMainWindow {background: 'white';}");
 
 #if defined(Q_OS_WIN)
