@@ -287,6 +287,8 @@ private slots:
     //!gets called on device reset
     void setDeviceNamePasswordProvided(const QString& newPassword, const QString& newName);
     void cleanseLoginAndSetPassword();
+    //!gets called when checking for an update
+    void updateButtonSetAvailable(bool);
 
     //== DBB USB ==
     //!function is user whishes to erase the DBB
