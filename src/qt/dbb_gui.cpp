@@ -2774,6 +2774,7 @@ void DBBDaemonGui::showSettings()
     {
         settingsDialog = new SettingsDialog(this, configData);
         connect(settingsDialog, SIGNAL(settingsDidChange()), this, SLOT(updateSettings()));
+        connect(settingsDialog, SIGNAL(settingsShouldChangeHiddenPassword(const QString&)), this, SLOT(updateHiddenPassword(const QString&)));
     }
 
     settingsDialog->show();
@@ -2786,6 +2787,17 @@ void DBBDaemonGui::updateSettings()
 
     if (comServer)
         comServer->setURL(configData->getComServerURL());
+}
+
+void DBBDaemonGui::updateHiddenPassword(const QString& hiddenPassword)
+{
+    DBB::LogPrint("Set hidden password\n", "");
+
+    executeCommandWrapper("{\"hidden_password\": \""+hiddenPassword.toStdString()+"\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+        UniValue jsonOut;
+        jsonOut.read(cmdOut);
+        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RESET_PASSWORD);
+    });
 }
 
 void DBBDaemonGui::showQrCodeScanner()

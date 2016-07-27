@@ -78,6 +78,7 @@ typedef enum DBB_RESPONSE_TYPE {
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME,
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME_CREATE,
     DBB_RESPONSE_TYPE_SET_DEVICE_NAME_RECREATE,
+    DBB_RESPONSE_TYPE_RESET_PASSWORD,
 } dbb_response_type_t;
 
 typedef enum DBB_ADDRESS_STYLE {
@@ -399,6 +400,7 @@ private slots:
     //!show settings dialog
     void showSettings();
     void updateSettings();
+    void updateHiddenPassword(const QString& hiddenPassword);
 
     //== QRCode Scanner==
     void showQrCodeScanner();
