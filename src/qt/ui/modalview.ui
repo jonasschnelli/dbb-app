@@ -349,7 +349,7 @@
         <string notr="true">color:white;</string>
        </property>
        <property name="text">
-        <string>* The password also encrypts SD card backups. The same password is therefore REQUIRED when restoring a backup. Don't forget it!</string>
+        <string>* Don't forget the password! It is REQUIRED when restoring a wallet from a backup.</string>
        </property>
        <property name="alignment">
         <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignTop</set>
