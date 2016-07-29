@@ -1423,7 +1423,8 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 
     std::string hashHex = DBB::getStretchedBackupHexKey(tempBackupPassword.toStdString());
     std::string command = "{\"seed\" : {"
-                                "\"source\" :\"" + backupFilename.toStdString() + "\","
+                                "\"source\":\"backup\","
+                                "\"filename\" :\"" + backupFilename.toStdString() + "\","
                                 "\"key\":\""+hashHex+"\""
                             "} }";
     DBB::LogPrint("Restoring backup (%s)...\n", backupFilename.toStdString().c_str());
