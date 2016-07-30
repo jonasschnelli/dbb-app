@@ -10,6 +10,7 @@ ui(new Ui::SettingsDialog)
     connect(this->ui->resetDefaultsButton, SIGNAL(clicked()), this, SLOT(resetDefaults()));
     connect(this->ui->saveButton, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->cancelButton, SIGNAL(clicked()), this, SLOT(cancel()));
+    connect(this->ui->setHiddenPasswordButton, SIGNAL(clicked()), this, SLOT(setHiddenPassword()));
 }
 
 SettingsDialog::~SettingsDialog()
@@ -41,6 +42,7 @@ void SettingsDialog::closeEvent(QCloseEvent *event)
     if (!cancleOnClose)
         storeSettings();
 
+    ui->setHiddenPasswordTextField->setText("");
     QWidget::closeEvent(event);
 }
 
@@ -56,4 +58,11 @@ void SettingsDialog::storeSettings()
     configData->setComServerURL(ui->smartVerificationURL->text().toStdString());
     configData->write();
     emit settingsDidChange();
+}
+
+void SettingsDialog::setHiddenPassword()
+{
+    emit settingsShouldChangeHiddenPassword(ui->setHiddenPasswordTextField->text());
+    ui->setHiddenPasswordTextField->setText("");
+    close();
 }
