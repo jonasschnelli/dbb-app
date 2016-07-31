@@ -1,7 +1,7 @@
 #include "settingsdialog.h"
 #include "ui/ui_settingsdialog.h"
 
-SettingsDialog::SettingsDialog(QWidget *parent, DBB::DBBConfigdata* configDataIn) :
+SettingsDialog::SettingsDialog(QWidget *parent, DBB::DBBConfigdata* configDataIn, bool deviceLocked) :
 QDialog(parent), configData(configDataIn),
 ui(new Ui::SettingsDialog)
 {
@@ -11,6 +11,17 @@ ui(new Ui::SettingsDialog)
     connect(this->ui->saveButton, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->cancelButton, SIGNAL(clicked()), this, SLOT(cancel()));
     connect(this->ui->setHiddenPasswordButton, SIGNAL(clicked()), this, SLOT(setHiddenPassword()));
+
+    updateDeviceLocked(deviceLocked);
+}
+
+void SettingsDialog::updateDeviceLocked(bool deviceLocked)
+{
+    if (deviceLocked)
+    {
+        ui->tabResetPW->setEnabled(false);
+        ui->setHiddenPasswordButton->setEnabled(false);
+    }
 }
 
 SettingsDialog::~SettingsDialog()

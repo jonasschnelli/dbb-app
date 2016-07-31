@@ -2792,11 +2792,12 @@ void DBBDaemonGui::showSettings()
 {
     if (!settingsDialog)
     {
-        settingsDialog = new SettingsDialog(this, configData);
+        settingsDialog = new SettingsDialog(this, configData, cachedDeviceLock);
         connect(settingsDialog, SIGNAL(settingsDidChange()), this, SLOT(updateSettings()));
         connect(settingsDialog, SIGNAL(settingsShouldChangeHiddenPassword(const QString&)), this, SLOT(updateHiddenPassword(const QString&)));
     }
 
+    settingsDialog->updateDeviceLocked(cachedDeviceLock);
     settingsDialog->show();
 }
 
