@@ -21,9 +21,10 @@ public slots:
     void setHiddenPassword();
     
 public:
-    explicit SettingsDialog(QWidget *parent = 0, DBB::DBBConfigdata* configData = NULL);
+    explicit SettingsDialog(QWidget *parent = 0, DBB::DBBConfigdata* configData = NULL, bool deviceLocked = false);
     ~SettingsDialog();
 
+    void updateDeviceLocked(bool deviceLocked);
     void closeEvent(QCloseEvent *event);
     void showEvent(QShowEvent* event);
 

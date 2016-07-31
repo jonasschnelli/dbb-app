@@ -856,7 +856,7 @@ background-color: rgba(240,240,240,255);
             <string>Expert configuration settings.</string>
            </property>
            <property name="text">
-            <string>Settings...</string>
+            <string>Expert Settings...</string>
            </property>
           </widget>
          </item>
