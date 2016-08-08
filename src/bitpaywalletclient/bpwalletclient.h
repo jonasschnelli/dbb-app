@@ -182,6 +182,8 @@ public:
     //set the dynamic/runtime CA file for https requests
     void setCAFile(const std::string& ca_file);
 
+    void setSocks5ProxyURL(const std::string& proxyUrl);
+
     int CheapRandom();
 
 private:
@@ -204,5 +206,6 @@ private:
     void Hash(const std::string& stringIn, uint8_t* hashout);
 
     std::string ca_file;
+    std::string socks5ProxyURL;
 };
 #endif //BP_WALLET_CLIENT_H

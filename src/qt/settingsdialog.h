@@ -19,6 +19,7 @@ public slots:
     void resetDefaults();
     void cancel();
     void setHiddenPassword();
+    void useDefaultProxyToggled(int newState);
     
 public:
     explicit SettingsDialog(QWidget *parent = 0, DBB::DBBConfigdata* configData = NULL, bool deviceLocked = false);
@@ -36,6 +37,7 @@ private:
     Ui::SettingsDialog *ui;
     void loadSettings();
     void storeSettings();
+    void updateVisibility();
     
     bool cancleOnClose;
 };

@@ -22,7 +22,8 @@ public:
     DBBUpdateManager();
     //set the dynamic/runtime CA file for https requests
     void setCAFile(const std::string& ca_file);
-
+    void setSocks5ProxyURL(const std::string& proxyUrl);
+    
 public slots:
     void checkForUpdateInBackground();
     void checkForUpdate(bool reportAlways = true);
@@ -32,5 +33,7 @@ private:
     bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);
     bool checkingForUpdates;
     std::string ca_file;
+
+    std::string socks5ProxyURL;
 };
 #endif // DBBAPP_UPDATE_H

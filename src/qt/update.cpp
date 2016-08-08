@@ -27,6 +27,7 @@ DBBUpdateManager::DBBUpdateManager() : QWidget(), checkingForUpdates(0)
 {
     connect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
     ca_file = "";
+    socks5ProxyURL.clear();
 }
 
 bool DBBUpdateManager::SendRequest(const std::string& method,
@@ -61,6 +62,10 @@ bool DBBUpdateManager::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+
+        if (socks5ProxyURL.size())
+            curl_easy_setopt(curl, CURLOPT_PROXY, socks5ProxyURL.c_str());
+        
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
@@ -159,4 +164,9 @@ void DBBUpdateManager::parseCheckUpdateResponse(const std::string &response, lon
 void DBBUpdateManager::setCAFile(const std::string& ca_file_in)
 {
     ca_file = ca_file_in;
+}
+
+void DBBUpdateManager::setSocks5ProxyURL(const std::string& proxyUrl)
+{
+    socks5ProxyURL = proxyUrl;
 }
