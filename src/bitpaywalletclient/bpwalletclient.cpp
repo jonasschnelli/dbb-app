@@ -341,27 +341,29 @@ bool BitPayWalletClient::GetLastKnownAddress(std::string& address, std::string& 
 bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut)
 {
     //form request
+    UniValue outputs(UniValue::VARR);
+
+    //currently we only support a single output
+    UniValue mainOutput(UniValue::VOBJ);
+
+    //add the output
+    mainOutput.push_back(Pair("toAddress", address));
+    mainOutput.push_back(Pair("amount", amount));
+    mainOutput.push_back(Pair("message", ""));
+    mainOutput.push_back(Pair("script", ""));
+    outputs.push_back(mainOutput);
+
     UniValue jsonArgs(UniValue::VOBJ);
-    jsonArgs.push_back(Pair("toAddress", address));
-    jsonArgs.push_back(Pair("amount", amount));
     jsonArgs.push_back(Pair("feePerKb", feeperkb));
     jsonArgs.push_back(Pair("payProUrl", false));
-
-    //[toAddress, amount, (message || ''), (payProUrl || '')].join('|');
-    std::string proposalHashString = address + "|" + std::to_string(amount) + "|" + "" + "|" + "";
-
-    std::string proposalSignature;
-    if (!GetCopayerSignature(proposalHashString, requestKey.privkey, proposalSignature)) {
-        errorOut = "Could not get copayer signature";
-        return false;
-    }
-
-    jsonArgs.push_back(Pair("proposalSignature", proposalSignature));
+    jsonArgs.push_back(Pair("type", "simple"));
+    jsonArgs.push_back(Pair("version", "1.0.0"));
+    jsonArgs.push_back(Pair("outputs", outputs));
     std::string json = jsonArgs.write();
 
     long httpStatusCode = 0;
     std::string response;
-    if (!SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode))
+    if (!SendRequest("post", "/v2/txproposals/", json, response, httpStatusCode))
     {
         errorOut = "Connection failed";
         return false;
@@ -396,12 +398,16 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
             //post again
             response.clear();
             httpStatusCode = 0;
-            int reqRet = SendRequest("post", "/v1/txproposals/", json, response, httpStatusCode);
+            int reqRet = SendRequest("post", "/v2/txproposals/", json, response, httpStatusCode);
             if (!reqRet || httpStatusCode != 200) {
                 errorOut = "Could not unlock funds";
                 return false;
             }
             paymentProposalOut.read(response);
+
+            if (!PublishTxProposal(paymentProposalOut, errorOut))
+                return false;
+            
             return true;
         } else {
             //unknown error
@@ -417,6 +423,49 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
     paymentProposalOut.read(response);
     if (!paymentProposalOut.isObject())
         return false;
+
+    if (!PublishTxProposal(paymentProposalOut, errorOut))
+        return false;
+
+    return true;
+}
+
+
+bool BitPayWalletClient::PublishTxProposal(const UniValue& paymentProposal, std::string& errorOut)
+{
+    // get txpid
+    UniValue pID = find_value(paymentProposal, "id");
+    std::string txpID = "";
+    if (pID.isStr())
+        txpID = pID.get_str();
+
+    // get serialized tx hex
+    std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
+    std::string serTx;
+    UniValue changeAddressData;
+    ParseTxProposal(paymentProposal, changeAddressData, serTx, inputHashesAndPaths, true);
+
+    // sign the hex with the copay request key
+    std::string txHashSig;
+    GetCopayerSignature(serTx, requestKey.privkey, txHashSig);
+
+    UniValue signatureJson(UniValue::VOBJ);
+    signatureJson.push_back(Pair("proposalSignature", txHashSig));
+
+
+    long httpStatusCode = 0;
+    std::string response;
+
+    if (!SendRequest("post", "/v1/txproposals/"+txpID+"/publish/", signatureJson.write(), response, httpStatusCode))
+    {
+        errorOut = "Connection failed";
+        return false;
+    }
+
+    if (httpStatusCode != 200) {
+        errorOut = "Could not publish transaction proposal";
+        return false;
+    }
 
     return true;
 }
@@ -589,7 +638,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
     return true;
 }
 
-void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes)
+void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes, bool noScriptPubKey)
 {
     btc_tx* tx = btc_tx_new();
 
@@ -612,11 +661,16 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
     for (i = 0; i < keys.size(); i++) {
         UniValue val = values[i];
 
-        if (keys[i] == "toAddress")
-            toAddress = val.get_str();
-
-        if (keys[i] == "amount")
-            toAmount = val.get_int64();
+        if (keys[i] == "outputs")
+        {
+            UniValue firstOutput = val[0];
+            UniValue addressObj = find_value(firstOutput, "toAddress");
+            UniValue toAmountObj = find_value(firstOutput, "amount");
+            if (addressObj.isStr())
+                toAddress = addressObj.get_str();
+            if (toAmountObj.isNum())
+                toAmount = toAmountObj.get_int64();
+        }
 
         if (keys[i] == "fee")
             fee = val.get_int64();
@@ -716,7 +770,8 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             inputsScriptAndPath.push_back(std::make_pair(path, vScript));
 
             txin->script_sig = cstr_new_sz(script->len);
-            cstr_append_buf(txin->script_sig, script->str, script->len);
+            if (!noScriptPubKey)
+                cstr_append_buf(txin->script_sig, script->str, script->len);
             
             vector_add(tx->vin, txin);
             cstr_free(script, true);
@@ -749,7 +804,8 @@ void BitPayWalletClient::ParseTxProposal(const UniValue& txProposal, UniValue& c
             memcpy(txin->prevout.hash, &aHash[0], 32);
             txin->prevout.n = nInput;
             txin->script_sig = cstr_new_sz(script->len);
-            cstr_append_buf(txin->script_sig, script->str, script->len);
+            if (!noScriptPubKey)
+                cstr_append_buf(txin->script_sig, script->str, script->len);
             vector_add(tx->vin, txin);
 
             cstr_free(script, true);
