@@ -101,6 +101,8 @@ public:
 
     bool CreatePaymentProposal(const std::string& address, uint64_t amount, uint64_t feeperkb, UniValue& paymentProposalOut, std::string& errorOut);
 
+    bool PublishTxProposal(const UniValue& paymentProposal, std::string& errorOut);
+
     //!joins a Wopay wallet
     bool JoinWallet(const std::string& name, const BitpayWalletInvitation invitation, std::string& response);
 
@@ -117,7 +119,7 @@ public:
     bool GetTransactionHistory(std::string& response);
 
     //!parse a transaction proposal, export inputs keypath/hashes ready for signing
-    void ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes);
+    void ParseTxProposal(const UniValue& txProposal, UniValue& changeAddressData, std::string& serTx, std::vector<std::pair<std::string, std::vector<unsigned char> > >& vInputTxHashes, bool noScriptPubKey = false);
 
     //!post signatures for a transaction proposal to the wallet server
     bool PostSignaturesForTxProposal(const UniValue& txProposal, const std::vector<std::string>& vHexSigs);
