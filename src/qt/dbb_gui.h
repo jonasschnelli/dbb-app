@@ -312,7 +312,9 @@ private slots:
     //!lock the bootloader to protect from unecpected firmware upgrades
     void lockBootloader();
     //!open a file chooser and unlock the bootloader
-    void upgradeFirmware();
+    void upgradeFirmwareButton();
+    void upgradeFirmware(bool unlockBootload);
+    void noDeviceConnectedLabelLink(const QString& link);
     //!start upgrading the firmware with a file at given location
     void upgradeFirmwareWithFile(const QString& fileName);
     void upgradeFirmwareDone(bool state);

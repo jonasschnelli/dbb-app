@@ -283,14 +283,17 @@ background-color: rgba(240,240,240,255);
          <x>10</x>
          <y>40</y>
          <width>460</width>
-         <height>20</height>
+         <height>100</height>
         </rect>
        </property>
        <property name="text">
         <string>No Device Connected.</string>
        </property>
        <property name="alignment">
-        <set>Qt::AlignCenter</set>
+        <set>Qt::AlignHCenter|Qt::AlignTop</set>
+       </property>
+       <property name="wordWrap">
+        <bool>true</bool>
        </property>
       </widget>
       <widget class="QPushButton" name="noDeviceIcon">
@@ -320,6 +323,8 @@ background-color: rgba(240,240,240,255);
         <bool>true</bool>
        </property>
       </widget>
+      <zorder>noDeviceIcon</zorder>
+      <zorder>noDeviceConnectedLabel</zorder>
      </widget>
      <zorder>noDeviceWidget</zorder>
      <zorder>verticalLayoutWidget</zorder>
