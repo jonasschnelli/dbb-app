@@ -1055,6 +1055,46 @@ static size_t WriteCallback(void* contents, size_t size, size_t nmemb, void* use
     return size * nmemb;
 }
 
+static
+int logprint_cb(CURL *handle, curl_infotype type,
+             char *data, size_t size,
+             void *userp)
+{
+    const char *text;
+    (void)handle; /* prevent compiler warning */
+
+    switch (type) {
+        case CURLINFO_TEXT:
+            DBB::LogPrintDebug(std::string(data));
+            printf(data);
+        default: /* in case a new one is introduced to shock us */
+            return 0;
+
+        case CURLINFO_HEADER_OUT:
+            text = "=> Send header";
+            break;
+        case CURLINFO_DATA_OUT:
+            text = "=> Send data";
+            break;
+        case CURLINFO_SSL_DATA_OUT:
+            text = "=> Send SSL data";
+            break;
+        case CURLINFO_HEADER_IN:
+            text = "<= Recv header";
+            break;
+        case CURLINFO_DATA_IN:
+            text = "<= Recv data";
+            break;
+        case CURLINFO_SSL_DATA_IN:
+            text = "<= Recv SSL data";
+            break;
+    }
+
+    DBB::LogPrintDebug(std::string(data));
+    printf(data);
+    return 0;
+}
+
 bool BitPayWalletClient::SendRequest(const std::string& method,
                                      const std::string& url,
                                      const std::string& args,
@@ -1105,6 +1145,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
 
 #ifdef DBB_ENABLE_DEBUG
             curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+            curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, logprint_cb);
 #endif
 
             res = curl_easy_perform(curl);
