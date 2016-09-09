@@ -174,6 +174,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     qRegisterMetaType<DBBWallet*>("DBBWallet *");
 
     // connect UI
+    connect(ui->noDeviceConnectedLabel, SIGNAL(linkActivated(const QString&)), this, SLOT(noDeviceConnectedLabelLink(const QString&)));
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
     connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(showSetPasswordInfo()));
@@ -188,7 +189,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->lockDevice, SIGNAL(clicked()), this, SLOT(lockDevice()));
     connect(ui->sendCoinsButton, SIGNAL(clicked()), this, SLOT(createTxProposalPressed()));
     connect(ui->getAddress, SIGNAL(clicked()), this, SLOT(showGetAddressDialog()));
-    connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
+    connect(ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmwareButton()));
     connect(ui->openSettings, SIGNAL(clicked()), this, SLOT(showSettings()));
     connect(ui->pairDeviceButton, SIGNAL(clicked()), this, SLOT(pairSmartphone()));
     ui->upgradeFirmware->setVisible(true);
@@ -361,7 +362,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(this->ui->modalBlockerView, SIGNAL(newDeviceNamePasswordAvailable(const QString&, const QString&)), this, SLOT(setDeviceNamePasswordProvided(const QString&, const QString&)));
     connect(this->ui->modalBlockerView, SIGNAL(newDeviceNameAvailable(const QString&)), this, SLOT(setDeviceNameProvided(const QString&)));
     connect(this->ui->modalBlockerView, SIGNAL(signingShouldProceed(const QString&, void *, const UniValue&, int)), this, SLOT(proceedVerification(const QString&, void *, const UniValue&, int)));
-    connect(this->ui->modalBlockerView, SIGNAL(shouldUpgradeFirmware()), this, SLOT(upgradeFirmware()));
+    connect(this->ui->modalBlockerView, SIGNAL(shouldUpgradeFirmware()), this, SLOT(upgradeFirmwareButton()));
     //modal general signals
     connect(this->ui->modalBlockerView, SIGNAL(modalViewWillShowHide(bool)), this, SLOT(modalStateChanged(bool)));
 
@@ -472,11 +473,21 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
             DBB::LogPrint("Device connected\n", "");
             this->statusBarLabelLeft->setText(tr("Device Connected"));
             this->statusBarButton->setVisible(true);
-        } else {
+        }
+        else if (state && deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER && !upgradeFirmwareState) {
+            // bricked, bootloader device found, ask for upgrading the firmware
+            int a=1;
+
+            this->ui->noDeviceConnectedLabel->setText(tr("<b>The device is in bootloader mode.</b><br><br>To enter normal mode, replug the device and do not press the touch button. If a firmware upgrade errored, try upgrading again.<br><br><a href=\"up\">Upgrade now.</a>"));
+            this->ui->noDeviceConnectedLabel->setWordWrap(true);
+            this->ui->noDeviceIcon->setVisible(false);
+        }
+        else {
             deviceConnected = false;
             DBB::LogPrint("Device disconnected\n", "");
             this->statusBarLabelLeft->setText(tr("No Device Found"));
             this->statusBarButton->setVisible(false);
+            this->ui->noDeviceIcon->setVisible(true);
         }
 
         uiUpdateDeviceState(deviceType);
@@ -1097,19 +1108,36 @@ void DBBDaemonGui::lockBootloader()
     });
 }
 
-void DBBDaemonGui::upgradeFirmware()
+void DBBDaemonGui::upgradeFirmwareButton()
+{
+    upgradeFirmware(true);
+}
+
+void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
 {
     //: translation: Open file dialog help text
     firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
     if (firmwareFileToUse.isNull())
         return;
 
-    DBB::LogPrint("Request bootloader unlock\n", "");
-    executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
-        UniValue jsonOut;
-        jsonOut.read(cmdOut);
-        emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
-    });
+    if (unlockbootloader)
+    {
+        DBB::LogPrint("Request bootloader unlock\n", "");
+        executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+            UniValue jsonOut;
+            jsonOut.read(cmdOut);
+            emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
+        });
+    }
+    else
+    {
+        upgradeFirmwareWithFile(firmwareFileToUse);
+    }
+}
+
+void DBBDaemonGui::noDeviceConnectedLabelLink(const QString& link)
+{
+    upgradeFirmware(false);
 }
 
 void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
