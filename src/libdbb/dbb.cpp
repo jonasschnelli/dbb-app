@@ -209,11 +209,27 @@ bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, st
 
     assert(data.size() <= HID_MAX_BUF_SIZE-2);
     memset(HID_REPORT, 0xFF, HID_MAX_BUF_SIZE);
-    HID_REPORT[0] = 0x77;
-    HID_REPORT[1] = chunknum % 0xff;
-    memcpy((void *)&HID_REPORT[2], (unsigned char*)&data[0], data.size());
+    int reportShift = 0;
+#ifdef DBB_ENABLE_HID_REPORT_SHIFT
+    reportShift = 1;
+    HID_REPORT[0] = 0x00;
+#endif
+    HID_REPORT[0+reportShift] = 0x77;
+    HID_REPORT[1+reportShift] = chunknum % 0xff;
+    memcpy((void *)&HID_REPORT[2+reportShift], (unsigned char*)&data[0], data.size());
 
-    hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize);
+    if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)
+    {
+        const wchar_t *error = hid_error(HID_HANDLE);
+        if (error)
+        {
+            std::wstring wsER(error);
+            std::string strER( wsER.begin(), wsER.end() );
+
+            DBB_DEBUG_INTERNAL("Error writing to the usb device: %s\n", strER.c_str());
+        }
+        return false;
+    }
 
     DBB_DEBUG_INTERNAL("try to read some bytes...\n");
     memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
