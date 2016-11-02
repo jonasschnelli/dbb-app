@@ -385,6 +385,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     copayWallet->setCAFile(ca_file);
 #endif
 
+    singleWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
+    copayWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
+
     vMultisigWallets.push_back(copayWallet);
     updateSettings(); //update backends
 
@@ -401,6 +404,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 
     //connect to the com server
     comServer = new DBBComServer(configData->getComServerURL());
+    comServer->setSocks5ProxyURL(configData->getSocks5ProxyURL());
 #if defined(__linux__) || defined(__unix__)
     // set the CA file in case we are compliling for linux
     comServer->setCAFile(ca_file);
@@ -418,7 +422,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(walletUpdateTimer, SIGNAL(timeout()), this, SLOT(updateTimerFired()));
 
     updateManager = new DBBUpdateManager();
-
+    updateManager->setSocks5ProxyURL(configData->getSocks5ProxyURL());
 #if defined(__linux__) || defined(__unix__)
     updateManager->setCAFile(ca_file);
 #endif
@@ -2439,19 +2443,25 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
         multisigWalletIsUpdating = false;
 
     UniValue response;
-    if (response.read(walletsResponse)) {
-        if (response.isObject()) {
-            DBB::LogPrint("Got update wallet response...\n", "");
+    if (response.read(walletsResponse) && response.isObject()) {
+        DBB::LogPrint("Got update wallet response...\n", "");
 
-            if (wallet == singleWallet)
-                updateUISingleWallet(response);
-            else {
-                updateUIMultisigWallets(response);
-                MultisigUpdatePaymentProposals(response);
-                if (initialJoin && !wallet->client.walletJoined)
-                    joinMultisigWalletInitiate(wallet);
-            }
+        if (wallet == singleWallet)
+            updateUISingleWallet(response);
+        else {
+            updateUIMultisigWallets(response);
+            MultisigUpdatePaymentProposals(response);
+            if (initialJoin && !wallet->client.walletJoined)
+                joinMultisigWalletInitiate(wallet);
         }
+    }
+    else if (walletsResponse.size() > 5) {
+        DBB::LogPrint("Got invalid response, maybe a invalid proxy response\n");
+        emit shouldShowAlert("Error", tr("Invalid response. Are you connected to the internet? Please check your proxy settings."));
+    }
+    else {
+        DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
+        emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
     }
 }
 
@@ -2832,10 +2842,18 @@ void DBBDaemonGui::showSettings()
 void DBBDaemonGui::updateSettings()
 {
     vMultisigWallets[0]->setBackendURL(configData->getBWSBackendURL());
+    vMultisigWallets[0]->setSocks5ProxyURL(configData->getSocks5ProxyURL());
     singleWallet->setBackendURL(configData->getBWSBackendURL());
-
+    singleWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
+    
     if (comServer)
+    {
         comServer->setURL(configData->getComServerURL());
+        comServer->setSocks5ProxyURL(configData->getSocks5ProxyURL());
+    }
+
+    if (updateManager)
+        updateManager->setSocks5ProxyURL(configData->getSocks5ProxyURL());
 }
 
 void DBBDaemonGui::updateHiddenPassword(const QString& hiddenPassword)

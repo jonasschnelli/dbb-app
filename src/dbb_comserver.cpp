@@ -63,6 +63,8 @@ DBBComServer::DBBComServer(const std::string& comServerURLIn) : longPollThread(0
     parseMessageCB = nullptr;
     nSequence = 0;
     mobileAppConnected = false;
+    ca_file = "";
+    socks5ProxyURL.clear();
 }
 
 DBBComServer::~DBBComServer()
@@ -157,6 +159,10 @@ bool DBBComServer::SendRequest(const std::string& method,
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
         curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+
+        if (socks5ProxyURL.size())
+            curl_easy_setopt(curl, CURLOPT_PROXY, socks5ProxyURL.c_str());
+        
         curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
@@ -369,4 +375,9 @@ void DBBComServer::setParseMessageCB(void (*fpIn)(DBBComServer*, const std::stri
 void DBBComServer::setCAFile(const std::string& ca_fileIn)
 {
     ca_file = ca_fileIn;
+}
+
+void DBBComServer::setSocks5ProxyURL(const std::string& socks5URL)
+{
+    socks5ProxyURL = socks5URL;
 }

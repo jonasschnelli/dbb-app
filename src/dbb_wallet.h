@@ -50,6 +50,8 @@ public:
     void setBackendURL(const std::string& backendUrl);
 
     void setCAFile(const std::string& caFile);
+
+    void setSocks5ProxyURL(const std::string& proxyURL);
 };
 
 

@@ -89,3 +89,8 @@ void DBBWallet::setCAFile(const std::string& ca_file_in)
 {
     client.setCAFile(ca_file_in);
 }
+
+void DBBWallet::setSocks5ProxyURL(const std::string& proxyURL)
+{
+    client.setSocks5ProxyURL(proxyURL);
+}

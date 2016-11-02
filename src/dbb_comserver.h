@@ -42,6 +42,7 @@ private:
     DBBNetThread* longPollThread; //!< the thread to handle the long polling (will run endless)
     std::string comServerURL; //!< the url to call
     std::string ca_file; //<!ca_file to use
+    std::string socks5ProxyURL; //<!socks5 URL or empty for no proxy
 
     /* send a synchronous http request */
     bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);
@@ -108,6 +109,7 @@ public:
     void setParseMessageCB(void (*fpIn)(DBBComServer*, const std::string&, void *), void *ctx);
 
     void setCAFile(const std::string& ca_file);
+    void setSocks5ProxyURL(const std::string& socksProxy);
 };
 
 #endif //DBBAPP_COMSERVER_H

@@ -121,6 +121,93 @@
         </layout>
        </widget>
       </widget>
+      <widget class="QWidget" name="proxy">
+       <attribute name="title">
+        <string>Proxy/Tor</string>
+       </attribute>
+       <widget class="QWidget" name="verticalLayoutWidgetProxy">
+        <property name="geometry">
+         <rect>
+          <x>0</x>
+          <y>0</y>
+          <width>391</width>
+          <height>164</height>
+         </rect>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayoutProxy">
+         <property name="leftMargin">
+          <number>10</number>
+         </property>
+         <property name="topMargin">
+          <number>10</number>
+         </property>
+         <property name="rightMargin">
+          <number>10</number>
+         </property>
+         <property name="bottomMargin">
+          <number>10</number>
+         </property>
+         <item>
+          <widget class="QCheckBox" name="useDefaultProxy">
+           <property name="text">
+            <string>Use localhost Tor Proxy</string>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <layout class="QVBoxLayout" name="verticalLayout_4">
+           <property name="leftMargin">
+            <number>20</number>
+           </property>
+           <property name="topMargin">
+            <number>5</number>
+           </property>
+           <item>
+            <widget class="QCheckBox" name="useDBBProxy">
+             <property name="text">
+              <string>Use digitalbitbox.com to bypass CloudeFlares tor blocker</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="Line" name="lineSpacer">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="Socks5ProxyLabel">
+             <property name="text">
+              <string>Individual Socks5/Tor Proxy URL</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="socks5ProxyURL">
+             <property name="placeholderText">
+              <string>socks5://localhost:9050</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
+          <spacer name="verticalSpacerProxy">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
+           </property>
+           <property name="sizeHint" stdset="0">
+            <size>
+             <width>20</width>
+             <height>40</height>
+            </size>
+           </property>
+          </spacer>
+         </item>
+        </layout>
+       </widget>
+      </widget>
       <widget class="QWidget" name="tabResetPW">
        <attribute name="title">
         <string>Hidden Wallet Password</string>

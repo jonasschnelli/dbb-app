@@ -16,6 +16,8 @@
 #include <fstream>
 
 static const char *bwsDefaultBackendURL = "https://bws.bitpay.com/bws/api";
+static const char *defaultDBBProxyURL = "https://bws.digitalbitbox.com/bws/api";
+static const char *defaultTorProxyURL = "socks5://localhost:9050";
 static const char *comServerDefaultURL = "https://digitalbitbox.com/smartverification/index.php";
 
 static const char *kVERSION = "version";
@@ -23,6 +25,9 @@ static const char *kCOM_CHANNEL_ID = "comserverchannelid";
 static const char *kENC_PKEY = "encryptionprivkey";
 static const char *kBWS_URL = "bws_url";
 static const char *kCOMSERVER_URL = "comsrv_url";
+static const char *kSOCKS5_PROXY = "socks5_url";
+static const char *kUSE_DEFAULT_PROXY = "use_default_proxy";
+static const char *kDBB_PROXY = "dbb_proxy";
 
 namespace DBB
 {
@@ -39,6 +44,9 @@ private:
     std::string bwsBackendURL;
     std::string comServerChannelID;
     std::vector<unsigned char> encryptionKey;
+    std::string socks5ProxyURL;
+    bool dbbProxy;
+    bool useDefaultProxy;
 
 public:
     DBBConfigdata(const std::string& filenameIn)
@@ -50,6 +58,8 @@ public:
         encryptionKey.clear();
         encryptionKey.resize(32);
         memset(&encryptionKey[0], 0, 32);
+        dbbProxy = false;
+        useDefaultProxy = false;
     }
 
     std::string getComServerURL() { return comServerURL; }
@@ -61,11 +71,44 @@ public:
     std::vector<unsigned char> getComServerEncryptionKey() { return encryptionKey; }
     void setComServerEncryptionKey(const std::vector<unsigned char>& newKey) { encryptionKey = newKey; }
 
-    std::string getBWSBackendURL() { return bwsBackendURL; }
+    std::string getBWSBackendURLInternal()
+    {
+        return bwsBackendURL;
+    }
+
+    std::string getBWSBackendURL()
+    {
+        if (dbbProxy && ( bwsBackendURL == bwsDefaultBackendURL ))
+            return defaultDBBProxyURL;
+
+        return bwsBackendURL;
+    }
     void setBWSBackendURL(const std::string& newURL) { bwsBackendURL = newURL; }
 
+    std::string getSocks5ProxyURLInternal() {
+        return socks5ProxyURL;
+    }
+
+    std::string getSocks5ProxyURL() {
+        if (!useDefaultProxy)
+            return std::string();
+
+        if (socks5ProxyURL.size() > 0)
+            return socks5ProxyURL;
+
+        return defaultTorProxyURL;
+    }
+    void setSocks5ProxyURL(const std::string& in_socks5ProxyURL) { socks5ProxyURL = in_socks5ProxyURL; }
+
+    bool getDBBProxy() { return dbbProxy; }
+    void setDBBProxy(bool newState) { dbbProxy = newState; }
+
+    bool getUseDefaultProxy() { return useDefaultProxy; }
+    void setUseDefaultProxy(bool newState) { useDefaultProxy = newState; }
+
     std::string getDefaultBWSULR() { return bwsDefaultBackendURL; }
-    std::string getDefaultComServerULR() { return comServerDefaultURL; }
+    std::string getDefaultComServerURL() { return comServerDefaultURL; }
+
 
     bool write()
     {
@@ -79,6 +122,18 @@ public:
 
         if (comServerURL != comServerDefaultURL)
             objData.pushKV(kCOMSERVER_URL, comServerURL);
+
+        if (!socks5ProxyURL.empty())
+            objData.pushKV(kSOCKS5_PROXY, socks5ProxyURL);
+
+
+        UniValue dbbProxyU(UniValue::VBOOL);
+        dbbProxyU.setBool(dbbProxy);
+        objData.pushKV(kDBB_PROXY, dbbProxyU);
+
+        UniValue defaultProxyU(UniValue::VBOOL);
+        defaultProxyU.setBool(useDefaultProxy);
+        objData.pushKV(kUSE_DEFAULT_PROXY, defaultProxyU);
 
         std::string json = objData.write();
         FILE* writeFile = fopen(filename.c_str(), "w");
@@ -129,6 +184,22 @@ public:
                 encryptionKey.clear();
                 std::copy(encryptionKeyS.begin(), encryptionKeyS.end(), std::back_inserter(encryptionKey));
             }
+
+            UniValue socks5ProxyU = find_value(objData, kSOCKS5_PROXY);
+            if (socks5ProxyU.isStr())
+                socks5ProxyURL = socks5ProxyU.get_str();
+
+            UniValue dbbProxyU = find_value(objData, kDBB_PROXY);
+            if (dbbProxyU.isBool())
+                dbbProxy = dbbProxyU.get_bool();
+            else
+                dbbProxy = false;
+
+            UniValue defaultProxyU = find_value(objData, kUSE_DEFAULT_PROXY);
+            if (defaultProxyU.isBool())
+                useDefaultProxy = defaultProxyU.get_bool();
+            else
+                useDefaultProxy = false;
         }
 
 

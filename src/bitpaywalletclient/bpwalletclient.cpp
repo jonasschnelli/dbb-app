@@ -62,6 +62,7 @@ BitPayWalletClient::BitPayWalletClient(std::string dataDirIn, bool testnetIn) : 
     ca_file = "";
     baseURL = "https://bws.bitpay.com/bws/api";
     filenameBase.clear();
+    socks5ProxyURL.clear();
 }
 
 void BitPayWalletClient::setBaseURL(const std::string& baseURLnew)
@@ -1134,6 +1135,10 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
             curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, WriteCallback);
             curl_easy_setopt(curl, CURLOPT_WRITEDATA, &responseOut);
             curl_easy_setopt(curl, CURLOPT_NOSIGNAL, 1L);
+
+            if (socks5ProxyURL.size())
+                curl_easy_setopt(curl, CURLOPT_PROXY, socks5ProxyURL.c_str());
+
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
             curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
 
@@ -1280,4 +1285,9 @@ int BitPayWalletClient::CheapRandom()
 void BitPayWalletClient::setCAFile(const std::string& ca_file_in)
 {
     ca_file = ca_file_in;
+}
+
+void BitPayWalletClient::setSocks5ProxyURL(const std::string& proxyIn)
+{
+    socks5ProxyURL = proxyIn;
 }
