@@ -384,7 +384,7 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="text">
-            <string></string>
+            <string/>
            </property>
           </widget>
          </item>
@@ -1166,7 +1166,7 @@ background-color: rgba(240,240,240,255);
             <bool>false</bool>
            </property>
            <property name="placeholderText">
-            <string>    To Address</string>
+            <string> To Address</string>
            </property>
           </widget>
          </item>
@@ -1210,7 +1210,7 @@ background-color: rgba(240,240,240,255);
             <bool>false</bool>
            </property>
            <property name="placeholderText">
-            <string>    Amount</string>
+            <string> Amount BTC</string>
            </property>
           </widget>
          </item>
@@ -1221,22 +1221,22 @@ background-color: rgba(240,240,240,255);
            </property>
            <item>
             <property name="text">
-             <string>priority (~next block)</string>
+             <string>Priority</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>normal (~2 blocks)</string>
+             <string>Standard</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>economy (~6 blocks)</string>
+             <string>Economy</string>
             </property>
            </item>
            <item>
             <property name="text">
-             <string>supereconomy (~24 blocks)</string>
+             <string>Budget</string>
             </property>
            </item>
           </widget>
