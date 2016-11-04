@@ -346,6 +346,11 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         verificationActivityAnimation->setLoopCount(8);
     }
 
+    // Set the tx fee tooltips
+    this->ui->feeLevel->setItemData(0, "Confirms as soon as possible", Qt::ToolTipRole);
+    this->ui->feeLevel->setItemData(1, "Confirms ~30 minutes", Qt::ToolTipRole);
+    this->ui->feeLevel->setItemData(2, "Confirms ~1 hour", Qt::ToolTipRole);
+    this->ui->feeLevel->setItemData(3, "Confirms ~4 hours", Qt::ToolTipRole);
 
     connect(this->ui->overviewButton, SIGNAL(clicked()), this, SLOT(mainOverviewButtonClicked()));
     connect(this->ui->multisigButton, SIGNAL(clicked()), this, SLOT(mainMultisigButtonClicked()));
