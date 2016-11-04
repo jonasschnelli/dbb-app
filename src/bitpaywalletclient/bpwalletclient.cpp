@@ -586,6 +586,8 @@ int BitPayWalletClient::GetFeeForPriority(int prio)
         keyField = "normal";
     else if (prio == 2)
         keyField = "economy";
+    else if (prio == 3)
+        keyField = "superEconomy";
     else
         keyField = "priority";
 
