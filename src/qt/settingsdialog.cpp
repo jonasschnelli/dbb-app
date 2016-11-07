@@ -19,11 +19,8 @@ ui(new Ui::SettingsDialog)
 
 void SettingsDialog::updateDeviceLocked(bool deviceLocked)
 {
-    if (deviceLocked)
-    {
-        ui->tabResetPW->setEnabled(false);
-        ui->setHiddenPasswordButton->setEnabled(false);
-    }
+    ui->tabResetPW->setEnabled(!deviceLocked);
+    ui->setHiddenPasswordButton->setEnabled(!deviceLocked);
 }
 
 SettingsDialog::~SettingsDialog()
