@@ -1185,7 +1185,7 @@ background-color: rgba(240,240,240,255);
         </layout>
        </item>
        <item>
-        <layout class="QHBoxLayout" name="hLayoutNew">
+        <layout class="QHBoxLayout" name="hLayoutNew" stretch="0,1,0,0">
          <property name="leftMargin">
           <number>5</number>
          </property>
@@ -1215,13 +1215,28 @@ background-color: rgba(240,240,240,255);
           </widget>
          </item>
          <item>
-          <widget class="QComboBox" name="comboBox">
-           <property name="enabled">
-            <bool>false</bool>
+          <widget class="QComboBox" name="feeLevel">
+           <property name="currentIndex">
+            <number>1</number>
            </property>
            <item>
             <property name="text">
-             <string>BTC</string>
+             <string>priority (~next block)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>normal (~2 blocks)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>economy (~6 blocks)</string>
+            </property>
+           </item>
+           <item>
+            <property name="text">
+             <string>supereconomy (~24 blocks)</string>
             </property>
            </item>
           </widget>
