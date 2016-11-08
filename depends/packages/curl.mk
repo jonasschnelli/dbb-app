@@ -5,7 +5,7 @@ $(package)_file_name=$(package)-$($(package)_version).tar.gz
 $(package)_sha256_hash=df9e7d4883abdd2703ee758fe0e3ae74cec759b26ec2b70e5d1c40239eea06ec
 $(package)_patches=darwinssl.patch
 $(package)_build_env+=CFLAGS="$($(package)_cflags) $($(package)_cppflags) -DCURL_STATICLIB"
-linux_$(package)_dependencies=openssl
+$(package)_dependencies=openssl
 define $(package)_preprocess_cmds
   patch -p1 < $($(package)_patch_dir)/darwinssl.patch && autoreconf -i
 endef
