@@ -1,6 +1,6 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
 AC_PREREQ([2.68])
-AC_INIT([Digital Bitbox CLI],[2.0.2],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
+AC_INIT([Digital Bitbox CLI],[2.1.0],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
 AC_CONFIG_SRCDIR([src/config])
 AC_CONFIG_HEADERS([src/config/dbb-config.h])
 AX_PREFIX_CONFIG_H([src/config/_dbb-config.h], [DBB])
