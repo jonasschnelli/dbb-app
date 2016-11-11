@@ -2460,9 +2460,12 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
                 joinMultisigWalletInitiate(wallet);
         }
     }
-    else if (walletsResponse.size() > 5  && !response.isObject()) {
-        DBB::LogPrint("Got invalid response, maybe a invalid proxy response\n");
-        emit shouldShowAlert("Error", tr("Invalid response. Are you connected to the internet? Please check your proxy settings."));
+    else if (walletsResponse.size() > 5) {
+        if (!response.isObject())
+        {
+            DBB::LogPrint("Got invalid response, maybe a invalid proxy response\n");
+            emit shouldShowAlert("Error", tr("Invalid response. Are you connected to the internet? Please check your proxy settings."));
+        }
     }
     else {
         DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
