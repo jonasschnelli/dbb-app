@@ -13,12 +13,13 @@ This package includes a cli tool "dbb-cli" which can be used to direcly talk wit
 
 **Examples:**
 
-* `dbb-cli erase`
+* `dbb-cli help`
 * `dbb-cli -newpassword=0000 password`
 * `dbb-cli -newpassword=test -password=0000 password`
 * `dbb-cli -password=test led`
 * `dbb-cli -password=test seed`
-* `dbb-cli -keypath=m/44/0 xpub`
+* `dbb-cli -password=test -keypath=m/44/0 xpub`
+* `dbb-cli -password=test erase`
 
 Available commands with possible arguments (* = mandatory):
 
@@ -26,17 +27,18 @@ Available commands with possible arguments (* = mandatory):
   erase 
   password -*newpassword
   led 
-  seed -source (default: create), -decrypt (default: no), -salt
+  seed -source (default: create), -raw (default: false), -entropy (default: 0123456789abcde), -key (default: 1234), -filename (default: backup.dat)
   backuplist 
-  backuperase 
-  backup -encrypt (default: no), -filename (default: backup.dat)
-  sign -type (default: meta), -meta, -*^hashes-keypaths, -*^keypath
+  backuperaseall 
+  backuperasefile -*filename
+  backup -key (default: 1234), -filename (default: backup.dat)
+  sign -lock_pin (default: 1234), -meta (default: meta), -*hasharray, -pubkeyarray
 
     Example
     =======
-    dbb-cli --password=0000 sign -hashes-keypaths='[{"hash": "f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79", "keypath":"m/44/0"}]' -keypath='[{"pubkey":"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9", "keypath":"m/44"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90
+    dbb-cli --password=0000 sign -hasharray='[{"hash": "f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79", "keypath":"m/44/0"}]' -pubkeyarray='[{"pubkey":"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9", "keypath":"m/44"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90
 
-    (this will sign the given hash(s) with the privatekey specified with keypath and checks, if pubkey at given keypath is equal/valid
+(This signs the given hash(es) with the privatekey specified at keypath. It checks if the pubkey at a given keypath is equal/valid.
 
   xpub -*keypath
   random -mode (default: true)
@@ -47,7 +49,7 @@ Available commands with possible arguments (* = mandatory):
   bootloaderunlock 
   bootloaderlock 
   firmware -filename
-  decryptbackup -filename
+  hidden_password -*hiddenpassword 
 ```
 
 ## Build Instructions
