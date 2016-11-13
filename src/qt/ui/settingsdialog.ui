@@ -150,7 +150,7 @@
          <item>
           <widget class="QCheckBox" name="useDefaultProxy">
            <property name="text">
-            <string>Use localhost Tor Proxy</string>
+            <string>Use a proxy</string>
            </property>
           </widget>
          </item>
@@ -165,7 +165,7 @@
            <item>
             <widget class="QCheckBox" name="useDBBProxy">
              <property name="text">
-              <string>Use digitalbitbox.com to bypass CloudeFlares tor blocker</string>
+              <string>Bypass the Cloudflare Tor blocker via digitalbitbox.com</string>
              </property>
             </widget>
            </item>
@@ -179,7 +179,7 @@
            <item>
             <widget class="QLabel" name="Socks5ProxyLabel">
              <property name="text">
-              <string>Individual Socks5/Tor Proxy URL</string>
+              <string>Socks5/Tor proxy URL</string>
              </property>
             </widget>
            </item>
