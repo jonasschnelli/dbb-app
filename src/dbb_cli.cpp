@@ -65,22 +65,28 @@ static const CDBBCommand vCommands[] =
 {
     { "erase"             , "{\"reset\" : \"__ERASE__\"}",                                "", false},
     { "password"          , "{\"password\" : \"%!newpassword%\"}",                        "", false},
-    { "led"               , "{\"led\" : \"toggle\"}",                                     "", true},
-    { "seed"              , "{\"seed\" : {\"source\" :\"%source|create%\","
-                            "\"decrypt\": \"%decrypt|no%\","
-                            "\"salt\" : \"%salt%\"} }",                                 "", true},
-
+    { "led"               , "{\"led\" : \"blink\"}",                                      "", true},
+    { "seed"              , "{\"seed\" : {"
+                                "\"source\" :\"%source|create%\","
+                                "\"raw\": \"%raw|false%\","
+                                "\"entropy\": \"%entropy|0123456789abcde%\","
+                                "\"key\": \"%key|1234%\","
+                                "\"filename\": \"%filename|backup.dat%\"}"
+                            "}",                                                          "", true},
     { "backuplist"        , "{\"backup\" : \"list\"}",                                    "", true},
-    { "backuperase"       , "{\"backup\" : \"erase\"}",                                   "", true},
-    { "backup"            , "{\"backup\" : { \"encrypt\":\"%encrypt|no%\","
-                            "\"filename\": \"%filename|backup.dat%\"}}",                "", true},
-
-    { "sign"              , "{\"sign\" : { \"type\":\"%type|meta%\","
-                            "\"meta\": \"%meta%\","
-                            "\"data\": %!^hashes-keypaths%,"
-                            "\"checkpub\": %!^keypath% }}",
-        "dbb-cli --password=0000 sign -hashes-keypaths='[{\"hash\": \"f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79\", \"keypath\":\"m/44/0\"}]' -keypath='[{\"pubkey\":\"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9\", \"keypath\":\"m/44\"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90\n\n(this will sign the given hash(s) with the privatekey specified with keypath and checks, if pubkey at given keypath is equal/valid",
-                                                                                        true},
+    { "backuperaseall"    , "{\"backup\" : \"erase\"}",                                   "", true},
+    { "backuperasefile"   , "{\"backup\" : {\"erase\":\"%!filename%\"}}",                 "", true},
+    { "backup"            , "{\"backup\" : {"
+                                "\"key\":\"%key|1234%\","
+                                "\"filename\": \"%filename|backup.dat%\"}"
+                            "}",                                                          "", true},
+    { "sign"              , "{\"sign\" : {"
+                                "\"pin\" : \"%lock_pin|1234%\","
+                                "\"meta\" : \"%meta|meta%\","
+                                "\"data\" : %!hasharray%,"
+                                "\"checkpub\": %pubkeyarray|[{\"pubkey\":\"000000000000000000000000000000000000000000000000000000000000000000\", \"keypath\":\"m/44\"}]% }"
+                            "}",
+        "dbb-cli --password=0000 sign -hasharray='[{\"hash\": \"f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79\", \"keypath\":\"m/44/0\"}]' -pubkeyarray='[{\"pubkey\":\"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9\", \"keypath\":\"m/44\"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90\n\n(This signs the given hash(es) with the privatekey specified at keypath. It checks if the pubkey at a given keypath is equal/valid.",                                       true},
 
     { "xpub"              , "{\"xpub\" : \"%!keypath%\"}",                                "", true},
     { "random"            , "{\"random\" : \"%mode|true%\"}",                             "", true},
@@ -89,13 +95,14 @@ static const CDBBCommand vCommands[] =
     { "lock"              , "{\"device\" : \"lock\"}",                                    "", true},
     { "verifypass"        , "{\"verifypass\" : \"%operation|create%\"}",                  "", true},
 
-    { "aes"               , "{\"aes256cbc\" : { \"type\":\"%type|encrypt%\","
-                            "\"data\": \"%!data%\"}}",                                  "", true},
-
+    { "aes"               , "{\"aes256cbc\" : {"
+                                "\"type\":\"%type|encrypt%\","
+                                "\"data\": \"%!data%\"}"
+                            "}",                                                          "", true},
     { "bootloaderunlock"  , "{\"bootloader\" : \"unlock\"}",                              "", true},
     { "bootloaderlock"    , "{\"bootloader\" : \"lock\"}",                                "", true},
     { "firmware"          , "%filename%",                                                 "", true},
-    { "decryptbackup"     , "%filename%",                                                 "", true},
+    /*{ "decryptbackup"     , "%filename%",                                                 "", true},*//* no longer valid for firmware v2 */
     { "hidden_password"   , "{\"hidden_password\" : \"%!hiddenpassword%\"}",              "", true},
 };
 
@@ -232,9 +239,9 @@ int main(int argc, char* argv[])
     bool connectRes = (userCmd == "firmware") ? DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R) : DBB::openConnection();
 
     if (!connectRes)
-        printf("Error: No digital bitbox connected\n");
+        printf("Error: No Digital Bitbox connected\n");
     else {
-        DebugOut("main", "Digital Bitbox Connected\n");
+        DebugOut("main", "Digital Bitbox connected\n");
 
         if (argc < 2) {
             printf("no command given\n");
