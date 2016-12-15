@@ -35,6 +35,8 @@ ModalView::ModalView(QWidget* parent) : QWidget(parent), ui(new Ui::ModalView), 
     connect(this->ui->upgradeFirmware, SIGNAL(clicked()), this, SLOT(upgradeFirmware()));
 
     ui->qrCodeSequence->useOnDarkBackground(true);
+    ui->setDeviceSubmit->setFocus();
+    ui->setDeviceSubmit->setEnabled(false);
     visible = false;
 }
 
