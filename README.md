@@ -8,7 +8,7 @@ A QT based application for the [Digital Bitbox](https://digitalbitbox.com) hardw
 The dbb-app Qt app will be built if qt5 is available on your system or if `--with-gui=qt5` has been set. 
 
 ## dbb-cli
-This package includes a cli tool "dbb-cli" which can be used to direcly talk with your digital bitbox device.
+This package includes a cli tool "dbb-cli" which can be used to direcly talk with your Digital Bitbox.
 
 
 **Examples:**
@@ -21,7 +21,7 @@ This package includes a cli tool "dbb-cli" which can be used to direcly talk wit
 * `dbb-cli -password=test -keypath=m/44/0 xpub`
 * `dbb-cli -password=test erase`
 
-Available commands with possible arguments (* = mandatory):
+Below are available commands with possible arguments (`*` indicates mandatory). Refer to the [API documentation](https://digitalbitbox.com/api) for explanations about each command.
 
 ```
   erase 
@@ -35,10 +35,9 @@ Available commands with possible arguments (* = mandatory):
   sign -lock_pin (default: 1234), -meta (default: meta), -*hasharray, -pubkeyarray
 
     Example
+    This signs the given hash(es) with the private key specified at the BIP32/44 keypath. The command must be sent two times in order to sign - refer to the API documentation. It also optionally checks if a pubkey matches the pubkey derived at the given keypath.
     =======
     dbb-cli --password=0000 sign -hasharray='[{"hash": "f6f4a3633eda92eef9dd96858dec2f5ea4dfebb67adac879c964194eb3b97d79", "keypath":"m/44/0"}]' -pubkeyarray='[{"pubkey":"0270526bf580ddb20ad18aad62b306d4beb3b09fae9a70b2b9a93349b653ef7fe9", "keypath":"m/44"}]' -meta=34982a264657cdf2635051bd778c99e73ce5eb2e8c7f9d32b8aaa7e547c7fd90
-
-(This signs the given hash(es) with the privatekey specified at keypath. It checks if the pubkey at a given keypath is equal/valid.
 
   xpub -*keypath
   random -mode (default: true)
