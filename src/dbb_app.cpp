@@ -189,12 +189,7 @@ int main(int argc, char** argv)
 
                 if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE || deviceType == DBB::DBB_DEVICE_UNKNOWN)
                 {
-                    bool openSuccess = false;
-                    if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER)
-                        openSuccess = DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R);
-                    else
-                        openSuccess = DBB::openConnection();
-
+                    bool openSuccess = DBB::openConnection(deviceType);
 #ifdef DBB_ENABLE_QT
                     //TODO, check if this requires locking
                     if (dbbGUI)

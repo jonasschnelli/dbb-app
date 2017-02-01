@@ -26,12 +26,14 @@ enum dbb_device_mode {
     DBB_DEVICE_MODE_BOOTLOADER,
     DBB_DEVICE_MODE_FIRMWARE,
     DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD,
+    DBB_DEVICE_MODE_FIRMWARE_U2F,
+    DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD,
     DBB_DEVICE_UNKNOWN,
 };
 //!open a connection to the digital bitbox device
 // retruns false if no connection could be made, keeps connection handling
 // internal
-bool openConnection(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsigned int readBufSizeIn = HID_REPORT_SIZE_DEFAULT);
+bool openConnection(enum dbb_device_mode mode);
 
 //!close the connection to the dbb device
 bool closeConnection();

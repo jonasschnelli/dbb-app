@@ -44,9 +44,178 @@ extern "C" {
 namespace DBB
 {
 static hid_device* HID_HANDLE = NULL;
+static enum dbb_device_mode HID_CURRENT_DEVICE_MODE = DBB_DEVICE_UNKNOWN;
 static unsigned int readBufSize = HID_REPORT_SIZE_DEFAULT;
 static unsigned int writeBufSize = HID_REPORT_SIZE_DEFAULT;
 static unsigned char HID_REPORT[HID_MAX_BUF_SIZE] = {0};
+
+#define  USB_REPORT_SIZE 64
+#ifndef MIN
+#define MIN(a, b)  (((a) < (b)) ? (a) : (b))
+#endif
+
+
+#define HWW_CID 0xff000000
+
+#define TYPE_MASK               0x80    // Frame type mask
+#define TYPE_INIT               0x80    // Initial frame identifier
+#define TYPE_CONT               0x00    // Continuation frame identifier
+
+#define ERR_INVALID_SEQ         0x04    // Invalid message sequencing
+
+#define U2FHID_ERROR        (TYPE_INIT | 0x3f)  // Error response
+#define U2FHID_VENDOR_FIRST (TYPE_INIT | 0x40)  // First vendor defined command
+#define HWW_COMMAND         (U2FHID_VENDOR_FIRST + 0x01)// Hardware wallet command
+
+#define FRAME_TYPE(f) ((f).type & TYPE_MASK)
+#define FRAME_CMD(f)  ((f).init.cmd & ~TYPE_MASK)
+#define MSG_LEN(f)    (((f).init.bcnth << 8) + (f).init.bcntl)
+#define FRAME_SEQ(f)  ((f).cont.seq & ~TYPE_MASK)
+
+__extension__ typedef struct {
+    uint32_t cid;               // Channel identifier
+    union {
+        uint8_t type;           // Frame type - bit 7 defines type
+        struct {
+            uint8_t cmd;        // Command - bit 7 set
+            uint8_t bcnth;      // Message byte count - high
+            uint8_t bcntl;      // Message byte count - low
+            uint8_t data[USB_REPORT_SIZE - 7]; // Data payload
+        } init;
+        struct {
+            uint8_t seq;        // Sequence number - bit 7 cleared
+            uint8_t data[USB_REPORT_SIZE - 5]; // Data payload
+        } cont;
+    };
+} USB_FRAME;
+
+static int api_hid_send_frame(USB_FRAME *f)
+{
+    int res = 0;
+    uint8_t d[sizeof(USB_FRAME) + 1];
+    memset(d, 0, sizeof(d));
+    d[0] = 0;  // un-numbered report
+    f->cid = htonl(f->cid);  // cid is in network order on the wire
+    memcpy(d + 1, f, sizeof(USB_FRAME));
+    f->cid = ntohl(f->cid);
+
+    res = hid_write(HID_HANDLE, d, sizeof(d));
+
+    if (res == sizeof(d)) {
+        return 0;
+    }
+    return 1;
+}
+
+
+static int api_hid_send_frames(uint32_t cid, uint8_t cmd, const void *data, size_t size)
+{
+    USB_FRAME frame;
+    int res;
+    size_t frameLen;
+    uint8_t seq = 0;
+    const uint8_t *pData = (const uint8_t *) data;
+
+    frame.cid = cid;
+    frame.init.cmd = TYPE_INIT | cmd;
+    frame.init.bcnth = (size >> 8) & 255;
+    frame.init.bcntl = (size & 255);
+
+    frameLen = MIN(size, sizeof(frame.init.data));
+    memset(frame.init.data, 0xEE, sizeof(frame.init.data));
+    memcpy(frame.init.data, pData, frameLen);
+
+    do {
+        res = api_hid_send_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+        size -= frameLen;
+        pData += frameLen;
+
+        frame.cont.seq = seq++;
+        frameLen = MIN(size, sizeof(frame.cont.data));
+        memset(frame.cont.data, 0xEE, sizeof(frame.cont.data));
+        memcpy(frame.cont.data, pData, frameLen);
+    } while (size);
+
+    return 0;
+}
+
+
+static int api_hid_read_frame(USB_FRAME *r)
+{
+
+    memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
+
+    int res = 0;
+    res = hid_read(HID_HANDLE, (uint8_t *) r, sizeof(USB_FRAME));
+
+    if (res == sizeof(USB_FRAME)) {
+        r->cid = ntohl(r->cid);
+        return 0;
+    }
+    return 1;
+}
+
+
+static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
+{
+    USB_FRAME frame;
+    int res, result;
+    size_t totalLen, frameLen;
+    uint8_t seq = 0;
+    uint8_t *pData = (uint8_t *) data;
+
+    (void) cmd;
+
+    do {
+        res = api_hid_read_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+    } while (frame.cid != cid || FRAME_TYPE(frame) != TYPE_INIT);
+
+    if (frame.init.cmd == U2FHID_ERROR) {
+        return -frame.init.data[0];
+    }
+
+    totalLen = MIN(max, MSG_LEN(frame));
+    frameLen = MIN(sizeof(frame.init.data), totalLen);
+
+    result = totalLen;
+
+    memcpy(pData, frame.init.data, frameLen);
+    totalLen -= frameLen;
+    pData += frameLen;
+
+    while (totalLen) {
+        res = api_hid_read_frame(&frame);
+        if (res != 0) {
+            return res;
+        }
+
+        if (frame.cid != cid) {
+            continue;
+        }
+        if (FRAME_TYPE(frame) != TYPE_CONT) {
+            return -ERR_INVALID_SEQ;
+        }
+        if (FRAME_SEQ(frame) != seq++) {
+            return -ERR_INVALID_SEQ;
+        }
+
+        frameLen = MIN(sizeof(frame.cont.data), totalLen);
+
+        memcpy(pData, frame.cont.data, frameLen);
+        totalLen -= frameLen;
+        pData += frameLen;
+    }
+
+    return result;
+}
 
 static bool api_hid_init(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsigned int readBufSizeIn = HID_REPORT_SIZE_DEFAULT)
 {
@@ -103,8 +272,22 @@ enum dbb_device_mode deviceAvailable()
         if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
         {
             foundType = DBB_DEVICE_MODE_FIRMWARE;
-            if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-')
-                foundType = DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD;
+            // for now, only support one digit version numbers
+            if (vSNParts[1].size() >= 6 && vSNParts[1][0] == 'v')
+            {
+                int major = vSNParts[1][1] - '0';
+                int minor = vSNParts[1][3] - '0';
+                int patch = vSNParts[1][5] - '0';
+
+                // if version is greater or equal to then 2.1.0, use U2F protocol
+                if (major > 2 || (major == 2 && minor >= 1))
+                {
+                    foundType = DBB_DEVICE_MODE_FIRMWARE_U2F;
+                }
+            }
+            if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-') {
+                foundType = (foundType == DBB_DEVICE_MODE_FIRMWARE) ? DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD : DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD;
+            }
             break;
         }
         else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
@@ -127,9 +310,21 @@ bool isConnectionOpen()
     return (HID_HANDLE != NULL);
 }
 
-bool openConnection(unsigned int writeBufSizeIn, unsigned int readBufSizeIn)
+bool openConnection(enum dbb_device_mode mode)
 {
-    return api_hid_init(writeBufSizeIn, readBufSizeIn);
+    if (mode == DBB_DEVICE_MODE_BOOTLOADER && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
+        HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_BOOTLOADER;
+        return true;
+    }
+    else if (mode == DBB_DEVICE_MODE_FIRMWARE_U2F && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
+        HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_FIRMWARE_U2F;
+        return true;
+    }
+    else
+    {
+        HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_FIRMWARE;
+        return api_hid_init();
+    }
 }
 
 bool closeConnection()
@@ -159,41 +354,50 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 #endif
     HID_REPORT[0] = 0x00;
     memcpy(HID_REPORT+reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
-    if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)
+    if (HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F)
     {
-        const wchar_t *error = hid_error(HID_HANDLE);
-        if (error)
-        {
-            std::wstring wsER(error);
-            std::string strER( wsER.begin(), wsER.end() );
+        int res = api_hid_send_frames(HWW_CID, HWW_COMMAND, json.c_str(), json.size());
 
-            DBB_DEBUG_INTERNAL("Error writing to the usb device: %s\n", strER.c_str());
-        }
-        return false;
+        memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
+        res = api_hid_read_frames(HWW_CID, HWW_COMMAND, HID_REPORT, HID_REPORT_SIZE_DEFAULT);
     }
-
-    DBB_DEBUG_INTERNAL("try to read some bytes...\n");
-    memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
-    while (cnt < readBufSize) {
-        res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
-        if (res < 0 || (res == 0 && cnt < readBufSize)) {
-            std::string errorStr = "";
+    else {
+        if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)
+        {
             const wchar_t *error = hid_error(HID_HANDLE);
-
             if (error)
             {
                 std::wstring wsER(error);
-                errorStr.assign( wsER.begin(), wsER.end() );
-            }
+                std::string strER( wsER.begin(), wsER.end() );
 
-            DBB_DEBUG_INTERNAL("HID Read failed or timed out: %s\n", errorStr.c_str());
+                DBB_DEBUG_INTERNAL("Error writing to the usb device: %s\n", strER.c_str());
+            }
             return false;
         }
-        cnt += res;
+
+        DBB_DEBUG_INTERNAL("try to read some bytes...\n");
+        memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
+        while (cnt < readBufSize) {
+            res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
+            if (res < 0 || (res == 0 && cnt < readBufSize)) {
+                std::string errorStr = "";
+                const wchar_t *error = hid_error(HID_HANDLE);
+
+                if (error)
+                {
+                    std::wstring wsER(error);
+                    errorStr.assign( wsER.begin(), wsER.end() );
+                }
+
+                DBB_DEBUG_INTERNAL("HID Read failed or timed out: %s\n", errorStr.c_str());
+                return false;
+            }
+            cnt += res;
+        }
+
+        DBB_DEBUG_INTERNAL(" OK, read %d bytes (%s).\n", res, (const char*)HID_REPORT);
     }
-
-    DBB_DEBUG_INTERNAL(" OK, read %d bytes (%s).\n", res, (const char*)HID_REPORT);
-
+    
     resultOut.assign((const char*)HID_REPORT);
     return true;
 }
@@ -254,8 +458,6 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
     if (cmdOut.size() != 1 || cmdOut[0] != 'v')
         return false;
     sendCommand("s0"+sigCmpStr, cmdOut);
-//    if (!(cmdOut.size() > 2 && cmdOut[0] == 's' && cmdOut[1] == '0'))
-//        return false;
     sendCommand("e", cmdOut);
 
     int cnt = 0;
