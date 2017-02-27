@@ -12,6 +12,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#include <arpa/inet.h>
 
 #include <string>
 #include <stdexcept>
@@ -27,7 +28,6 @@
 #include "hidapi/hidapi.h"
 
 #include <btc/hash.h>
-
 //defined in libbtc sha2.h
 extern "C" {
     extern void hmac_sha512(const uint8_t* key, const uint32_t keylen, const uint8_t* msg, const uint32_t msglen, uint8_t* hmac);
