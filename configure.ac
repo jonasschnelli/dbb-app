@@ -65,6 +65,18 @@ if test "x$enable_debug" = xyes; then
     AC_DEFINE_UNQUOTED([ENABLE_DEBUG],[1],[Define to 1 to enable debung output])
 fi
 
+# Enable net debug
+AC_ARG_ENABLE([netdebug],
+    [AS_HELP_STRING([--enable-netdebug],
+                    [use net debug (default is no)])],
+    [enable_netdebug=$enableval],
+    [enable_netdebug=no])
+
+if test "x$enable_netdebug" = xyes; then
+    AC_DEFINE_UNQUOTED([ENABLE_NETDEBUG],[1],[Define to 1 to enable net debung output])
+fi
+
+
 AC_ARG_ENABLE([daemon],
     [AS_HELP_STRING([--enable-daemon],
     [enable daemon (default is yes)])],
@@ -365,6 +377,7 @@ AC_OUTPUT
 
 echo ""
 echo "Options used to compile and link:"
+echo "  NET_DEBUG     = $enable_netdebug"
 echo "  CC            = $CC"
 echo "  CFLAGS        = $CFLAGS"
 echo "  CPPFLAGS      = $CPPFLAGS"
