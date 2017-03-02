@@ -35,6 +35,9 @@ extern "C" {
 
 #define HID_MAX_BUF_SIZE 5120
 
+// must be min 30 seconds to allow touch button confirmations
+#define HID_READ_TIMEOUT 35 * 1000
+
 #ifdef DBB_ENABLE_DEBUG
 #define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
 #else
@@ -150,7 +153,7 @@ static int api_hid_read_frame(USB_FRAME *r)
     memset((int8_t *)r, 0xEE, sizeof(USB_FRAME));
 
     int res = 0;
-    res = hid_read(HID_HANDLE, (uint8_t *) r, sizeof(USB_FRAME));
+    res = hid_read_timeout(HID_HANDLE, (uint8_t *) r, sizeof(USB_FRAME), HID_READ_TIMEOUT);
 
     if (res == sizeof(USB_FRAME)) {
         r->cid = ntohl(r->cid);
@@ -313,11 +316,11 @@ bool isConnectionOpen()
 bool openConnection(enum dbb_device_mode mode)
 {
     if (mode == DBB_DEVICE_MODE_BOOTLOADER && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
-        HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_BOOTLOADER;
+        HID_CURRENT_DEVICE_MODE = mode;
         return true;
     }
-    else if (mode == DBB_DEVICE_MODE_FIRMWARE_U2F && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
-        HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_FIRMWARE_U2F;
+    else if ((mode == DBB_DEVICE_MODE_FIRMWARE_U2F || mode == DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD) && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
+        HID_CURRENT_DEVICE_MODE = mode;
         return true;
     }
     else
@@ -354,7 +357,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
 #endif
     HID_REPORT[0] = 0x00;
     memcpy(HID_REPORT+reportShift, json.c_str(), std::min(HID_MAX_BUF_SIZE, (int)json.size()));
-    if (HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F)
+    if (HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F || HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD)
     {
         int res = api_hid_send_frames(HWW_CID, HWW_COMMAND, json.c_str(), json.size());
 
@@ -378,7 +381,7 @@ bool sendCommand(const std::string& json, std::string& resultOut)
         DBB_DEBUG_INTERNAL("try to read some bytes...\n");
         memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
         while (cnt < readBufSize) {
-            res = hid_read(HID_HANDLE, HID_REPORT + cnt, readBufSize);
+            res = hid_read_timeout(HID_HANDLE, HID_REPORT + cnt, readBufSize, HID_READ_TIMEOUT);
             if (res < 0 || (res == 0 && cnt < readBufSize)) {
                 std::string errorStr = "";
                 const wchar_t *error = hid_error(HID_HANDLE);
