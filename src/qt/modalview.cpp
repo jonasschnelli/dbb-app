@@ -327,7 +327,7 @@ void ModalView::proceedFrom2FAToSigning(const QString &twoFACode)
 
 void ModalView::twoFACancelPressed()
 {
-    ui->qrCodeSequence->setVisible(false);
+    setQrCodeVisibility(false);
     ui->abortButton->setVisible(false);
 
     if (txPointer)
