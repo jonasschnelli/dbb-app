@@ -104,6 +104,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               walletUpdateTimer(0),
                                               comServer(0),
                                               lastPing(0),
+                                              netLoaded(false),
                                               settingsDialog(0),
                                               updateManager(0)
 {
@@ -589,6 +590,8 @@ void DBBDaemonGui::uiUpdateDeviceState(int deviceType)
 
         if (walletUpdateTimer)
             walletUpdateTimer->stop();
+
+        netLoaded = false;
 
     } else {
         if (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F)
@@ -2451,6 +2454,7 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     if (response.read(walletsResponse) && response.isObject()) {
         DBB::LogPrint("Got update wallet response...\n", "");
 
+        netLoaded = true;
         if (wallet == singleWallet)
             updateUISingleWallet(response);
         else {
@@ -2468,8 +2472,10 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
         }
     }
     else {
-        DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
-        emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+        if (!netLoaded) {
+            DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
+            emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+        }
     }
 }
 

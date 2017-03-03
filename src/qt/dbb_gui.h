@@ -195,6 +195,7 @@ private:
     DBBComServer *comServer;
     std::time_t lastPing;
 
+    std::atomic<bool> netLoaded;
 #ifdef DBB_USE_MULTIMEDIA
     DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
 #endif
