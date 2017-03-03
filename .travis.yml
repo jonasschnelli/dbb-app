@@ -24,7 +24,7 @@ install:
         && export CC="gcc-4.8"
         ;
       else
-        brew install hidapi libevent qt5 libqrencode
+        brew install hidapi qt5 libqrencode
         ;
       fi
 

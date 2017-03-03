@@ -142,37 +142,48 @@ int main(int argc, char** argv)
                 std::string password = std::get<1>(cmdCB);
                 dbb_cmd_execution_status_t status = DBB_CMD_EXECUTION_STATUS_OK;
 
-                if (!password.empty())
-                {
-                    std::string base64str;
-                    std::string unencryptedJson;
-                    try
+                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
+                DebugOut("sendcmd", "Opening HID...\n");
+                bool openSuccess = DBB::openConnection(deviceType);
+                if (!openSuccess) {
+                    status = DBB_CMD_EXECUTION_DEVICE_OPEN_FAILED;
+                }
+                else {
+                    if (!password.empty())
                     {
-                        DebugOut("sendcmd", "encrypt&send: %s\n", cmd.c_str());
-                        DBB::encryptAndEncodeCommand(cmd, password, base64str);
-                        if (!DBB::sendCommand(base64str, cmdOut))
+                        std::string base64str;
+                        std::string unencryptedJson;
+                        try
                         {
-                            DebugOut("sendcmd", "sending command failed\n");
+                            DebugOut("sendcmd", "encrypt&send: %s\n", cmd.c_str());
+                            DBB::encryptAndEncodeCommand(cmd, password, base64str);
+                            if (!DBB::sendCommand(base64str, cmdOut))
+                            {
+                                DebugOut("sendcmd", "sending command failed\n");
+                                status = DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED;
+                            }
+                            else
+                                DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                        }
+                        catch (const std::exception& ex) {
+                            unencryptedJson = cmdOut;
+                            DebugOut("sendcmd", "response decryption failed: %s\n", unencryptedJson.c_str());
                             status = DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED;
                         }
-                        else
-                            DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
-                    }
-                    catch (const std::exception& ex) {
-                        unencryptedJson = cmdOut;
-                        DebugOut("sendcmd", "response decryption failed: %s\n", unencryptedJson.c_str());
-                        status = DBB_CMD_EXECUTION_STATUS_ENCRYPTION_FAILED;
-                    }
 
-                    cmdOut = unencryptedJson;
+                        cmdOut = unencryptedJson;
+                    }
+                    else
+                    {
+                        DebugOut("sendcmd", "send unencrypted: %s\n", cmd.c_str());
+                        DBB::sendCommand(cmd, cmdOut);
+                    }
+                    std::get<2>(cmdCB)(cmdOut, status);
+                    cmdQueue.pop();
+
+                    DebugOut("sendcmd", "Closing HID\n");
+                    DBB::closeConnection();
                 }
-                else
-                {
-                    DebugOut("sendcmd", "send unencrypted: %s\n", cmd.c_str());
-                    DBB::sendCommand(cmd, cmdOut);
-                }
-                std::get<2>(cmdCB)(cmdOut, status);
-                cmdQueue.pop();
             }
             notified = false;
         }
@@ -187,20 +198,11 @@ int main(int argc, char** argv)
                 std::unique_lock<std::mutex> lock(cs_queue);
                 enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
 
-                if (!DBB::isConnectionOpen() || deviceType == DBB::DBB_DEVICE_NO_DEVICE || deviceType == DBB::DBB_DEVICE_UNKNOWN)
-                {
-                    bool openSuccess = false;
-                    if (deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER)
-                        openSuccess = DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R);
-                    else
-                        openSuccess = DBB::openConnection();
-
 #ifdef DBB_ENABLE_QT
                     //TODO, check if this requires locking
                     if (dbbGUI)
-                        dbbGUI->deviceStateHasChanged(openSuccess, deviceType);
+                        dbbGUI->deviceStateHasChanged( (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD), deviceType);
 #endif
-                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }

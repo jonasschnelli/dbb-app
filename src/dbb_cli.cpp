@@ -104,6 +104,8 @@ static const CDBBCommand vCommands[] =
     { "firmware"          , "%filename%",                                                 "", true},
     /*{ "decryptbackup"     , "%filename%",                                                 "", true},*//* no longer valid for firmware v2 */
     { "hidden_password"   , "{\"hidden_password\" : \"%!hiddenpassword%\"}",              "", true},
+    { "u2f-on"            , "{\"feature_set\" : {\"U2F\": true} }",                       "", true},
+    { "u2f-off"           , "{\"feature_set\" : {\"U2F\": false} }",                      "", true},
 };
 
 
@@ -236,7 +238,7 @@ int main(int argc, char* argv[])
         printf("Error: No Digital Bitbox is Bootloader-Mode detected\n");
         return 1;
     }
-    bool connectRes = (userCmd == "firmware") ? DBB::openConnection(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R) : DBB::openConnection();
+    bool connectRes = DBB::openConnection(deviceMode);
 
     if (!connectRes)
         printf("Error: No Digital Bitbox connected\n");
