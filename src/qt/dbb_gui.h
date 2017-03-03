@@ -412,6 +412,8 @@ private slots:
     void showQrCodeScanner();
     void qrCodeFound(const QString& payload);
 
+    //== linux udev rule check
+    void checkUDevRule();
 };
 
 #endif

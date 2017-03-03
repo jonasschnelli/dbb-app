@@ -21,6 +21,7 @@
 #include <QGraphicsOpacityEffect>
 #include <QtNetwork/QHostInfo>
 #include <QDateTime>
+#include <QSettings>
 
 #include "ui/ui_overview.h"
 #include <dbb.h>
@@ -388,6 +389,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 #if defined(__linux__) || defined(__unix__)
     singleWallet->setCAFile(ca_file);
     copayWallet->setCAFile(ca_file);
+    checkUDevRule();
 #endif
 
     singleWallet->setSocks5ProxyURL(configData->getSocks5ProxyURL());
@@ -2925,4 +2927,35 @@ void DBBDaemonGui::qrCodeFound(const QString &payload)
     if (!validQRCode)
         showAlert(tr("Invalid Bitcoin QRCode"), tr("The scanned QRCode does not contain a valid Bitcoin address."));
 #endif
+}
+
+inline bool file_exists (const char *name) {
+    struct stat buffer;
+    int result = stat(name, &buffer);
+    return (result == 0);
+}
+
+void DBBDaemonGui::checkUDevRule()
+{
+    static const int WARNING_NEVER_SHOW_AGAIN = 2;
+    const char *udev_rules_file = "/etc/udev/rules.d/51-hid-digitalbitbox.rules";
+    QSettings settings;
+    if (settings.value("udev_warning_state", 0).toInt() != WARNING_NEVER_SHOW_AGAIN && !file_exists(udev_rules_file))
+    {
+        QMessageBox msgBox;
+        msgBox.setText(tr("Linux udev rule"));
+        msgBox.setInformativeText(tr("It looks like you are running on Linux and don't have the required udev rule."));
+        QAbstractButton *dontWarnAgainButton = msgBox.addButton(tr("Don't warn me again"), QMessageBox::RejectRole);
+        QAbstractButton *showHelpButton = msgBox.addButton(tr("Show online manual"), QMessageBox::HelpRole);
+        msgBox.addButton(QMessageBox::Ok);
+        msgBox.exec();
+        if (msgBox.clickedButton() == dontWarnAgainButton)
+        {
+            settings.setValue("udev_warning_state", WARNING_NEVER_SHOW_AGAIN);
+        }
+       if (msgBox.clickedButton() == showHelpButton)
+        {
+            QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/start_linux#udev?app=dbb-app"));
+        }
+    }
 }
