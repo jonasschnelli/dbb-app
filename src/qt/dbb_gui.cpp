@@ -2937,6 +2937,7 @@ inline bool file_exists (const char *name) {
 
 void DBBDaemonGui::checkUDevRule()
 {
+#if DBB_ENABLE_UDEV_CHECK
     static const int WARNING_NEVER_SHOW_AGAIN = 2;
     const char *udev_rules_file = "/etc/udev/rules.d/51-hid-digitalbitbox.rules";
     QSettings settings;
@@ -2958,4 +2959,5 @@ void DBBDaemonGui::checkUDevRule()
             QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/start_linux#udev?app=dbb-app"));
         }
     }
+#endif
 }
