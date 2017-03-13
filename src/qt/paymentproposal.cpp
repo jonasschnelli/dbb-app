@@ -48,11 +48,11 @@ void PaymentProposal::SetData(DBBWallet *walletIn, const std::string copayerID, 
 
     UniValue amountUni = find_value(proposalData, "amount");
     if (amountUni.isNum())
-        this->ui->amountLabel->setText(QString::fromStdString(DBB::formatMoney(amountUni.get_int())));
+        this->ui->amountLabel->setText(QString::fromStdString(DBB::formatMoney(amountUni.get_int64())));
 
     UniValue feeUni = find_value(proposalData, "fee");
     if (feeUni.isNum())
-        this->ui->feeLabel->setText(QString::fromStdString(DBB::formatMoney(feeUni.get_int())));
+        this->ui->feeLabel->setText(QString::fromStdString(DBB::formatMoney(feeUni.get_int64())));
 
     UniValue actions = find_value(proposalData, "actions");
 

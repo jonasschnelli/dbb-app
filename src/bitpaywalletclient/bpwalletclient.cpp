@@ -577,7 +577,7 @@ bool BitPayWalletClient::GetFeeLevels()
     return true;
 }
 
-int BitPayWalletClient::GetFeeForPriority(int prio)
+int64_t BitPayWalletClient::GetFeeForPriority(int prio)
 {
     std::unique_lock<std::recursive_mutex> lock(this->cs_client);
     
@@ -600,7 +600,7 @@ int BitPayWalletClient::GetFeeForPriority(int prio)
             UniValue feePerKBUB = find_value(oneObj, "feePerKB");
             if (levelUV.isStr() && levelUV.get_str() == keyField)
             {
-                return feePerKBUB.get_int();
+                return feePerKBUB.get_int64();
             }
         }
     }
