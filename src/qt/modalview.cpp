@@ -286,7 +286,7 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
         ui->stepsLabel->setText(tr("<strong>Step %1 of %2</strong>").arg(QString::number(step), QString::number(steps)));
     }
     ui->modalIcon->setVisible(true);
-    if (showQRSqeuence) {
+    if (showQRSqeuence && steps == 1) {
         ui->showDetailsButton->setVisible(true);
 
 //        ui->continueButton->setVisible(true);
