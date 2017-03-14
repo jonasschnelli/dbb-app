@@ -33,6 +33,7 @@
 #include "serialize.h"
 
 #include <cstdio>
+#include <cmath>
 #include <ctime>
 #include <chrono>
 #include <fstream>
@@ -52,6 +53,8 @@
 #endif
 
 const static bool DBB_FW_UPGRADE_DUMMY_SIGN = false;
+
+const static int MAX_INPUTS_PER_SIGN = 18;
 
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
@@ -2605,9 +2608,27 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
     UniValue changeAddressData;
     wallet->client.ParseTxProposal(paymentProposal, changeAddressData, serTx, inputHashesAndPaths);
 
+    // strip out already signed hashes
+    // make a mutable copy of the sighash/keypath vector
+    auto inputHashesAndPathsCopy = inputHashesAndPaths;
+    auto it = inputHashesAndPathsCopy.begin();
+    int amountOfCalls =  ceil((double)inputHashesAndPaths.size()/(double)MAX_INPUTS_PER_SIGN);
+    while(it != inputHashesAndPathsCopy.end()) {
+        std::string hexHash = DBB::HexStr((unsigned char*)&it->second[0], (unsigned char*)&it->second[0] + 32);
+        if(wallet->mapHashSig.count(hexHash)) {
+            // we already have this hash, remove it from the mutable copy
+            it = inputHashesAndPathsCopy.erase(it);
+        }
+        else ++it;
+    }
+
+    // make sure the vector does not exceede the max hashes per sign commands
+    if (inputHashesAndPathsCopy.size() > MAX_INPUTS_PER_SIGN)
+        inputHashesAndPathsCopy.resize(MAX_INPUTS_PER_SIGN);
+
     //build sign command
     std::string hashCmd;
-    for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
+    for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPathsCopy) {
         std::string hexHash = DBB::HexStr((unsigned char*)&hashAndPathPair.second[0], (unsigned char*)&hashAndPathPair.second[0] + 32);
 
         hashCmd += "{ \"hash\" : \"" + hexHash + "\", \"keypath\" : \"" + wallet->baseKeypath() + "/" + hashAndPathPair.first + "\" }, ";
@@ -2637,8 +2658,6 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
         }
     }
 
-    std::string hexHash = DBB::HexStr(&inputHashesAndPaths[0].second[0], &inputHashesAndPaths[0].second[0] + 32);
-
     std::string twoFaPart = "";
     if (!tfaCode.isEmpty())
         twoFaPart = "\"pin\" : \""+tfaCode.toStdString()+"\", ";
@@ -2649,15 +2668,9 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
 
     std::string command = "{\"sign\": { "+twoFaPart+"\"type\": \"meta\", \"meta\" : \""+serTxHashHex+"\", \"data\" : [ " + hashCmd + " ], \"checkpub\" : "+checkpubObj.write()+" } }";
 
-    if (command.size() >= HID_REPORT_SIZE_DEFAULT)
-    {
-        DBB::LogPrint("signing size exceeded (to many inputs)\n", "");
-        emit shouldShowAlert("Error", tr("To many inputs. Currently a max. of 18 inputs is supported"));
-        return;
-    }
     bool ret = false;
     DBB::LogPrint("Request signing...\n", "");
-    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, serTx, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(command, DBB_PROCESS_INFOLAYER_STYLE_NO_INFO, [wallet, &ret, actionType, paymentProposal, inputHashesAndPaths, inputHashesAndPathsCopy, serTx, tfaCode, this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         //send a signal to the main thread
         processCommand = false;
         setLoading(false);
@@ -2674,10 +2687,10 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
             UniValue errorObj = find_value(jsonOut, "error");
             if (errorObj.isObject()) {
                 //error found
-                UniValue errorCodeObj = find_value(errorObj, "code");
                 UniValue errorMessageObj = find_value(errorObj, "message");
                 if (errorMessageObj.isStr())
                 {
+                    wallet->mapHashSig.clear();
                     DBB::LogPrint("Error while signing (%s)\n", errorMessageObj.get_str().c_str());
                     emit shouldShowAlert("Error", QString::fromStdString(errorMessageObj.get_str()));
                 }
@@ -2694,18 +2707,58 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
                     if (vSignatureObjects.size() > 0) {
                         std::vector<std::string> sigs;
 
+                        int sigCount = 0;
                         for (const UniValue& oneSig : vSignatureObjects) {
                             UniValue sigObject = find_value(oneSig, "sig");
                             UniValue pubKey = find_value(oneSig, "pubkey");
-                            if (!sigObject.isNull() && sigObject.isStr()) {
-                                sigs.push_back(sigObject.get_str());
-                                //client.BroadcastProposal(values[0]);
+                            if (sigObject.isNull() || !sigObject.isStr()) {
+                                wallet->mapHashSig.clear();
+                                DBB::LogPrint("Invalid signature from device\n", "");
+                                emit shouldShowAlert("Error", tr("Invalid signature from device"));
+                                return;
                             }
+
+                            int pos = 0;
+                            std::string hexHashOfSig = DBB::HexStr((unsigned char*)&inputHashesAndPathsCopy[sigCount].second[0], (unsigned char*)&inputHashesAndPathsCopy[sigCount].second[0] + 32);
+                            for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
+                                std::string hexHash = DBB::HexStr((unsigned char*)&hashAndPathPair.second[0], (unsigned char*)&hashAndPathPair.second[0] + 32);
+                                if (hexHashOfSig == hexHash) {
+                                    break;
+                                }
+                                pos++;
+                            }
+                            wallet->mapHashSig[hexHashOfSig] = std::make_pair(pos, sigObject.get_str());
+
+                            sigCount++;
                         }
 
-                        emit shouldHideVerificationInfo();
-                        emit signedProposalAvailable(wallet, paymentProposal, sigs);
-                        ret = true;
+                        if (wallet->mapHashSig.size() < inputHashesAndPaths.size())
+                        {
+                            // we don't have all inputs signatures
+                            // need another signing round:
+                            emit createTxProposalDone(wallet, tfaCode, paymentProposal);
+                        }
+                        else {
+                            // create the exact order signature array
+                            std::vector<std::string> sigs;
+                            int pos = 0;
+                            for (const std::pair<std::string, std::vector<unsigned char> >& hashAndPathPair : inputHashesAndPaths) {
+                                std::string hexHash = DBB::HexStr((unsigned char*)&hashAndPathPair.second[0], (unsigned char*)&hashAndPathPair.second[0] + 32);
+                                if (wallet->mapHashSig[hexHash].first != pos) {
+                                    wallet->mapHashSig.clear();
+                                    DBB::LogPrint("Invalid position of inputs/signatures\n", "");
+                                    emit shouldShowAlert("Error", tr("Invalid position of inputs/signatures"));
+                                    return;
+                                }
+                                sigs.push_back(wallet->mapHashSig[hexHash].second);
+                                pos++;
+                            }
+
+                            emit shouldHideVerificationInfo();
+                            emit signedProposalAvailable(wallet, paymentProposal, sigs);
+                            wallet->mapHashSig.clear();
+                            ret = true;
+                        }
                     }
                 }
             }
@@ -2721,6 +2774,8 @@ void DBBDaemonGui::postSignaturesForPaymentProposal(DBBWallet* wallet, const Uni
         if (!wallet->client.PostSignaturesForTxProposal(proposal, vSigs))
         {
             DBB::LogPrint("Error posting txp signatures\n", "");
+            emit shouldHideModalInfo();
+            emit shouldHideVerificationInfo();
             emit shouldShowAlert("Error", tr("Could not post signatures"));
         }
         else
