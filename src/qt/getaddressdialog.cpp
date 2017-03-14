@@ -10,6 +10,8 @@
 #include <btc/base58.h>
 #include <qrencode.h>
 
+#include "dbb_util.h"
+
 #define DBB_DEFAULT_KEYPATH "m/44'/0'/0'/0/"
 
 GetAddressDialog::GetAddressDialog(QWidget *parent) :
@@ -86,12 +88,24 @@ void GetAddressDialog::updateAddress(const UniValue &xpub)
     UniValue xpubUV = find_value(xpub, "xpub");
     if (xpubUV.isStr())
     {
-        ui->xpub->setText(QString::fromStdString(xpubUV.get_str()));
+        std::string xpub = xpubUV.get_str();
+
+        if (DBB::mapArgs.count("-testnet")) {
+            // the device only returns mainnet xpubs
+            // convert to testnet
+            btc_hdnode mainnet_node;
+            btc_hdnode_deserialize(xpub.c_str(), &btc_chain_main, &mainnet_node);
+            char outbuf[112];
+            btc_hdnode_serialize_public(&mainnet_node, &btc_chain_test, outbuf, sizeof(outbuf));
+            xpub.assign(outbuf);
+        }
+        ui->xpub->setText(QString::fromStdString(xpub));
+
 
         btc_hdnode node;
-        bool r = btc_hdnode_deserialize(xpubUV.get_str().c_str(), &btc_chain_main, &node);
+        bool r = btc_hdnode_deserialize(xpub.c_str(), DBB::mapArgs.count("-testnet") ? &btc_chain_test : &btc_chain_main, &node);
         char outbuf[112];
-        btc_hdnode_get_p2pkh_address(&node, &btc_chain_main, outbuf, sizeof(outbuf));
+        btc_hdnode_get_p2pkh_address(&node, DBB::mapArgs.count("-testnet") ? &btc_chain_test : &btc_chain_main, outbuf, sizeof(outbuf));
 
         ui->address->setText(QString::fromUtf8(outbuf));
 
