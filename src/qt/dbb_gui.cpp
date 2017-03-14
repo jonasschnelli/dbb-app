@@ -704,6 +704,14 @@ void DBBDaemonGui::gotoSettingsPage()
 
 void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& proposalData, int actionType, const std::string& echoStr)
 {
+    // check the required amount of steps
+    std::vector<std::pair<std::string, std::vector<unsigned char> > > inputHashesAndPaths;
+    std::string serTxDummy;
+    UniValue changeAddressDataDummy;
+    wallet->client.ParseTxProposal(proposalData, changeAddressDataDummy, serTxDummy, inputHashesAndPaths);
+    int amountOfSteps = ceil((double)inputHashesAndPaths.size()/(double)MAX_INPUTS_PER_SIGN);
+    int currentStep   = ceil((double)wallet->mapHashSig.size() /(double)MAX_INPUTS_PER_SIGN)+1;
+
     if (comServer->mobileAppConnected)
     {
         comServer->postNotification(echoStr);
@@ -711,23 +719,15 @@ void DBBDaemonGui::showEchoVerification(DBBWallet* wallet, const UniValue& propo
     }
 
     ui->modalBlockerView->setTXVerificationData(wallet, proposalData, echoStr, actionType);
-    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, !comServer->mobileAppConnected);
+    ui->modalBlockerView->showTransactionVerification(cachedDeviceLock, !comServer->mobileAppConnected, currentStep, amountOfSteps);
 
     if (!cachedDeviceLock)
     {
-        if (comServer->mobileAppConnected)
-        {
-            //no follow up action required, clear TX data
-            ui->modalBlockerView->clearTXData();
+        //no follow up action required, clear TX data
+        ui->modalBlockerView->clearTXData();
 
-            //directly start DBB signing process
-            PaymentProposalAction(wallet, "", proposalData, actionType);
-        }
-        else
-        {
-            //no verification device connected, start QRCode based verification
-            QMessageBox::warning(this, tr(""), tr("No mobile app detected.<br><br>Optionally, you can verify the transaction by manually scanning the sequence of QR codes with a paired Digital Bitbox mobile app."), QMessageBox::Ok);
-        }
+        //directly start DBB signing process
+        PaymentProposalAction(wallet, "", proposalData, actionType);
 
     }
     else
