@@ -110,7 +110,7 @@ public:
     bool GetFeeLevels();
 
     //!get the feeperkb rate for the given prio (0 = priority, 1 = normal, 2 = economy)
-    int GetFeeForPriority(int prio = 0);
+    int64_t GetFeeForPriority(int prio = 0);
 
     //!load available wallets over wallet server
     bool GetWallets(std::string& response);

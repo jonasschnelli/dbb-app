@@ -2043,7 +2043,7 @@ void DBBDaemonGui::createTxProposalPressed()
         UniValue proposalOut;
         std::string errorOut;
 
-        int fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
+        int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
 
         if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
             emit changeNetLoading(false);
