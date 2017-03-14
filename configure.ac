@@ -94,6 +94,9 @@ AC_ARG_ENABLE([hid_report_shift],
 AC_ARG_ENABLE([hidrawforce],
     AS_HELP_STRING([--enable-hidrawforce], [force usage of hidapi hidraw even when libusb is present (default is no)]), ,[enable_hidrawforce=no])
 
+AC_ARG_ENABLE([udev_check],
+    AS_HELP_STRING([--enable-udev-check], [enable udev_check (default is yes)]), , [enable_udev_check=yes])
+
 dnl Check for pthread compile/link requirements
 AX_PTHREAD
 
@@ -355,6 +358,10 @@ if test "x$enable_hid_report_shift" != xno; then
   AC_DEFINE_UNQUOTED([ENABLE_HID_REPORT_SHIFT],[1],[Define to 1 to enable the HID REPORT 1 byte shift])
 fi
 
+if test "x$enable_udev_check" != xno; then
+  AC_DEFINE_UNQUOTED([ENABLE_UDEV_CHECK],[1],[Define to 1 to enable the udev rule check])
+fi
+
 BITCOIN_QT_CHECK([AC_CHECK_LIB([qrencode], [main],[QR_LIBS=-lqrencode], AC_MSG_ERROR(qrencode missing))])
 BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, AC_MSG_ERROR(qrencode missing))])
 AC_SUBST(QR_LIBS)
@@ -387,4 +394,5 @@ echo "  LDFLAGS       = $LDFLAGS"
 echo "  HIDRPSHFT     = $enable_hid_report_shift"
 echo "  HIDLIB        = $usinghidlib"
 echo "  QRCODE-READER = $qt_enable_multimedia"
+echo "  UDEV_CHECK    = $enable_udev_check"
 echo ""
