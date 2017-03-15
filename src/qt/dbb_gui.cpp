@@ -53,7 +53,7 @@
 
 const static bool DBB_FW_UPGRADE_DUMMY_SIGN = false;
 
-const static int MAX_INPUTS_PER_SIGN = 18;
+const static int MAX_INPUTS_PER_SIGN = 14;
 
 //function from dbb_app.cpp
 extern void executeCommand(const std::string& cmd, const std::string& password, std::function<void(const std::string&, dbb_cmd_execution_status_t status)> cmdFinished);
