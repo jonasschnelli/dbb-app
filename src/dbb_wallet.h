@@ -10,6 +10,7 @@
 
 #include <atomic>
 #include <mutex>
+#include <map>
 #ifdef WIN32
 #include <windows.h>
 #include "mingw/mingw.mutex.h"
@@ -24,6 +25,8 @@ private:
     std::string _baseKeypath;
 
 public:
+    std::map<std::string, std::pair<int, std::string> > mapHashSig;
+
     BitPayWalletClient client;
     std::string participationName;
     std::string walletRemoteName;
