@@ -388,9 +388,9 @@
   <widget class="QLabel" name="modalInfoLabelLA">
    <property name="geometry">
     <rect>
-     <x>130</x>
+     <x>22</x>
      <y>220</y>
-     <width>270</width>
+     <width>430</width>
      <height>150</height>
     </rect>
    </property>
@@ -423,15 +423,28 @@
    <widget class="QWidget" name="horizontalLayoutWidget">
     <property name="geometry">
      <rect>
-      <x>10</x>
-      <y>10</y>
+      <x>0</x>
+      <y>0</y>
       <width>440</width>
       <height>80</height>
      </rect>
     </property>
     <layout class="QHBoxLayout" name="horizontalLayout_4">
      <item>
+      <widget class="QLabel" name="infoLabel">
+       <property name="styleSheet">
+        <string notr="true">color: white;</string>
+       </property>
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QPushButton" name="showDetailsButton">
+       <property name="enabled">
+        <bool>true</bool>
+       </property>
        <property name="styleSheet">
         <string notr="true">color: white; text-align:left; text-decoration: underline;</string>
        </property>
@@ -474,6 +487,19 @@
       <widget class="QPushButton" name="abortButton">
        <property name="text">
         <string>Cancel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLabel" name="stepsLabel">
+       <property name="styleSheet">
+        <string notr="true">color:white;font-size:18pt;</string>
+       </property>
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
        </property>
       </widget>
      </item>

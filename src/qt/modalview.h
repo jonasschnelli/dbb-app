@@ -35,7 +35,7 @@ public slots:
     void showSetPassword();
     void showSetDeviceNameCreate();
     void showModalInfo(const QString &info, int helpType);
-    void showTransactionVerification(bool twoFAlocked, bool showQRSqeuence = false);
+    void showTransactionVerification(bool twoFAlocked, bool showQRSqeuence = false, int step = 1, int steps = 1);
     void deviceSubmitProvided();
     void deviceCancelProvided();
     void cleanse();

@@ -113,6 +113,8 @@ void ModalView::setDeviceHideAll()
     ui->upgradeFirmware->setVisible(false);
     ui->qrCodeSequence->setVisible(false);
     ui->showDetailsButton->setVisible(false);
+    ui->infoLabel->setVisible(false);
+    ui->stepsLabel->setVisible(false);
     ui->okButton->setVisible(false);
     ui->setDeviceWidget->setVisible(false);
     ui->setPasswordOld->setVisible(false);
@@ -235,11 +237,11 @@ void ModalView::showModalInfo(const QString &info, int helpType)
     emit modalViewWillShowHide(true);
 }
 
-void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuence)
+void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuence, int step, int steps)
 {
     QString longString;
 
-    longString += "Sending:<br />";
+    longString += "Sending: ";
 
     UniValue amountUni = find_value(txData, "amount");
     if (amountUni.isNum())
@@ -248,6 +250,14 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     }
 
     UniValue toAddressUni = find_value(txData, "toAddress");
+    if (!toAddressUni.isStr())
+    {
+        // try to get the address from the outputs
+        UniValue outputs = find_value(txData, "outputs");
+        if (outputs.isArray()) {
+            toAddressUni = find_value(outputs[0], "toAddress");
+        }
+    }
     if (toAddressUni.isStr())
     {
         longString += "to <strong>"+QString::fromStdString(toAddressUni.get_str())+"</strong><br />";
@@ -256,29 +266,36 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
     UniValue feeUni = find_value(txData, "fee");
     if (feeUni.isNum())
     {
-        longString += "Fee: " + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()));
+        longString += "Additional Fee: " + QString::fromStdString(DBB::formatMoney(feeUni.get_int64()));
+        longString += "<br />-----------------------<br /><strong>Total: " + QString::fromStdString(DBB::formatMoney(amountUni.get_int64()+feeUni.get_int64())) + "</strong>";
     }
 
     showModalInfo("", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
     ui->modalInfoLabelLA->setText(longString);
-    ui->abortButton->setVisible(twoFAlocked || showQRSqeuence);
+    ui->abortButton->setVisible(twoFAlocked);
     ui->qrCodeSequence->setData(txEcho);
     ui->modalInfoLabel->setVisible(true);
     ui->modalInfoLabelLA->setVisible(true);
-    ui->showDetailsButton->setVisible(true);
     ui->showDetailsButton->setText(tr("Show Verification QR Codes"));
 
-    ui->modalIcon->setVisible(true);
-    if (showQRSqeuence)
-    {
-        ui->continueButton->setVisible(true);
-        setQrCodeVisibility(true);
-        ui->modalIcon->setVisible(false);
+    if (steps > 1) {
         ui->showDetailsButton->setVisible(false);
+        ui->infoLabel->setVisible(true);
+        ui->stepsLabel->setVisible(true);
+        ui->infoLabel->setText(tr("Signing large transaction. Please be patient..."));
+        ui->stepsLabel->setText(tr("<strong>Touch %1 of %2</strong>").arg(QString::number(step), QString::number(steps)));
+    }
+    ui->modalIcon->setVisible(true);
+    if (showQRSqeuence && steps == 1) {
+        ui->showDetailsButton->setVisible(true);
+
+//        ui->continueButton->setVisible(true);
+//        setQrCodeVisibility(true);
+//        ui->modalIcon->setVisible(false);
+//        ui->showDetailsButton->setVisible(false);
     }
 
-    if (twoFAlocked)
-    {
+    if (twoFAlocked) {
         //ui->continueButton->setVisible(true);
 
         QIcon newIcon;
