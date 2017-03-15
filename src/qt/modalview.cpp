@@ -282,8 +282,8 @@ void ModalView::showTransactionVerification(bool twoFAlocked, bool showQRSqeuenc
         ui->showDetailsButton->setVisible(false);
         ui->infoLabel->setVisible(true);
         ui->stepsLabel->setVisible(true);
-        ui->infoLabel->setText(tr("Signing large transaction. Please be patient."));
-        ui->stepsLabel->setText(tr("<strong>Step %1 of %2</strong>").arg(QString::number(step), QString::number(steps)));
+        ui->infoLabel->setText(tr("Signing large transaction. Please be patient..."));
+        ui->stepsLabel->setText(tr("<strong>Touch %1 of %2</strong>").arg(QString::number(step), QString::number(steps)));
     }
     ui->modalIcon->setVisible(true);
     if (showQRSqeuence && steps == 1) {
