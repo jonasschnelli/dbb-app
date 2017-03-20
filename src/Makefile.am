@@ -1,4 +1,4 @@
-DIST_SUBDIRS = libbtc univalue
+DIST_SUBDIRS = libbtc univalue hidapi
 GIT_VERSION := $(shell git describe --abbrev=6 --always --tags)
 
 AM_CPPFLAGS = -I$(top_srcdir)/include
@@ -11,6 +11,18 @@ DBB_INCLUDES =
 LIBBTC=libbtc/libbtc.la
 UNIVALUE=univalue/libunivalue.la
 
+if TARGET_WINDOWS
+  HIDAPI=hidapi/windows/libhidapi.la
+endif
+
+if TARGET_OSX
+  HIDAPI=hidapi/mac/libhidapi.la
+endif
+
+if TARGET_LINUX
+  HIDAPI=hidapi/linux/libhidapi-hidraw.la
+endif
+
 $(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
@@ -19,19 +31,25 @@ LIBBTC_INCLUDES = -I$(srcdir)/libbtc/include -I$(srcdir)/libbtc/src
 $(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 
-DBB_INCLUDES += -I$(srcdir)/univalue/include $(LIBBTC_INCLUDES)
+$(HIDAPI):
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+	
+HIDAPI_INCLUDES = -I$(srcdir)/hidapi
+	
+DBB_INCLUDES += -I$(srcdir)/univalue/include $(LIBBTC_INCLUDES) $(HIDAPI_INCLUDES)
 
 
 noinst_LIBRARIES = libdbb.a libbpwalletclient.a
 
 libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
-libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(LIBBTC_INCLUDES)
+libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(HIDAPI_INCLUDES) $(LIBBTC_INCLUDES)
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
+libdbb_a_LIBADD = $(HIDAPI)
 
 libbpwalletclient_a_INCLUDES = bitpaywalletclient/bpwalletclient.h
 libbpwalletclient_a_SOURCES = bitpaywalletclient/bpwalletclient.cpp
 libbpwalletclient_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
-libbpwalletclient_a_LIBADD = $(LIBBTC) $(UNIVALUE)
+libbpwalletclient_a_LIBADD = $(HIDAPI) $(LIBBTC) $(UNIVALUE)
  
 dbb_cli_CONFIG_INCLUDES=-I$(builddir)/config
 dbb_cli_INCLUDES=-I$(builddir) -I$(builddir)/obj
@@ -42,7 +60,7 @@ dbb_cli_SOURCES = dbb_cli.cpp dbb_util.h dbb_util.cpp
 dbb_cli_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_cli_CFLAGS =
 dbb_cli_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC)
+dbb_cli_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC) $(HIDAPI) 
 
 
 #check if we should build the dbb app
@@ -68,7 +86,7 @@ dbb_app_SOURCES = \
 dbb_app_CPPFLAGS = $(AM_CPPFLAGS) $(QR_CFLAGS) $(DBB_INCLUDES)
 dbb_app_CFLAGS =
 dbb_app_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(UNIVALUE) $(LIBCURL)
+dbb_app_LDADD = libdbb.a libbpwalletclient.a $(LIBBTC) $(UNIVALUE) $(LIBCURL) $(HIDAPI)
 
 if ENABLE_QT
 
@@ -163,7 +181,7 @@ dbb_app_CPPFLAGS += $(QT_INCLUDES) $(QT_DBUS_INCLUDES) $(QT_MULTIMEDIA_INCLUDES)
 dbb_app_CXXFLAGS = $(AM_CXXFLAGS) $(QT_PIE_FLAGS)
 ##dbb_app_LDFLAGS += -pthread $(QT_LDFLAGS) -pthread
 dbb_app_LDFLAGS += $(RELDFLAGS) $(AM_LDFLAGS) $(QT_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QT_MULTIMEDIA_LIBS) $(QT_MULTIMEDIAWIDGETS_LIBS) $(QR_LIBS) $(SSL_LIBS) $(CRYPTO_LIBS) -lcurl $(LINUX_LIBS)
+dbb_app_LDADD += $(QT_LIBS) $(QT_DBUS_LIBS) $(QT_MULTIMEDIA_LIBS) $(QT_MULTIMEDIAWIDGETS_LIBS) $(QR_LIBS) $(SSL_LIBS)  $(CRYPTO_LIBS) -lcurl $(LINUX_LIBS)
 dbb_app_LIBTOOLFLAGS = --tag CXX
 
 CLEAN_QT = $(QT_MOC_CPP) $(QT_FORMS_H)
@@ -177,6 +195,7 @@ clean-local:
 	-$(MAKE) -C libbtc clean
 	-$(MAKE) -C univalue clean
 	-$(MAKE) -C secp256k1 clean
+	-$(MAKE) -C hidapi clean
 
 ui_%.h: %.ui
 	@test -f $(UIC)

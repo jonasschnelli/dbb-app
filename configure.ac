@@ -91,9 +91,6 @@ fi
 AC_ARG_ENABLE([hid_report_shift],
     AS_HELP_STRING([--enable-hid_report_shift], [enable hid_report_shift (default is yes)]), , [enable_hid_report_shift=yes])
 
-AC_ARG_ENABLE([hidrawforce],
-    AS_HELP_STRING([--enable-hidrawforce], [force usage of hidapi hidraw even when libusb is present (default is no)]), ,[enable_hidrawforce=no])
-
 AC_ARG_ENABLE([udev_check],
     AS_HELP_STRING([--enable-udev-check], [enable udev_check (default is yes)]), , [enable_udev_check=yes])
 
@@ -135,7 +132,6 @@ case $host in
      AC_CHECK_LIB([dmoguids],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([msdmo],      [main],, AC_MSG_ERROR(lib missing))
 
-     AC_CHECK_LIB([hidapi],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([curl],      [main],, AC_MSG_ERROR(lib missing))
      
      # -static is interpreted by libtool, where it has a different meaning.
@@ -298,40 +294,6 @@ if test x$ac_cv_lib_pthread_pthread_mutex_init = xyes ; then
 fi
 
 
-# Look for hidapi library
-case $host in
-  *linux*)
-   AC_SEARCH_LIBS(udev_queue_get_queue_is_empty, udev, , AC_MSG_ERROR(udev is required!))
-   AC_SEARCH_LIBS(libusb_init, usb, , [have_hid_libusb=no])
-   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes])
-   AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
-   ;;
-  *darwin*)
-   CXXFLAGS="$CXXFLAGS"
-   AC_CHECK_LIB(hidapi-libusb, hid_open, [have_hid_libusb=yes], [have_hid_libusb=no])
-   AC_CHECK_LIB(hidapi-hidraw, hid_open, [have_hid_hidraw=yes], [have_hid_hidraw=no])
-   if test x$have_hid_libusb$have_hid_hidraw = xnono;  then
-      AC_CHECK_LIB(hidapi, hid_open)
-   fi
-   ;;
-esac
-
-usinghidlib=unknown
-AC_CHECK_HEADER([hidapi/hidapi.h],,AC_MSG_ERROR(hidapi headers missing))
-if test x$have_hid_libusb$enable_hidrawforce = xyesno;  then
-   AC_MSG_NOTICE([using hidapi with libusb])
-   usinghidlib=libusb
-   AC_SEARCH_LIBS([hid_open], [hidapi hidapi-libusb], , AC_MSG_ERROR(hiapi is required!))
-else
-   if test x$have_hid_hidraw = xyes;  then
-      AC_MSG_NOTICE([using hidapi with hidraw (hidrawforce: $enable_hidrawforce)])
-      AC_SEARCH_LIBS([hid_open], [hidapi hidapi-hidraw], , AC_MSG_ERROR(hiapi is required!))
-      usinghidlib=hidraw
-   else
-      usinghidlib=mac_or_win_native
-   fi
-fi
-
 if test x$bitcoin_enable_qt = xyes; then
   if test x$qt_enable_multimedia != xno; then
     AC_DEFINE([USE_MULTIMEDIA],[1],[Define if QtMultimedia support should be compiled in])
@@ -367,6 +329,8 @@ BITCOIN_QT_CHECK([AC_CHECK_HEADER([qrencode.h],, AC_MSG_ERROR(qrencode missing))
 AC_SUBST(QR_LIBS)
 AC_SUBST(RELDFLAGS)
 AM_CONDITIONAL([TARGET_WINDOWS], [test x$TARGET_OS = xwindows])
+AM_CONDITIONAL([TARGET_LINUX], [test x$TARGET_OS = xlinux])
+AM_CONDITIONAL([TARGET_OSX], [test x$TARGET_OS = xdarwin])
 AC_SUBST(HARDENED_CXXFLAGS)
 AC_SUBST(HARDENED_CPPFLAGS)
 AC_SUBST(HARDENED_LDFLAGS)
@@ -375,8 +339,9 @@ AC_SUBST(PIC_FLAGS)
 AC_SUBST(PIE_FLAGS)
 AC_SUBST(BUILD_TEST)
 AC_SUBST(BUILD_QT)
+AC_DEFINE([TARGET_OS], [$TARGET_OS], [Define to 1 if using pthread is enabled.])
 export CXXFLAGS
-AC_CONFIG_SUBDIRS([src/libbtc src/univalue])
+AC_CONFIG_SUBDIRS([src/libbtc src/univalue src/hidapi])
 
 AC_PROG_CXX
 AC_CONFIG_FILES([Makefile src/Makefile])
@@ -384,6 +349,7 @@ AC_OUTPUT
 
 echo ""
 echo "Options used to compile and link:"
+echo "  TARGET_OS     = $TARGET_OS"
 echo "  NET_DEBUG     = $enable_netdebug"
 echo "  CC            = $CC"
 echo "  CFLAGS        = $CFLAGS"
@@ -392,7 +358,6 @@ echo "  CXX           = $CXX"
 echo "  CXXFLAGS      = $CXXFLAGS"
 echo "  LDFLAGS       = $LDFLAGS"
 echo "  HIDRPSHFT     = $enable_hid_report_shift"
-echo "  HIDLIB        = $usinghidlib"
 echo "  QRCODE-READER = $qt_enable_multimedia"
 echo "  UDEV_CHECK    = $enable_udev_check"
 echo ""
