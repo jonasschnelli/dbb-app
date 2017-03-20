@@ -28,6 +28,8 @@
 #include "hidapi/hidapi.h"
 
 #include <btc/hash.h>
+#include <btc/ecc_key.h>
+
 //defined in libbtc sha2.h
 extern "C" {
     extern void hmac_sha512(const uint8_t* key, const uint32_t keylen, const uint8_t* msg, const uint32_t msglen, uint8_t* hmac);
@@ -452,6 +454,29 @@ bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, st
     
     resultOut.assign((const char*)HID_REPORT);
     return true;
+}
+
+const std::string dummySig(const std::vector<char>& firmwareBuffer)
+{
+    // dummy sign and get the compact signature
+    // dummy private key to allow current testing
+    // the private key matches the pubkey on the DBB bootloader / FW
+    std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
+
+    // generate a double SHA256 of the firmware data
+    uint8_t hashout[32];
+    btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
+    std::string hashHex = DBB::HexStr(hashout, hashout+32);
+
+    btc_key key;
+    btc_privkey_init(&key);
+    std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
+    memcpy(&key.privkey, &privkey[0], 32);
+
+    size_t sizeout = 64;
+    unsigned char sig[sizeout];
+    int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
+    return DBB::HexStr(sig, sig+sizeout);
 }
 
 bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float progress)> progressCallback)

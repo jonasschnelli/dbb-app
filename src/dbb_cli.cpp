@@ -301,13 +301,22 @@ int main(int argc, char* argv[])
             std::streamsize firmwareSize = firmwareFile.tellg();
             if (firmwareSize > 0)
             {
+                std::string sigStr;
                 firmwareFile.seekg(0, std::ios::beg);
+                //read signatures
+                if (DBB::GetArg("-noreadsig", "") == "")
+                {
+                    unsigned char sigByte[FIRMWARE_SIGLEN];
+                    firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
+                    sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+                    printf("Reading signature... %s\n", sigStr.c_str());
+                }
 
+                //read firmware
                 std::vector<char> firmwareBuffer(DBB_APP_LENGTH);
                 unsigned int pos = 0;
                 while (true)
                 {
-                    //read into
                     firmwareFile.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
                     std::streamsize bytes = firmwareFile.gcount();
                     if (bytes == 0)
@@ -320,24 +329,15 @@ int main(int argc, char* argv[])
                 // append 0xff to the rest of the firmware buffer
                 memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_APP_LENGTH-pos);
 
-                // generate a double SHA256 of the firmware data
-                uint8_t hashout[32];
-                btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
-                std::string hashHex = DBB::HexStr(hashout, hashout+32);
+                if (DBB::GetArg("-dummysigwrite", "") != "")
+                {
+                    printf("Creating dummy signature...");
+                    btc_ecc_start();
+                    sigStr = DBB::dummySig(firmwareBuffer);
+                    printf("%s\n", sigStr.c_str());
+                    btc_ecc_stop();
+                }
 
-                // sign and get the compact signature
-                btc_ecc_start();
-                btc_key key;
-                btc_privkey_init(&key);
-                std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
-                memcpy(&key.privkey, &privkey[0], 32);
-
-                size_t sizeout = 64;
-                unsigned char sig[sizeout];
-                int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
-                std::string sigStr = DBB::HexStr(sig, sig+sizeout);
-
-                btc_ecc_stop();
                 // send firmware blob to DBB
                 if (!DBB::upgradeFirmware(firmwareBuffer, firmwareSize, sigStr, [](const std::string& infotext, float progress) {}))
                     printf("Firmware upgrade failed!\n");
