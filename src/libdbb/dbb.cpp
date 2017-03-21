@@ -50,6 +50,7 @@ namespace DBB
 {
 static hid_device* HID_HANDLE = NULL;
 static enum dbb_device_mode HID_CURRENT_DEVICE_MODE = DBB_DEVICE_UNKNOWN;
+static std::string HID_CURRENT_DEVICE_PATH();
 static unsigned int readBufSize = HID_REPORT_SIZE_DEFAULT;
 static unsigned int writeBufSize = HID_REPORT_SIZE_DEFAULT;
 static unsigned char HID_REPORT[HID_MAX_BUF_SIZE] = {0};
@@ -104,6 +105,7 @@ static int api_hid_send_frame(USB_FRAME *f)
     memcpy(d + 1, f, sizeof(USB_FRAME));
     f->cid = ntohl(f->cid);
 
+    DBB_DEBUG_INTERNAL("send frame data %s\n", HexStr(d, d+sizeof(d)).c_str(), res);
     res = hid_write(HID_HANDLE, d, sizeof(d));
 
     if (res == sizeof(d)) {
@@ -132,6 +134,7 @@ static int api_hid_send_frames(uint32_t cid, uint8_t cmd, const void *data, size
 
     do {
         res = api_hid_send_frame(&frame);
+        DBB_DEBUG_INTERNAL("  send frame done, bytes: %d (result: %d)\n", frameLen, res);
         if (res != 0) {
             return res;
         }
@@ -184,6 +187,7 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
     } while (frame.cid != cid || FRAME_TYPE(frame) != TYPE_INIT);
 
     if (frame.init.cmd == U2FHID_ERROR) {
+        DBB_DEBUG_INTERNAL("reading error... U2FHID_ERROR\n", res);
         return -frame.init.data[0];
     }
 
@@ -222,13 +226,12 @@ static int api_hid_read_frames(uint32_t cid, uint8_t cmd, void *data, int max)
     return result;
 }
 
-static bool api_hid_init(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsigned int readBufSizeIn = HID_REPORT_SIZE_DEFAULT)
+static bool api_hid_init(unsigned int writeBufSizeIn = HID_REPORT_SIZE_DEFAULT, unsigned int readBufSizeIn = HID_REPORT_SIZE_DEFAULT, const char *path = NULL)
 {
     readBufSize = readBufSizeIn;
     writeBufSize = writeBufSizeIn;
-
-    //TODO: way to handle multiple DBB
-    HID_HANDLE = hid_open(0x03eb, 0x2402, NULL); //vendor-id, product-id
+    DBB_DEBUG_INTERNAL("hid open path: %s\n", path);
+    HID_HANDLE = hid_open_path(path);
     if (!HID_HANDLE) {
         return false;
     }
@@ -241,13 +244,14 @@ static bool api_hid_close(void)
     if (HID_HANDLE) {
         hid_close(HID_HANDLE); //vendor-id, product-id
         hid_exit();
+        HID_HANDLE = 0;
         return true;
     }
 
     return false;
 }
 
-enum dbb_device_mode deviceAvailable()
+enum dbb_device_mode deviceAvailable(std::string& devicePathOut)
 {
     struct hid_device_info* devs, *cur_dev;
 
@@ -256,49 +260,56 @@ enum dbb_device_mode deviceAvailable()
     cur_dev = devs;
     enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
-        // get the manufacturer wide string
-        if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number)
-        {
-            cur_dev = cur_dev->next;
-            foundType = DBB_DEVICE_UNKNOWN;
-            continue;
-        }
-
-
-        std::wstring wsMF(cur_dev->manufacturer_string);
-        std::string strMF( wsMF.begin(), wsMF.end() );
-
-        // get the setial number wide string
-        std::wstring wsSN(cur_dev->serial_number);
-        std::string strSN( wsSN.begin(), wsSN.end() );
-
-        std::vector<std::string> vSNParts = DBB::split(strSN, ':');
-
-        if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
-        {
-            foundType = DBB_DEVICE_MODE_FIRMWARE;
-            // for now, only support one digit version numbers
-            if (vSNParts[1].size() >= 6 && vSNParts[1][0] == 'v')
+        DBB_DEBUG_INTERNAL("found device with usage_page: %d and ifnum: %d and path: %s\n", cur_dev->usage_page, cur_dev->interface_number, cur_dev->path);
+        if (cur_dev->interface_number == 0 || cur_dev->usage_page == 0xffff) {
+            // get the manufacturer wide string
+            if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number || !cur_dev->path)
             {
-                int major = vSNParts[1][1] - '0';
-                int minor = vSNParts[1][3] - '0';
-                int patch = vSNParts[1][5] - '0';
+                cur_dev = cur_dev->next;
+                foundType = DBB_DEVICE_UNKNOWN;
+                continue;
+            }
+            devicePathOut.resize(strlen(cur_dev->path));
+            devicePathOut.assign(cur_dev->path);
+            std::wstring wsMF(cur_dev->manufacturer_string);
+            std::string strMF( wsMF.begin(), wsMF.end() );
 
-                // if version is greater or equal to then 2.1.0, use U2F protocol
-                if (major > 2 || (major == 2 && minor >= 1))
+            // get the setial number wide string
+            std::wstring wsSN(cur_dev->serial_number);
+            std::string strSN( wsSN.begin(), wsSN.end() );
+
+            std::vector<std::string> vSNParts = DBB::split(strSN, ':');
+
+            if ((vSNParts.size() == 2 && vSNParts[0] == "dbb.fw") || strSN == "firmware")
+            {
+                foundType = DBB_DEVICE_MODE_FIRMWARE;
+                // for now, only support one digit version numbers
+                if (vSNParts[1].size() >= 6 && vSNParts[1][0] == 'v')
                 {
-                    foundType = DBB_DEVICE_MODE_FIRMWARE_U2F;
+                    int major = vSNParts[1][1] - '0';
+                    int minor = vSNParts[1][3] - '0';
+                    int patch = vSNParts[1][5] - '0';
+
+                    // if version is greater or equal to then 2.1.0, use U2F protocol
+                    if (major > 2 || (major == 2 && minor >= 1))
+                    {
+                        foundType = DBB_DEVICE_MODE_FIRMWARE_U2F;
+                    }
                 }
+                if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-') {
+                    foundType = (foundType == DBB_DEVICE_MODE_FIRMWARE) ? DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD : DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD;
+                }
+                break;
             }
-            if (vSNParts[1].size() > 2 && vSNParts[1][vSNParts[1].size()-2] == '-' && vSNParts[1][vSNParts[1].size()-1] == '-') {
-                foundType = (foundType == DBB_DEVICE_MODE_FIRMWARE) ? DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD : DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD;
+            else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
+            {
+                foundType = DBB_DEVICE_MODE_BOOTLOADER;
+                break;
             }
-            break;
-        }
-        else if (vSNParts.size() == 2 && vSNParts[0] == "dbb.bl")
-        {
-            foundType = DBB_DEVICE_MODE_BOOTLOADER;
-            break;
+            else
+            {
+                cur_dev = cur_dev->next;
+            }
         }
         else
         {
@@ -307,6 +318,7 @@ enum dbb_device_mode deviceAvailable()
     }
     hid_free_enumeration(devs);
     
+    DBB_DEBUG_INTERNAL("found device type: %d\n", foundType);
     return foundType;
 }
 
@@ -315,20 +327,20 @@ bool isConnectionOpen()
     return (HID_HANDLE != NULL);
 }
 
-bool openConnection(enum dbb_device_mode mode)
+bool openConnection(enum dbb_device_mode mode, const std::string& devicePath)
 {
-    if (mode == DBB_DEVICE_MODE_BOOTLOADER && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
+    if (mode == DBB_DEVICE_MODE_BOOTLOADER && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R, devicePath.c_str())) {
         HID_CURRENT_DEVICE_MODE = mode;
         return true;
     }
-    else if ((mode == DBB_DEVICE_MODE_FIRMWARE_U2F || mode == DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD) && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R)) {
+    else if ((mode == DBB_DEVICE_MODE_FIRMWARE_U2F || mode == DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD) && api_hid_init(HID_BL_BUF_SIZE_W, HID_BL_BUF_SIZE_R, devicePath.c_str())) {
         HID_CURRENT_DEVICE_MODE = mode;
         return true;
     }
     else
     {
         HID_CURRENT_DEVICE_MODE = DBB_DEVICE_MODE_FIRMWARE;
-        return api_hid_init();
+        return api_hid_init(HID_REPORT_SIZE_DEFAULT, HID_REPORT_SIZE_DEFAULT, devicePath.c_str());
     }
 }
 
@@ -362,9 +374,10 @@ bool sendCommand(const std::string& json, std::string& resultOut)
     if (HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F || HID_CURRENT_DEVICE_MODE == DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD)
     {
         int res = api_hid_send_frames(HWW_CID, HWW_COMMAND, json.c_str(), json.size());
-
+        DBB_DEBUG_INTERNAL("sending done... %d\n", res);
         memset(HID_REPORT, 0, HID_MAX_BUF_SIZE);
         res = api_hid_read_frames(HWW_CID, HWW_COMMAND, HID_REPORT, HID_REPORT_SIZE_DEFAULT);
+        DBB_DEBUG_INTERNAL("reading done... %d\n", res);
     }
     else {
         if(hid_write(HID_HANDLE, (unsigned char*)HID_REPORT, writeBufSize+reportShift) == -1)

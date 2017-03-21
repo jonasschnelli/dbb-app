@@ -231,14 +231,14 @@ int main(int argc, char* argv[])
         }
         return 1;
     }
-
-    enum DBB::dbb_device_mode deviceMode = DBB::deviceAvailable();
+    std::string devicePath;
+    enum DBB::dbb_device_mode deviceMode = DBB::deviceAvailable(devicePath);
     if (userCmd == "firmware" && deviceMode != DBB::DBB_DEVICE_MODE_BOOTLOADER)
     {
         printf("Error: No Digital Bitbox is Bootloader-Mode detected\n");
         return 1;
     }
-    bool connectRes = DBB::openConnection(deviceMode);
+    bool connectRes = DBB::openConnection(deviceMode, devicePath);
 
     if (!connectRes)
         printf("Error: No Digital Bitbox connected\n");

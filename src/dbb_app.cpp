@@ -142,9 +142,11 @@ int main(int argc, char** argv)
                 std::string password = std::get<1>(cmdCB);
                 dbb_cmd_execution_status_t status = DBB_CMD_EXECUTION_STATUS_OK;
 
-                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
+                std::string devicePath;
+                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable(devicePath);
+
                 DebugOut("sendcmd", "Opening HID...\n");
-                bool openSuccess = DBB::openConnection(deviceType);
+                bool openSuccess = DBB::openConnection(deviceType, devicePath);
                 if (!openSuccess) {
                     status = DBB_CMD_EXECUTION_DEVICE_OPEN_FAILED;
                 }
@@ -196,7 +198,8 @@ int main(int argc, char** argv)
             //check devices
             {
                 std::unique_lock<std::mutex> lock(cs_queue);
-                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable();
+                std::string devicePath;
+                enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable(devicePath);
 
 #ifdef DBB_ENABLE_QT
                     //TODO, check if this requires locking
