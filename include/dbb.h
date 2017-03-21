@@ -33,13 +33,13 @@ enum dbb_device_mode {
 //!open a connection to the digital bitbox device
 // retruns false if no connection could be made, keeps connection handling
 // internal
-bool openConnection(enum dbb_device_mode mode);
+bool openConnection(enum dbb_device_mode mode, const std::string& devicePath);
 
 //!close the connection to the dbb device
 bool closeConnection();
 
 //!check if a DBB device is available
-enum dbb_device_mode deviceAvailable();
+enum dbb_device_mode deviceAvailable(std::string& devicePathOut);
 
 //!return true if a USBHID connection is open
 bool isConnectionOpen();

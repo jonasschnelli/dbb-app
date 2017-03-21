@@ -408,7 +408,8 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
 
     //set status bar connection status
     uiUpdateDeviceState();
-    changeConnectedState(DBB::isConnectionOpen(), DBB::deviceAvailable());
+    std::string devicePath;
+    changeConnectedState(DBB::isConnectionOpen(), DBB::deviceAvailable(devicePath));
 
     //connect the device status update at very last point in init
     connect(this, SIGNAL(deviceStateHasChanged(bool, int)), this, SLOT(changeConnectedState(bool, int)));
