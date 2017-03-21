@@ -1208,27 +1208,9 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 // append 0xff to the rest of the firmware buffer
                 memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_APP_LENGTH-pos);
 
-                // generate a double SHA256 of the firmware data
-                uint8_t hashout[32];
-                btc_hash((const uint8_t*)&firmwareBuffer[0], firmwareBuffer.size(), hashout);
-                std::string hashHex = DBB::HexStr(hashout, hashout+32);
-
                 if (DBB_FW_UPGRADE_DUMMY_SIGN)
                 {
-                    // dummy sign and get the compact signature
-                    // dummy private key to allow current testing
-                    // the private key matches the pubkey on the DBB bootloader / FW
-                    std::string testing_privkey = "e0178ae94827844042d91584911a6856799a52d89e9d467b83f1cf76a0482a11";
-
-                    btc_key key;
-                    btc_privkey_init(&key);
-                    std::vector<unsigned char> privkey = DBB::ParseHex(testing_privkey);
-                    memcpy(&key.privkey, &privkey[0], 32);
-
-                    size_t sizeout = 64;
-                    unsigned char sig[sizeout];
-                    int res = btc_key_sign_hash_compact(&key, hashout, sig, &sizeout);
-                    sigStr = DBB::HexStr(sig, sig+sizeout);
+                    sigStr = DBB::dummySig(firmwareBuffer);
                 }
 
                 emit shouldUpdateModalInfo("<strong>Upgrading Firmware...</strong>");

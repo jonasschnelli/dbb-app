@@ -50,6 +50,10 @@ bool sendCommand(const std::string &json, std::string &resultOut);
 //!send a binary chunk (used for firmware updates)
 bool sendChunk(unsigned int chunknum, const std::vector<unsigned char>& data, std::string& resultOut);
 
+//!creates a (dummy) signature to allows to run custom compiled firmware on development devices
+//!WILL ONLY RUN ON DEVELOPMENT DEVICES (only those accept dummy signatures)
+const std::string dummySig(const std::vector<char>& firmwareBuffer);
+
 //!send firmware
 bool upgradeFirmware(const std::vector<char>& firmware, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float)> progressCallback);
 
