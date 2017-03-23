@@ -12,7 +12,9 @@
 #include <string.h>
 #include <unistd.h>
 #include <time.h>
+#ifndef WIN32
 #include <arpa/inet.h>
+#endif
 
 #include <string>
 #include <stdexcept>
