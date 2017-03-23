@@ -494,10 +494,19 @@ const std::string dummySig(const std::vector<char>& firmwareBuffer)
 
 bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSize, const std::string& sigCmpStr, std::function<void(const std::string&, float progress)> progressCallback)
 {
+    std::string devicePath;
+    enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable(devicePath);
+    bool openSuccess = DBB::openConnection(deviceType, devicePath);
+    if (!openSuccess) {
+        return false;
+    }
+
     std::string cmdOut;
     sendCommand("v0", cmdOut);
-    if (cmdOut.size() != 1 || cmdOut[0] != 'v')
+    if (cmdOut.size() != 1 || cmdOut[0] != 'v') {
+        DBB::closeConnection();
         return false;
+    }
     sendCommand("s0"+sigCmpStr, cmdOut);
     sendCommand("e", cmdOut);
 
@@ -511,8 +520,10 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
         DBB::sendChunk(cnt,chunk,cmdOut);
         progressCallback("", 1.0/nChunks*cnt);
         pos += FIRMWARE_CHUNKSIZE;
-        if (cmdOut != "w0")
+        if (cmdOut != "w0") {
+            DBB::closeConnection();
             return false;
+        }
 
         if (pos >= firmwareSize)
             break;
@@ -520,13 +531,17 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
     }
 
     sendCommand("s0"+sigCmpStr, cmdOut);
-    if (cmdOut.size() < 2)
+    if (cmdOut.size() < 2) {
+        DBB::closeConnection();
         return false;
-    if (!(cmdOut[0] == 's' && cmdOut[1] == '0'))
+    }
+    if (!(cmdOut[0] == 's' && cmdOut[1] == '0')) {
+        DBB::closeConnection();
         return false;
+    }
 
     progressCallback("", 1.0);
-
+    DBB::closeConnection();
     return true;
 }
 

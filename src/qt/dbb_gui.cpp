@@ -492,8 +492,6 @@ void DBBDaemonGui::changeConnectedState(bool state, int deviceType)
         }
         else if (state && deviceType == DBB::DBB_DEVICE_MODE_BOOTLOADER && !upgradeFirmwareState) {
             // bricked, bootloader device found, ask for upgrading the firmware
-            int a=1;
-
             this->ui->noDeviceConnectedLabel->setText(tr("<b>The device is in bootloader mode.</b><br><br>To enter normal mode, replug the device and do not press the touch button. If a firmware upgrade errored, try upgrading again.<br><br><a href=\"up\">Upgrade now.</a>"));
             this->ui->noDeviceConnectedLabel->setWordWrap(true);
             this->ui->noDeviceIcon->setVisible(false);
@@ -1173,6 +1171,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
         //: translation: started updating firmware info text
         showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please stand by...", DBB_PROCESS_INFOLAYER_STYLE_NO_INFO);
 
+        setFirmwareUpdateHID(true);
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
             bool upgradeRes = false;
 
@@ -1185,11 +1184,12 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 firmwareFile.seekg(0, std::ios::beg);
 
                 //read signatures
-                if (!DBB_FW_UPGRADE_DUMMY_SIGN)
+                if (DBB::GetArg("-noreadsig", "") == "")
                 {
                     unsigned char sigByte[FIRMWARE_SIGLEN];
                     firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
                     sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
+                    printf("Reading signature... %s\n", sigStr.c_str());
                 }
 
                 //read firmware
@@ -1209,7 +1209,7 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 // append 0xff to the rest of the firmware buffer
                 memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_APP_LENGTH-pos);
 
-                if (DBB_FW_UPGRADE_DUMMY_SIGN)
+                if (DBB::GetArg("-dummysigwrite", "") != "")
                 {
                     sigStr = DBB::dummySig(firmwareBuffer);
                 }
@@ -1228,8 +1228,8 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
     }
     else
     {
-        upgradeFirmwareState = false;
         setFirmwareUpdateHID(false);
+        upgradeFirmwareState = false;
     }
 }
 
@@ -1247,7 +1247,7 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     {
         //: translation: successfull firmware update text
         DBB::LogPrint("Firmware successfully upgraded\n", "");
-        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br>(Do not tap the touch button this time.)"), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br>(<font color=\"#6699cc\">Do not tap the touch button this time</font>.)"), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
@@ -1255,8 +1255,6 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
         DBB::LogPrint("Error while upgrading firmware\n", "");
         showAlert(tr("Firmware Upgrade"), tr("Error while upgrading firmware. Please unplug and replug your Digital Bitbox."));
     }
-
-
 }
 
 void DBBDaemonGui::setDeviceNameProvided(const QString &name)
@@ -1804,8 +1802,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         } else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK) {
             upgradeFirmwareState = true;
             shouldKeepBootloaderState = true;
-            setFirmwareUpdateHID(true);
-            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplug and replug your Digital Bitbox.<br>Before the LED turns off, briefly tap the touch button to start the upgrade.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+            showModalInfo("<strong>Upgrading Firmware...</strong><br/><br/>Please unplug and replug your Digital Bitbox.<br>Before the LED turns off, briefly <font color=\"#6699cc\">tap the touch button</font> to start the upgrade.", DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
         }
         else if (tag == DBB_RESPONSE_TYPE_BOOTLOADER_LOCK) {
             hideModalInfo();
