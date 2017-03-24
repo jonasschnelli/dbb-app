@@ -195,17 +195,21 @@ int main(int argc, char** argv)
     std::thread usbCheckThread([&]() {
         while(1)
         {
+            enum DBB::dbb_device_mode oldDeviceType;
             //check devices
+            if (firmwareUpdateHID) {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1000));
+                continue;
+            }
             {
                 std::unique_lock<std::mutex> lock(cs_queue);
                 std::string devicePath;
                 enum DBB::dbb_device_mode deviceType = DBB::deviceAvailable(devicePath);
 
-#ifdef DBB_ENABLE_QT
-                    //TODO, check if this requires locking
-                    if (dbbGUI)
-                        dbbGUI->deviceStateHasChanged( (deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_NO_PASSWORD || deviceType == DBB::DBB_DEVICE_MODE_FIRMWARE_U2F_NO_PASSWORD), deviceType);
-#endif
+                if (dbbGUI && oldDeviceType != deviceType) {
+                    dbbGUI->deviceStateHasChanged( (deviceType != DBB::DBB_DEVICE_UNKNOWN && deviceType != DBB::DBB_DEVICE_NO_DEVICE), deviceType);
+                    oldDeviceType = deviceType;
+                }
             }
             std::this_thread::sleep_for(std::chrono::milliseconds(1000));
         }
