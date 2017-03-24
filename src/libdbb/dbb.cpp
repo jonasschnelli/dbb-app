@@ -36,9 +36,7 @@ extern "C" {
 }
 
 #define HID_MAX_BUF_SIZE 5120
-
-// must be min 30 seconds to allow touch button confirmations
-#define HID_READ_TIMEOUT 35 * 1000
+#define HID_READ_TIMEOUT (120 * 1000)
 
 #ifdef DBB_ENABLE_DEBUG
 #define DBB_DEBUG_INTERNAL(format, args...) printf(format, ##args);
