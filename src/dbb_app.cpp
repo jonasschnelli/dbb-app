@@ -82,7 +82,6 @@ Q_IMPORT_PLUGIN(AccessibleFactory)
 Q_IMPORT_PLUGIN(QXcbIntegrationPlugin);
 #elif defined(DBB_QT_QPA_PLATFORM_WINDOWS)
 Q_IMPORT_PLUGIN(QWindowsIntegrationPlugin);
-Q_IMPORT_PLUGIN(DSServicePlugin);
 #elif defined(DBB_QT_QPA_PLATFORM_COCOA)
 Q_IMPORT_PLUGIN(QCocoaIntegrationPlugin);
 Q_IMPORT_PLUGIN(AVFServicePlugin);

@@ -44,7 +44,7 @@ noinst_LIBRARIES = libdbb.a libbpwalletclient.a
 libdbb_a_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 libdbb_a_INCLUDES = ../include/dbb.h libdbb/dbb_util.h libdbb/crypto.h $(HIDAPI_INCLUDES) $(LIBBTC_INCLUDES)
 libdbb_a_SOURCES = libdbb/dbb.cpp libdbb/base64.cpp libdbb/crypto.cpp libdbb/dbb_util.h
-libdbb_a_LIBADD = $(HIDAPI)
+libdbb_a_LIBADD = $(LIBBTC) $(HIDAPI)
 
 libbpwalletclient_a_INCLUDES = bitpaywalletclient/bpwalletclient.h
 libbpwalletclient_a_SOURCES = bitpaywalletclient/bpwalletclient.cpp
