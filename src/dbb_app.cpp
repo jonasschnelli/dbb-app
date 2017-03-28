@@ -192,7 +192,7 @@ int main(int argc, char** argv)
 
     //create a thread for the http handling
     std::thread usbCheckThread([&]() {
-        while(1)
+        while (!stopThread)
         {
             enum DBB::dbb_device_mode oldDeviceType;
             //check devices
@@ -241,7 +241,15 @@ int main(int argc, char** argv)
     //set style sheets
     app.exec();
 
+    stopThread = true;
+    notified = true;
+    queueCondVar.notify_one();
+    usbCheckThread.join();
+    cmdThread.join();
+
     DBB::closeConnection(); //clean up HID
+    delete dbbGUI; dbbGUI = NULL;
+
     btc_ecc_stop();
     exit(1);
 }

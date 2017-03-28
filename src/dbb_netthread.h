@@ -32,6 +32,7 @@ public:
     DBBNetThread();
     ~DBBNetThread();
     void completed();
+    void join();
     bool hasCompleted();
     std::thread currentThread;
 

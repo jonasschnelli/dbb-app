@@ -20,6 +20,7 @@ signals:
 
 public:
     DBBUpdateManager();
+    ~DBBUpdateManager();
     //set the dynamic/runtime CA file for https requests
     void setCAFile(const std::string& ca_file);
     void setSocks5ProxyURL(const std::string& proxyUrl);

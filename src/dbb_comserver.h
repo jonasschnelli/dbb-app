@@ -43,6 +43,7 @@ private:
     std::string comServerURL; //!< the url to call
     std::string ca_file; //<!ca_file to use
     std::string socks5ProxyURL; //<!socks5 URL or empty for no proxy
+    std::atomic<bool> shouldCancel;
 
     /* send a synchronous http request */
     bool SendRequest(const std::string& method, const std::string& url, const std::string& args, std::string& responseOut, long& httpcodeOut);

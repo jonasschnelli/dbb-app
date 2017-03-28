@@ -76,7 +76,57 @@ static void comServerCallback(DBBComServer* cs, const std::string& str, void *ct
 
 DBBDaemonGui::~DBBDaemonGui()
 {
+    if (qrCodeScanner) {
+        delete qrCodeScanner; qrCodeScanner = NULL;
+    }
+    if (backupDialog) {
+        delete backupDialog; backupDialog = NULL;
+    }
+    if (getAddressDialog) {
+        delete getAddressDialog; getAddressDialog = NULL;
+    }
+    if (statusBarButton) {
+        delete statusBarButton; statusBarButton = NULL;
+    }
+    if (statusBarVDeviceIcon) {
+        delete statusBarVDeviceIcon; statusBarVDeviceIcon = NULL;
+    }
+    if (statusBarNetIcon) {
+        delete statusBarNetIcon; statusBarNetIcon = NULL;
+    }
+    if (statusBarUSBIcon) {
+        delete statusBarUSBIcon; statusBarUSBIcon = NULL;
+    }
+    if (statusBarLabelLeft) {
+        delete statusBarLabelLeft; statusBarLabelLeft = NULL;
+    }
+    if (statusBarLabelRight) {
+        delete statusBarLabelRight; statusBarLabelRight = NULL;
+    }
+    if (configData) {
+        delete configData; configData = NULL;
+    }
+    {
+        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
 
+        if (singleWallet) {
+            delete singleWallet; singleWallet = NULL;
+        }
+        if (!vMultisigWallets.empty()) {
+            delete vMultisigWallets[0];
+            vMultisigWallets.clear();
+        }
+    }
+    if (walletUpdateTimer) {
+        walletUpdateTimer->stop();
+        delete walletUpdateTimer; walletUpdateTimer = NULL;
+    }
+    if (updateManager) {
+        delete updateManager; updateManager = NULL;
+    }
+    if (comServer) {
+        delete comServer; comServer = NULL;
+    }
 }
 
 DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(parent),
@@ -323,6 +373,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         netActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
         netActivityAnimation->setLoopCount(-1);
         netActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+        delete eff;
     }
     if (!usbActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
@@ -337,6 +388,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         usbActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
         usbActivityAnimation->setLoopCount(-1);
         usbActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
+        delete eff;
     }
     if (!verificationActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
@@ -349,6 +401,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         verificationActivityAnimation->setKeyValueAt(0.5, 0.3);
         verificationActivityAnimation->setKeyValueAt(1, 1.0);
         verificationActivityAnimation->setLoopCount(8);
+        delete eff;
     }
 
     // Set the tx fee tooltips
