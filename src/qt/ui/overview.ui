@@ -283,7 +283,7 @@ background-color: rgba(240,240,240,255);
          <x>10</x>
          <y>40</y>
          <width>460</width>
-         <height>100</height>
+         <height>200</height>
         </rect>
        </property>
        <property name="text">
