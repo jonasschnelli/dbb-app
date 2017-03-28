@@ -131,6 +131,14 @@ case $host in
      AC_CHECK_LIB([strmiids],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([dmoguids],      [main],, AC_MSG_ERROR(lib missing))
      AC_CHECK_LIB([msdmo],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([quartz],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([mfplat],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([opengl32],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([glu32],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([d3d9],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([mf],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([evr],      [main],, AC_MSG_ERROR(lib missing))
+     AC_CHECK_LIB([dxva2],      [main],, AC_MSG_ERROR(lib missing))
 
      AC_CHECK_LIB([curl],      [main],, AC_MSG_ERROR(lib missing))
      
