@@ -63,13 +63,17 @@ DBBComServer::DBBComServer(const std::string& comServerURLIn) : longPollThread(0
     parseMessageCB = nullptr;
     nSequence = 0;
     mobileAppConnected = false;
+    shouldCancel = false;
     ca_file = "";
     socks5ProxyURL.clear();
 }
 
 DBBComServer::~DBBComServer()
 {
-
+    shouldCancel = true;
+    if (longPollThread) {
+        longPollThread->join();
+    }
 }
 
 bool DBBComServer::generateNewKey()
@@ -200,7 +204,7 @@ bool DBBComServer::shouldCancelLongPoll()
     // detects if a long poll needs to be cancled
     // because user have switched the channel
     std::unique_lock<std::mutex> lock(cs_com);
-    return (currentLongPollChannelID != channelID || currentLongPollURL != comServerURL);
+    return (shouldCancel || currentLongPollChannelID != channelID || currentLongPollURL != comServerURL);
 }
 
 void DBBComServer::startLongPollThread()
@@ -230,6 +234,8 @@ void DBBComServer::startLongPollThread()
             }
             SendRequest("post", currentLongPollURL, "c=gd&uuid="+currentLongPollChannelID+"&dt=0&s="+std::to_string(sequence), response, httpStatusCode);
             sequence++;
+            if (shouldCancel)
+                return;
 
             if (httpStatusCode >= 300)
             {

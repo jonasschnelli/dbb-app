@@ -17,6 +17,11 @@ bool DBBNetThread::hasCompleted()
     return finished;
 }
 
+void DBBNetThread::join()
+{
+    currentThread.join();
+}
+
 DBBNetThread::DBBNetThread()
 {
     finished = false;

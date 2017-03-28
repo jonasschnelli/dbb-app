@@ -30,6 +30,11 @@ DBBUpdateManager::DBBUpdateManager() : QWidget(), checkingForUpdates(0)
     socks5ProxyURL.clear();
 }
 
+DBBUpdateManager::~DBBUpdateManager()
+{
+    disconnect(this, SIGNAL(checkForUpdateResponseAvailable(const std::string&, long, bool)), this, SLOT(parseCheckUpdateResponse(const std::string&, long, bool)));
+}
+
 bool DBBUpdateManager::SendRequest(const std::string& method,
                                const std::string& url,
                                const std::string& args,
