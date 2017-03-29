@@ -220,6 +220,9 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     this->ui->multisigBalance->setStyleSheet("font-size: " + QString::fromStdString(balanceFontSize) + ";");
     ////////////// END STYLING
 
+    this->ui->tableWidget->setVisible(false);
+    this->ui->loadinghistory->setVisible(true);
+
     // allow serval signaling data types
     qRegisterMetaType<UniValue>("UniValue");
     qRegisterMetaType<std::string>("std::string");
@@ -2282,6 +2285,13 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
     if (!singleWallet->client.IsSeeded())
         return;
     
+    if (this->ui->balanceLabel->text() == "?") {
+        this->ui->balanceLabel->setText("Loading...");
+        this->ui->singleWalletBalance->setText("Loading...");
+
+        this->ui->currentAddress->setText("Loading...");
+    }
+
     singleWalletIsUpdating = true;
     executeNetUpdateWallet(singleWallet, showLoading, [this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
@@ -2358,6 +2368,9 @@ void DBBDaemonGui::historyShowTx(QModelIndex index)
 void DBBDaemonGui::updateTransactionTable(DBBWallet *wallet, bool historyAvailable, const UniValue &history)
 {
     ui->tableWidget->setModel(NULL);
+
+    this->ui->loadinghistory->setVisible(false);
+    this->ui->tableWidget->setVisible(true);
 
     if (!historyAvailable || !history.isArray())
         return;

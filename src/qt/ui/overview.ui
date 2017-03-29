@@ -143,7 +143,7 @@
             </font>
            </property>
            <property name="text">
-            <string>Balance</string>
+            <string>?</string>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
@@ -207,6 +207,13 @@ background-color: rgba(240,240,240,255);
           </widget>
          </item>
         </layout>
+       </item>
+       <item>
+        <widget class="QLabel" name="loadinghistory">
+         <property name="text">
+          <string>Loading transaction history...</string>
+         </property>
+        </widget>
        </item>
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_6">
@@ -1102,7 +1109,7 @@ background-color: rgba(240,240,240,255);
             </font>
            </property>
            <property name="text">
-            <string>Balance</string>
+            <string>?</string>
            </property>
            <property name="textInteractionFlags">
             <set>Qt::LinksAccessibleByMouse|Qt::TextSelectableByMouse</set>
