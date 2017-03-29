@@ -76,9 +76,11 @@ static void comServerCallback(DBBComServer* cs, const std::string& str, void *ct
 
 DBBDaemonGui::~DBBDaemonGui()
 {
+#ifdef DBB_USE_MULTIMEDIA
     if (qrCodeScanner) {
         delete qrCodeScanner; qrCodeScanner = NULL;
     }
+#endif
     if (backupDialog) {
         delete backupDialog; backupDialog = NULL;
     }
