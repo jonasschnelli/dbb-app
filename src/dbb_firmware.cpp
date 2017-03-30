@@ -151,6 +151,7 @@ void upgradeFirmware(const std::string& password, const std::string& possibleFil
                 if (unlock.find("\"code\":600") != std::string::npos) {
                     std::cout << "Aborted by user\n";
                 }
+                DBB::closeConnection();
             }
 
             printf("Firmware successfully upgraded!\n");
@@ -192,11 +193,11 @@ int main(int argc, char* argv[])
 
         std::cout << "Unlocking bootloader: please press touch button for more then 3 seconds.\n";
         std::string unlock = sendSingleCommand("{\"bootloader\" : \"unlock\"}", password);
+        DBB::closeConnection();
         if (unlock.find("\"code\":600") != std::string::npos) {
             std::cout << "Aborted by user\n";
             return 1;
         }
-        DBB::closeConnection();
 
         std::cout << "Please unplug and re-plug the device, press the touch button after your have replugged the device\nPress enter after you have done this...";
         std::string dummyLine;
@@ -207,15 +208,15 @@ int main(int argc, char* argv[])
         if (deviceMode != DBB::DBB_DEVICE_MODE_BOOTLOADER)
         {
             std::cout << "Device is not in bootloader mode. Please try again.\n";
+            DBB::closeConnection();
             return 1;
         }
         if (!connectRes) {
             printf("Error: No Digital Bitbox connected\n");
             return 1;
         }
-
-        upgradeFirmware(password, possibleFilename);
         DBB::closeConnection();
+        upgradeFirmware(password, possibleFilename);
     }
 
     return 0;

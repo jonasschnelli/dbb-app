@@ -36,6 +36,9 @@ $(UNIVALUE): $(wildcard univalue/lib/*) $(wildcard univalue/include/*)
 
 $(HIDAPI):
 	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
+
+$(HIDAPI_FIRMWARE):
+	$(AM_V_at)$(MAKE) $(AM_MAKEFLAGS) -C $(@D) $(@F)
 	
 HIDAPI_INCLUDES = -I$(srcdir)/hidapi
 	
@@ -69,7 +72,7 @@ dbb_firmware_SOURCES = dbb_firmware.cpp dbb_util.h dbb_util.cpp firmware.h
 dbb_firmware_CPPFLAGS = $(AM_CPPFLAGS) $(DBB_INCLUDES)
 dbb_firmware_CFLAGS =
 dbb_firmware_LDFLAGS = $(RELDFLAGS) $(AM_LDFLAGS) $(LIBTOOL_APP_LDFLAGS)
-dbb_firmware_LDADD = $(UNIVALUE) libdbb.a $(LIBBTC) $(HIDAPI_FIRMWARE) 
+dbb_firmware_LDADD = libdbb.a $(UNIVALUE) $(LIBBTC) $(HIDAPI_FIRMWARE) 
 
 
 #check if we should build the dbb app
