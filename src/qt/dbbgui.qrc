@@ -2,6 +2,7 @@
     <qresource prefix="/icons">
         <file alias="bitcoin">res/bitcoin.png</file>
         <file alias="dbb">res/dbb.png</file>
+        <file alias="dbb_icon">res/dbb_icon.png</file>
         <file alias="connected">res/connected.png</file>
         <file alias="copay">res/group-outline.png</file>
         <file alias="home">res/home-outline.png</file>

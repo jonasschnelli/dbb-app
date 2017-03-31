@@ -311,7 +311,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(getAddressDialog, SIGNAL(verifyGetAddress(const QString&)), this, SLOT(getAddressVerify(const QString&)));
 
     //set window icon
-    QApplication::setWindowIcon(QIcon(":/icons/dbb"));
+    QApplication::setWindowIcon(QIcon(":/icons/dbb_icon"));
     //: translation: window title
     setWindowTitle(tr("Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
 
