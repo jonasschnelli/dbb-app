@@ -896,6 +896,7 @@ void DBBDaemonGui::hideSessionPasswordView()
 
 void DBBDaemonGui::showSetPasswordInfo()
 {
+    QMessageBox::information(this, tr("Change Password"), tr("Changing the device password does NOT change the backup password. The backup password is ALWAYS the password that was used during wallet initialization. Be sure to remember it."), QMessageBox::Ok);
     ui->modalBlockerView->showSetPassword();
 }
 
@@ -1505,6 +1506,8 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
+    QMessageBox::information(this, tr("Restore Backup"), tr("To restore a wallet from a backup, please enter the device password that was used during wallet initialization."), QMessageBox::Ok);
+
     bool ok;
     QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
     if (!ok || tempBackupPassword.isEmpty())
