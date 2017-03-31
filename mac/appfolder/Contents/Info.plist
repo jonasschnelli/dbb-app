@@ -3,7 +3,7 @@
 <plist version="0.9">
 <dict>
   <key>LSMinimumSystemVersion</key>
-  <string>10.7.0</string>
+  <string>10.8.0</string>
 
   <key>LSArchitecturePriority</key>
   <array>
@@ -17,13 +17,13 @@
   <string>APPL</string>
 
   <key>CFBundleGetInfoString</key>
-  <string>2.1.0, Copyright © 2016 Digital Bitbox</string>
+  <string>2.2.0, Copyright © 2017 Digital Bitbox</string>
 
   <key>CFBundleShortVersionString</key>
-  <string>2.1.0</string>
+  <string>2.2.0</string>
 
   <key>CFBundleVersion</key>
-  <string>2.1.0</string>
+  <string>2.2.0</string>
 
   <key>CFBundleSignature</key>
   <string>????</string>
