@@ -1313,7 +1313,7 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     {
         //: translation: successfull firmware update text
         DBB::LogPrint("Firmware successfully upgraded\n", "");
-        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br>(<font color=\"#6699cc\">Do not tap the touch button this time</font>.)"), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br><font color=\"#6699cc\">Do not tap the touch button this time</font>."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
