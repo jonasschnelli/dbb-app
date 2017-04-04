@@ -1508,10 +1508,8 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    QMessageBox::information(this, tr("Restore Backup"), tr("To restore a wallet from a backup, please enter the device password that was used during wallet initialization."), QMessageBox::Ok);
-
     bool ok;
-    QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
+    QString tempBackupPassword = QInputDialog::getText(this, "", tr("To restore a wallet from a backup, please enter the\ndevice password that was used during wallet initialization."), QLineEdit::Password, "", &ok);
     if (!ok || tempBackupPassword.isEmpty())
         return;
 
