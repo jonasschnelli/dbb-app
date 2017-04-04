@@ -1191,8 +1191,10 @@ void DBBDaemonGui::upgradeFirmwareButton()
 void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
 {
     #if defined(__linux__) || defined(__unix__)
-    QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually, please see the according manual on our website"), QMessageBox::Ok);
-    QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
+    int msgboxRes = QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually. Click OK to open a webpage listing the instructions."), QMessageBox::Ok | QMessageBox::Cancel);
+    if (msgboxRes == QMessageBox::Ok)  {
+        QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
+    }
     return;
     #endif
     //: translation: Open file dialog help text
