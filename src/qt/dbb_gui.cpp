@@ -311,7 +311,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(getAddressDialog, SIGNAL(verifyGetAddress(const QString&)), this, SLOT(getAddressVerify(const QString&)));
 
     //set window icon
-    QApplication::setWindowIcon(QIcon(":/icons/dbb"));
+    QApplication::setWindowIcon(QIcon(":/icons/dbb_icon"));
     //: translation: window title
     setWindowTitle(tr("Digital Bitbox") + (DBB_USE_TESTNET ? " ---TESTNET---" : ""));
 
@@ -1191,8 +1191,10 @@ void DBBDaemonGui::upgradeFirmwareButton()
 void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
 {
     #if defined(__linux__) || defined(__unix__)
-    QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually, please see the according manual on our website"), QMessageBox::Ok);
-    QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
+    int msgboxRes = QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually. Click OK to open a webpage listing the instructions."), QMessageBox::Ok | QMessageBox::Cancel);
+    if (msgboxRes == QMessageBox::Ok)  {
+        QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
+    }
     return;
     #endif
     //: translation: Open file dialog help text
@@ -1311,7 +1313,7 @@ void DBBDaemonGui::upgradeFirmwareDone(bool status)
     {
         //: translation: successfull firmware update text
         DBB::LogPrint("Firmware successfully upgraded\n", "");
-        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br>(<font color=\"#6699cc\">Do not tap the touch button this time</font>.)"), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
+        showModalInfo(tr("<strong>Upgrade successful!</strong><br><br>Please unplug and replug your Digital Bitbox to continue. <br><font color=\"#6699cc\">Do not tap the touch button this time</font>."), DBB_PROCESS_INFOLAYER_STYLE_REPLUG);
     }
     else
     {
@@ -1506,10 +1508,8 @@ void DBBDaemonGui::eraseBackup(const QString& backupFilename)
 
 void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 {
-    QMessageBox::information(this, tr("Restore Backup"), tr("To restore a wallet from a backup, please enter the device password that was used during wallet initialization."), QMessageBox::Ok);
-
     bool ok;
-    QString tempBackupPassword = QInputDialog::getText(this, "", tr("Enter backup-file password"), QLineEdit::Password, "", &ok);
+    QString tempBackupPassword = QInputDialog::getText(this, "", tr("To restore a wallet from a backup, please enter the\ndevice password that was used during wallet initialization."), QLineEdit::Password, "", &ok);
     if (!ok || tempBackupPassword.isEmpty())
         return;
 
