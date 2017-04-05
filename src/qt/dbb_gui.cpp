@@ -1255,7 +1255,6 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                     unsigned char sigByte[FIRMWARE_SIGLEN];
                     firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
                     sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
-                    printf("Reading signature... %s\n", sigStr.c_str());
                 }
 
                 //read firmware
@@ -3056,7 +3055,7 @@ void DBBDaemonGui::checkUDevRule()
 {
 #if DBB_ENABLE_UDEV_CHECK
     static const int WARNING_NEVER_SHOW_AGAIN = 2;
-    const char *udev_rules_file = "/etc/udev/rules.d/51-hid-digitalbitbox.rules";
+    const char *udev_rules_file = "/etc/udev/rules.d/52-hid-digitalbitbox.rules";
     QSettings settings;
     if (settings.value("udev_warning_state", 0).toInt() != WARNING_NEVER_SHOW_AGAIN && !file_exists(udev_rules_file))
     {
