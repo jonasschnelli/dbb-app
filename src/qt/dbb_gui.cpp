@@ -1255,7 +1255,6 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                     unsigned char sigByte[FIRMWARE_SIGLEN];
                     firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
                     sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
-                    printf("Reading signature... %s\n", sigStr.c_str());
                 }
 
                 //read firmware
