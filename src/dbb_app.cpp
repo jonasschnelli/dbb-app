@@ -216,8 +216,9 @@ int main(int argc, char** argv)
 
     btc_ecc_start();
     // Generate high-dpi pixmaps
-#if defined(Q_OS_MAC)
     QApplication::setAttribute(Qt::AA_UseHighDpiPixmaps);
+#if QT_VERSION >= QT_VERSION_CHECK(5, 6, 0)
+    QApplication::setAttribute (Qt::AA_EnableHighDpiScaling);
 #endif
 
     QString bitcoinURL;
