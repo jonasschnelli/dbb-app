@@ -19,6 +19,7 @@ public slots:
     void resetDefaults();
     void cancel();
     void setHiddenPassword();
+    void resetU2F();
     void useDefaultProxyToggled(int newState);
     
 public:
@@ -32,6 +33,7 @@ public:
 signals:
     void settingsDidChange();
     void settingsShouldChangeHiddenPassword(const QString&);
+    void settingsShouldResetU2F();
 
 private:
     Ui::SettingsDialog *ui;
