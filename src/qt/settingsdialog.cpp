@@ -1,6 +1,8 @@
 #include "settingsdialog.h"
 #include "ui/ui_settingsdialog.h"
 
+#include <QMessageBox>
+
 SettingsDialog::SettingsDialog(QWidget *parent, DBB::DBBConfigdata* configDataIn, bool deviceLocked) :
 QDialog(parent), configData(configDataIn),
 ui(new Ui::SettingsDialog)
@@ -11,6 +13,7 @@ ui(new Ui::SettingsDialog)
     connect(this->ui->saveButton, SIGNAL(clicked()), this, SLOT(close()));
     connect(this->ui->cancelButton, SIGNAL(clicked()), this, SLOT(cancel()));
     connect(this->ui->setHiddenPasswordButton, SIGNAL(clicked()), this, SLOT(setHiddenPassword()));
+    connect(this->ui->resetU2Fbutton, SIGNAL(clicked()), this, SLOT(resetU2F()));
 
     connect(this->ui->useDefaultProxy, SIGNAL(stateChanged(int)), this, SLOT(useDefaultProxyToggled(int)));
 
@@ -96,5 +99,15 @@ void SettingsDialog::setHiddenPassword()
 {
     emit settingsShouldChangeHiddenPassword(ui->setHiddenPasswordTextField->text());
     ui->setHiddenPasswordTextField->setText("");
+    close();
+}
+
+void SettingsDialog::resetU2F()
+{
+    QMessageBox::StandardButton reply = QMessageBox::question(this, "U2F Reset", tr("Do you really want to erase the current U2F settings?"), QMessageBox::Yes | QMessageBox::No);
+    if (reply == QMessageBox::No)
+        return;
+
+    emit settingsShouldResetU2F();
     close();
 }

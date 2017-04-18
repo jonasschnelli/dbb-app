@@ -1035,6 +1035,17 @@ void DBBDaemonGui::eraseClicked()
     }
 }
 
+void DBBDaemonGui::resetU2F()
+{
+    DBB::LogPrint("Request U2F reset...\n", "");
+    if (executeCommandWrapper("{\"reset\":\"U2F\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+            UniValue jsonOut;
+            jsonOut.read(cmdOut);
+            emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RESET_U2F);
+        })) {
+    }
+}
+
 void DBBDaemonGui::ledClicked(dbb_led_blink_mode_t mode)
 {
     std::string command;
@@ -2955,6 +2966,7 @@ void DBBDaemonGui::showSettings()
         settingsDialog = new SettingsDialog(this, configData, cachedDeviceLock);
         connect(settingsDialog, SIGNAL(settingsDidChange()), this, SLOT(updateSettings()));
         connect(settingsDialog, SIGNAL(settingsShouldChangeHiddenPassword(const QString&)), this, SLOT(updateHiddenPassword(const QString&)));
+        connect(settingsDialog, SIGNAL(settingsShouldResetU2F()), this, SLOT(resetU2F()));
     }
 
     settingsDialog->updateDeviceLocked(cachedDeviceLock);
