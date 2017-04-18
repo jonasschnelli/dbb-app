@@ -378,7 +378,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         netActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
         netActivityAnimation->setLoopCount(-1);
         netActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
-        delete eff;
     }
     if (!usbActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
@@ -393,7 +392,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
         usbActivityAnimation->setEasingCurve(QEasingCurve::OutQuad);
         usbActivityAnimation->setLoopCount(-1);
         usbActivityAnimation->start(QAbstractAnimation::DeleteWhenStopped);
-        delete eff;
     }
     if (!verificationActivityAnimation) {
         QGraphicsOpacityEffect* eff = new QGraphicsOpacityEffect(this);
@@ -2305,20 +2303,6 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
     executeNetUpdateWallet(singleWallet, showLoading, [this](bool walletsAvailable, const std::string& walletsResponse) {
         emit getWalletsResponseAvailable(this->singleWallet, walletsAvailable, walletsResponse);
     });
-
-    DBBNetThread* thread = DBBNetThread::DetachThread();
-    thread->currentThread = std::thread([this, thread]() {
-        std::string txHistoryResponse;
-        bool transactionHistoryAvailable = this->singleWallet->client.GetTransactionHistory(txHistoryResponse);
-
-
-        UniValue data;
-        if (transactionHistoryAvailable)
-            data.read(txHistoryResponse);
-
-        emit getTransactionHistoryAvailable(this->singleWallet, transactionHistoryAvailable, data);
-        thread->completed();
-    });
 }
 
 void DBBDaemonGui::updateUIMultisigWallets(const UniValue& walletResponse)
@@ -2489,6 +2473,18 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, s
                 wallet->shouldUpdateWalletAgain = false;
                 walletsAvailable = wallet->client.GetWallets(walletsResponse);
                 wallet->client.GetFeeLevels();
+                std::string txHistoryResponse;
+                if (wallet == this->singleWallet) {
+                    bool transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);
+
+
+                    UniValue data;
+                    if (transactionHistoryAvailable)
+                        data.read(txHistoryResponse);
+
+                    emit getTransactionHistoryAvailable(wallet, transactionHistoryAvailable, data);
+                }
+
             }while(wallet->shouldUpdateWalletAgain);
 
             wallet->updatingWallet = false;
