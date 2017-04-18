@@ -1,3 +1,17 @@
+### Release Notes 2.2.1
+
+HiDPI issues windows
+===============================================
+Windows Resize/DPI awareness problems are now solved.
+
+History loading bug
+===============================================
+Solved a problem where the history loading got stuck
+
+Reset U2F feature
+===============================================
+Added a reset-u2f function (experts settings)
+
 ### Release Notes 2.2.0
 
 Compatibility with the new 2.1.0 firmware (U2F)
