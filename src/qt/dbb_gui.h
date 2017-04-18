@@ -295,6 +295,8 @@ private slots:
     //== DBB USB ==
     //!function is user whishes to erase the DBB
     void eraseClicked();
+    //!reset the U2F seed
+    void resetU2F();
     void ledClicked(dbb_led_blink_mode_t mode = DBB_LED_BLINK_MODE_BLINK);
     //!get basic informations about the connected DBB
     void getInfo();
