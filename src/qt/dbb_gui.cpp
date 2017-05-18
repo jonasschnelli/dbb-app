@@ -45,6 +45,8 @@
 
 #include <qrencode.h>
 
+#include "firmware.h"
+
 #if defined _MSC_VER
 #include <direct.h>
 #elif defined __GNUC__
@@ -841,7 +843,10 @@ void DBBDaemonGui::passwordProvided()
     // to slide in call
     loginScreenIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
 
+    DBB::LogPrint("Storing session password in memory\n", "");
     sessionPassword = this->ui->passwordLineEdit->text().toStdString();
+
+    DBB::LogPrint("Requesting device info...\n", "");
     getInfo();
 }
 
@@ -1016,6 +1021,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
 
     setLoading(true);
     processCommand = true;
+    DBB::LogPrint("Executing command...\n", "");
     executeCommand(cmd, sessionPassword, cmdFinished);
 
     return true;
@@ -1250,19 +1256,36 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
         fwUpgradeThread = new std::thread([this,possibleFilename]() {
             bool upgradeRes = false;
 
-            // load the file
-            std::ifstream firmwareFile(possibleFilename, std::ios::binary | std::ios::ate);
-            std::streamsize firmwareSize = firmwareFile.tellg();
-            std::string sigStr;
+            std::streamsize firmwareSize;
+            std::stringstream buffer;
+
+            if (possibleFilename.empty() || possibleFilename == "" || possibleFilename == "int")
+            {
+                // load internally
+                for (int i = 0; i<firmware_deterministic_2_2_0_signed_bin_len;i++)
+                {
+                    buffer << firmware_deterministic_2_2_0_signed_bin[i];
+                }
+                firmwareSize = firmware_deterministic_2_2_0_signed_bin_len;
+            }
+            else {
+                // load the file
+                std::ifstream firmwareFile(possibleFilename, std::ios::binary);
+                buffer << firmwareFile.rdbuf();
+                firmwareSize = firmwareFile.tellg();
+                firmwareFile.close();
+            }
+
+            buffer.seekg(0, std::ios::beg);
             if (firmwareSize > 0)
             {
-                firmwareFile.seekg(0, std::ios::beg);
+                std::string sigStr;
 
                 //read signatures
                 if (DBB::GetArg("-noreadsig", "") == "")
                 {
                     unsigned char sigByte[FIRMWARE_SIGLEN];
-                    firmwareFile.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
+                    buffer.read((char *)&sigByte[0], FIRMWARE_SIGLEN);
                     sigStr = DBB::HexStr(sigByte, sigByte + FIRMWARE_SIGLEN);
                 }
 
@@ -1271,14 +1294,13 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
                 unsigned int pos = 0;
                 while (true)
                 {
-                    firmwareFile.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
-                    std::streamsize bytes = firmwareFile.gcount();
+                    buffer.read(&firmwareBuffer[0]+pos, FIRMWARE_CHUNKSIZE);
+                    std::streamsize bytes = buffer.gcount();
                     if (bytes == 0)
                         break;
 
                     pos += bytes;
                 }
-                firmwareFile.close();
 
                 // append 0xff to the rest of the firmware buffer
                 memset((void *)(&firmwareBuffer[0]+pos), 0xff, DBB_APP_LENGTH-pos);
@@ -1546,6 +1568,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 
 void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag)
 {
+    DBB::LogPrint("Parsing response from device...\n", "");
     processCommand = false;
     setLoading(false);
 
@@ -1562,7 +1585,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         bool errorShown = false;
         if (errorObj.isObject()) {
             //error found
-
+            DBB::LogPrint("Got error object from device\n", "");
             //special case, password not accepted during "login" because of a ongoing-signing, etc.
             if (this->ui->blockerView->isVisible() && this->ui->passwordLineEdit->isVisible())
             {
@@ -1597,6 +1620,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 errorShown = true;
             }
         } else if (tag == DBB_RESPONSE_TYPE_INFO) {
+            DBB::LogPrint("Got device info\n", "");
             UniValue deviceObj = find_value(response, "device");
             if (deviceObj.isObject()) {
                 UniValue version = find_value(deviceObj, "version");
@@ -1626,6 +1650,41 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         return;
                     }
                     this->ui->versionLabel->setText(v);
+                }
+
+                try {
+                    std::string vcopy = version.get_str();
+                    vcopy.erase(std::remove(vcopy.begin(), vcopy.end(), 'v'), vcopy.end());
+                    vcopy.erase(std::remove(vcopy.begin(), vcopy.end(), 'V'), vcopy.end());
+                    vcopy.erase(std::remove(vcopy.begin(), vcopy.end(), '.'), vcopy.end());
+                    int test = std::stoi(vcopy);
+                    if (test < 220 && bootlock.isTrue()) {
+
+                        QMessageBox msgBox;
+                        msgBox.setText(tr("Update Firmware"));
+                        msgBox.setInformativeText(tr("A firmware upgrade (%1) is available for your device. Do you wish to install it?").arg(QString::fromStdString(std::string(firmware_deterministic_string))));
+                        QAbstractButton *showOnline = msgBox.addButton(tr("Show infos online"), QMessageBox::RejectRole);
+                        msgBox.addButton(QMessageBox::Yes);
+                        msgBox.addButton(QMessageBox::No);
+                        int res = msgBox.exec();
+                        if (msgBox.clickedButton() == showOnline)
+                        {
+                            QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware?app=dbb-app"));
+                        }
+                        else if (res == QMessageBox::Yes) {
+                            DBB::LogPrint("Upgrading firmware\n", "");
+                            firmwareFileToUse = "int";
+                            DBB::LogPrint("Request bootloader unlock\n", "");
+                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                                UniValue jsonOut;
+                                jsonOut.read(cmdOut);
+                                emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
+                            });
+                            return;
+                        }
+                    }
+                } catch (std::exception &e) {
+
                 }
 
                 //update device name
@@ -1984,6 +2043,9 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 }
             }
         }
+    }
+    else {
+        DBB::LogPrint("Parsing was invalid JSON\n", "");
     }
 }
 
