@@ -1205,13 +1205,6 @@ void DBBDaemonGui::upgradeFirmwareButton()
 
 void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
 {
-    #if defined(__linux__) || defined(__unix__)
-    int msgboxRes = QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually. Click OK to open a webpage listing the instructions."), QMessageBox::Ok | QMessageBox::Cancel);
-    if (msgboxRes == QMessageBox::Ok)  {
-        QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
-    }
-    return;
-    #endif
     //: translation: Open file dialog help text
     firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
     if (firmwareFileToUse.isNull())
