@@ -1673,6 +1673,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
                             });
+                            return;
                         }
                     }
                 } catch (std::exception &e) {
