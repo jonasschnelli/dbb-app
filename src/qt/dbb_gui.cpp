@@ -1669,7 +1669,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         int res = msgBox.exec();
                         if (msgBox.clickedButton() == showOnline)
                         {
-                            QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/start_linux#udev?app=dbb-app"));
+                            QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware?app=dbb-app"));
                         }
                         else if (res == QMessageBox::Yes) {
                             DBB::LogPrint("Upgrading firmware\n", "");
