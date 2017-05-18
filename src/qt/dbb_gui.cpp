@@ -843,7 +843,10 @@ void DBBDaemonGui::passwordProvided()
     // to slide in call
     loginScreenIndicatorOpacityAnimation->start(QAbstractAnimation::KeepWhenStopped);
 
+    DBB::LogPrint("Storing session password in memory\n", "");
     sessionPassword = this->ui->passwordLineEdit->text().toStdString();
+
+    DBB::LogPrint("Requesting device info...\n", "");
     getInfo();
 }
 
@@ -1018,6 +1021,7 @@ bool DBBDaemonGui::executeCommandWrapper(const std::string& cmd, const dbb_proce
 
     setLoading(true);
     processCommand = true;
+    DBB::LogPrint("Executing command...\n", "");
     executeCommand(cmd, sessionPassword, cmdFinished);
 
     return true;
@@ -1564,6 +1568,7 @@ void DBBDaemonGui::restoreBackup(const QString& backupFilename)
 
 void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_status_t status, dbb_response_type_t tag, int subtag)
 {
+    DBB::LogPrint("Parsing response from device...\n", "");
     processCommand = false;
     setLoading(false);
 
@@ -1580,7 +1585,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
         bool errorShown = false;
         if (errorObj.isObject()) {
             //error found
-
+            DBB::LogPrint("Got error object from device\n", "");
             //special case, password not accepted during "login" because of a ongoing-signing, etc.
             if (this->ui->blockerView->isVisible() && this->ui->passwordLineEdit->isVisible())
             {
@@ -1615,6 +1620,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 errorShown = true;
             }
         } else if (tag == DBB_RESPONSE_TYPE_INFO) {
+            DBB::LogPrint("Got device info\n", "");
             UniValue deviceObj = find_value(response, "device");
             if (deviceObj.isObject()) {
                 UniValue version = find_value(deviceObj, "version");
@@ -1666,6 +1672,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                             QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/start_linux#udev?app=dbb-app"));
                         }
                         else if (res == QMessageBox::Yes) {
+                            DBB::LogPrint("Upgrading firmware\n", "");
                             firmwareFileToUse = "int";
                             DBB::LogPrint("Request bootloader unlock\n", "");
                             executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
@@ -1679,9 +1686,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 } catch (std::exception &e) {
 
                 }
-
-
-
 
                 //update device name
                 if (name.isStr())
@@ -2039,6 +2043,9 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 }
             }
         }
+    }
+    else {
+        DBB::LogPrint("Parsing was invalid JSON\n", "");
     }
 }
 
