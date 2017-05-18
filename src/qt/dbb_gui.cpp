@@ -1205,13 +1205,6 @@ void DBBDaemonGui::upgradeFirmwareButton()
 
 void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
 {
-    #if defined(__linux__) || defined(__unix__)
-    int msgboxRes = QMessageBox::information(this, tr("Firmware Upgrade"), tr("Firmware upgrades on Linux must be done manually. Click OK to open a webpage listing the instructions."), QMessageBox::Ok | QMessageBox::Cancel);
-    if (msgboxRes == QMessageBox::Ok)  {
-        QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware_linux"));
-    }
-    return;
-    #endif
     //: translation: Open file dialog help text
     firmwareFileToUse = QFileDialog::getOpenFileName(this, tr("Select Firmware"), "", tr("DBB Firmware Files (*.bin *.dbb)"));
     if (firmwareFileToUse.isNull())
@@ -1224,7 +1217,7 @@ void DBBDaemonGui::upgradeFirmware(bool unlockbootloader)
             UniValue jsonOut;
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
-        });
+        }, tr("Unlock the bootloader to install a new firmware"));
     }
     else
     {
@@ -1663,7 +1656,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         QMessageBox msgBox;
                         msgBox.setText(tr("Update Firmware"));
                         msgBox.setInformativeText(tr("A firmware upgrade (%1) is available for your device. Do you wish to install it?").arg(QString::fromStdString(std::string(firmware_deterministic_string))));
-                        QAbstractButton *showOnline = msgBox.addButton(tr("Show infos online"), QMessageBox::RejectRole);
+                        QAbstractButton *showOnline = msgBox.addButton(tr("Show online information"), QMessageBox::RejectRole);
                         msgBox.addButton(QMessageBox::Yes);
                         msgBox.addButton(QMessageBox::No);
                         int res = msgBox.exec();
@@ -1679,8 +1672,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                                 UniValue jsonOut;
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
-                            });
-                            return;
+                            }, tr("Unlock the bootloader to install a new firmware"));
                         }
                     }
                 } catch (std::exception &e) {

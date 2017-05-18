@@ -20,7 +20,7 @@ if TARGET_OSX
 endif
 
 if TARGET_LINUX
-  HIDAPI=hidapi/linux/libhidapi-hidraw.la
+  HIDAPI=hidapi/libusb/libhidapi-libusb.la
 endif
 
 $(LIBBTC): $(wildcard libbtc/src/*) $(wildcard libbtc/include/*)
