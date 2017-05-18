@@ -1673,6 +1673,8 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
                             }, tr("Unlock the bootloader to install a new firmware"));
+                            passwordAccepted();
+                            return;
                         }
                     }
                 } catch (std::exception &e) {
