@@ -567,7 +567,7 @@ bool BitPayWalletClient::GetFeeLevels()
         return false;
 
     long httpStatusCode = 0;
-    if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+    if (!SendRequest("get", "/v1/feelevels/?network="+std::string(testnet ? "testnet" : "livenet")+"&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)
