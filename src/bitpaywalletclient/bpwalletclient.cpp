@@ -615,7 +615,7 @@ int64_t BitPayWalletClient::GetFeeForPriority(int prio)
         }
     }
 
-    return 2000; //default fallback feerate
+    return 0; //don't use a fallback fee, abort at this point
 }
 
 bool BitPayWalletClient::GetWallets(std::string& response)

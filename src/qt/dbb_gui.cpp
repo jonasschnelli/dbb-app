@@ -2159,17 +2159,22 @@ void DBBDaemonGui::createTxProposalPressed()
         std::string errorOut;
 
         int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
-
-        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+        if (fee == 0) {
             emit changeNetLoading(false);
             emit shouldHideModalInfo();
-            emit shouldShowAlert("Error", QString::fromStdString(errorOut));
-        }
-        else
-        {
-            emit changeNetLoading(false);
-            emit shouldUpdateModalInfo(tr("Start Signing Process"));
-            emit createTxProposalDone(singleWallet, "", proposalOut);
+            emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
+        } else {
+            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+                emit changeNetLoading(false);
+                emit shouldHideModalInfo();
+                emit shouldShowAlert("Error", QString::fromStdString(errorOut));
+            }
+            else
+            {
+                emit changeNetLoading(false);
+                emit shouldUpdateModalInfo(tr("Start Signing Process"));
+                emit createTxProposalDone(singleWallet, "", proposalOut);
+            }
         }
 
         thread->completed();
