@@ -567,6 +567,16 @@ bool BitPayWalletClient::GetFeeLevels()
         return false;
 
     long httpStatusCode = 0;
+    if (SendRequest("get", "https://www.digitalbitbox.com/fees/levels.json?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode, false)) {
+        // we could read our "internal" fees
+        feeLevelsObject.read(response);
+        if (response.size() > 10 && feeLevelsObject.isArray()) {
+            return true;
+        }
+    }
+
+    response.clear();
+    httpStatusCode = 0;
     if (!SendRequest("get", "/v1/feelevels/?network=livenet&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
