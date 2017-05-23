@@ -641,7 +641,7 @@ bool BitPayWalletClient::GetTransactionHistory(std::string& response)
         return false;
 
     long httpStatusCode = 0;
-    if (!SendRequest("get", "/v1/txhistory/?limit=50&r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
+    if (!SendRequest("get", "/v1/txhistory/?r="+std::to_string(CheapRandom()), "{}", response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200)
