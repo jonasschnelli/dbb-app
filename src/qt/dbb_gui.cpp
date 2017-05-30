@@ -2353,6 +2353,9 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
 {
     if (singleWallet->updatingWallet)
     {
+        if (showLoading) {
+            setNetLoading(true);
+        }
         singleWallet->shouldUpdateWalletAgain = true;
         return;
     }
@@ -2536,13 +2539,26 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, s
 
             do
             {
-                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-                wallet->shouldUpdateWalletAgain = false;
-                walletsAvailable = wallet->client.GetWallets(walletsResponse);
-                wallet->client.GetFeeLevels();
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    wallet->shouldUpdateWalletAgain = false;
+                    walletsAvailable = wallet->client.GetWallets(walletsResponse);
+                }
+                emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse, false);
+                bool isSingleWallet = false;
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    wallet->client.GetFeeLevels();
+                    isSingleWallet = (wallet == this->singleWallet);
+                }
                 std::string txHistoryResponse;
-                if (wallet == this->singleWallet) {
-                    bool transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);
+                if (isSingleWallet) {
+                    bool transactionHistoryAvailable  = false;
+                    {
+                        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                        transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);
+                    }
+
 
 
                     UniValue data;
