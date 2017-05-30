@@ -1668,13 +1668,19 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                             DBB::LogPrint("Upgrading firmware\n", "");
                             firmwareFileToUse = "int";
                             DBB::LogPrint("Request bootloader unlock\n", "");
-                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                            bool unlockSuccess = false;
+                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this, &unlockSuccess](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                                 UniValue jsonOut;
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
+                                if (upgradeFirmwareState) {
+                                    unlockSuccess = true;
+                                }
                             }, tr("Unlock the bootloader to install a new firmware"));
-                            passwordAccepted();
-                            return;
+                            if (unlockSuccess) {
+                                passwordAccepted();
+                                return;
+                            }
                         }
                     }
                 } catch (std::exception &e) {
