@@ -152,6 +152,8 @@ signals:
 
     void comServerIncommingMessage(const QString& msg);
 
+    void reloadGetinfo();
+
 private:
     QString *openedWithBitcoinURI;
     Ui::MainWindow* ui;

@@ -312,6 +312,13 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(getAddressDialog, SIGNAL(shouldGetXPub(const QString&)), this, SLOT(getAddressGetXPub(const QString&)));
     connect(getAddressDialog, SIGNAL(verifyGetAddress(const QString&)), this, SLOT(getAddressVerify(const QString&)));
 
+    // connect direct reload lambda
+    connect(this, &DBBDaemonGui::reloadGetinfo, this, [this]() {
+        // use action as you wish
+        resetInfos();
+        getInfo();
+    });
+
     //set window icon
     QApplication::setWindowIcon(QIcon(":/icons/dbb_icon"));
     //: translation: window title
@@ -1668,19 +1675,16 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                             DBB::LogPrint("Upgrading firmware\n", "");
                             firmwareFileToUse = "int";
                             DBB::LogPrint("Request bootloader unlock\n", "");
-                            bool unlockSuccess = false;
-                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this, &unlockSuccess](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                                 UniValue jsonOut;
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
-                                if (upgradeFirmwareState) {
-                                    unlockSuccess = true;
+                                if (!upgradeFirmwareState) {
+                                    emit reloadGetinfo();
                                 }
                             }, tr("Unlock the bootloader to install a new firmware"));
-                            if (unlockSuccess) {
-                                passwordAccepted();
-                                return;
-                            }
+                            passwordAccepted();
+                            return;
                         }
                     }
                 } catch (std::exception &e) {
