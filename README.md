@@ -58,9 +58,9 @@ dbb-cli and dbb-app depend on libbtc (https://github.com/libbtc/libbtc) for key 
 Libbtc is included as git subtree and will be compiled during the normal build process.
 
 - libbtc (included as git subtree) (https://github.com/libbtc/libbtc)
-- hidapi (https://github.com/signal11/hidapi)
-- libcurl
-- libavahi (for mDNS; linux only, libavahi-compat-libdnssd-dev)
+- hidapi (included as git subtree) (https://github.com/signal11/hidapi)
+- libcurl (https web calls)
+- libqrencode (QR Code generation)
 - qt5 (if UI enabled)
 
 OSX:
@@ -70,7 +70,7 @@ OSX:
 #### Linux (Ubuntu 15.04):
 
     sudo apt-get install build-essential libtool autotools-dev autoconf pkg-config git
-    sudo apt-get install libcurl4-openssl-dev libudev-dev libqrencode-dev libhidapi-dev
+    sudo apt-get install libusb-1.0-0-dev libcurl4-openssl-dev libudev-dev libqrencode-dev
     sudo apt-get install libqt5gui5 libqt5core5a libqt5dbus5 qttools5-dev qttools5-dev-tools libqt5websockets5-dev libavahi-compat-libdnssd-dev
 
 
@@ -79,17 +79,6 @@ OSX:
     sudo yum groupinstall "C Development Tests and Libraries"
     sudo yum install git hidapi-devel
     sudo yum install mesa-libGL-devel qt5-qttools-devel
-
-
-
-if `libhidapi` is not available, compile it yourself
-
-    sudo apt-get install libudev-dev libusb-1.0-0-dev lib
-    git clone git://github.com/signal11/hidapi.git
-    ./bootstrap
-    ./configure
-    make
-    sudo make install
 
 
 #### *nix depends secure build (from hash-verified source)
@@ -111,6 +100,6 @@ Optionally probably want to create out-of-tree directory to save latest source &
 ### Basic build steps:
 
     ./autogen.sh
-    ./configure --enable-debug --with-gui=qt5
+    ./configure --enable-debug --with-gui=qt5 --enable-libusb
     make
     sudo make install
