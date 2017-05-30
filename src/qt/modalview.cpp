@@ -144,6 +144,7 @@ void ModalView::showSetNewWallet()
     ui->setDevicePasswordInfo->setVisible(true);
     ui->setDeviceName->setFocus();
     ui->setDeviceSubmit->setEnabled(false);
+    ui->setDeviceCancel->setVisible(false);
 }
 
 void ModalView::showSetPassword()
@@ -158,6 +159,7 @@ void ModalView::showSetPassword()
     ui->setDevicePasswordInfo->setVisible(true);
     ui->setPasswordOld->setFocus();
     ui->setDeviceSubmit->setEnabled(false);
+    ui->setDeviceCancel->setVisible(true);
 }
 
 void ModalView::showSetDeviceNameCreate()
