@@ -38,7 +38,6 @@ addons:
     - g++-4.8
     - clang
     - libudev-dev
-    - libusb-dev
     - libusb-1.0-0-dev
     - libevent-dev
 
@@ -50,7 +49,7 @@ script:
     - if [ "${TRAVIS_OS_NAME}" = "linux" ]; then
         QTDIR="/opt/qt55" && PATH="$QTDIR/bin:$PATH" && qt55-env.sh
         && ./autogen.sh
-        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --enable-daemon --with-gui=qt5 --enable-debug
+        && PKG_CONFIG_PATH="/opt/qt55/lib/pkgconfig:$PKG_CONFIG_PATH" ./configure CXX=g++-4.8 --enable-daemon --with-gui=qt5 --enable-debug --enable-libusb
         ;
      else
         ./autogen.sh
