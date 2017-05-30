@@ -1668,13 +1668,19 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                             DBB::LogPrint("Upgrading firmware\n", "");
                             firmwareFileToUse = "int";
                             DBB::LogPrint("Request bootloader unlock\n", "");
-                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+                            bool unlockSuccess = false;
+                            executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this, &unlockSuccess](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                                 UniValue jsonOut;
                                 jsonOut.read(cmdOut);
                                 emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
+                                if (upgradeFirmwareState) {
+                                    unlockSuccess = true;
+                                }
                             }, tr("Unlock the bootloader to install a new firmware"));
-                            passwordAccepted();
-                            return;
+                            if (unlockSuccess) {
+                                passwordAccepted();
+                                return;
+                            }
                         }
                     }
                 } catch (std::exception &e) {
@@ -2353,6 +2359,9 @@ void DBBDaemonGui::SingleWalletUpdateWallets(bool showLoading)
 {
     if (singleWallet->updatingWallet)
     {
+        if (showLoading) {
+            setNetLoading(true);
+        }
         singleWallet->shouldUpdateWalletAgain = true;
         return;
     }
@@ -2536,13 +2545,26 @@ void DBBDaemonGui::executeNetUpdateWallet(DBBWallet* wallet, bool showLoading, s
 
             do
             {
-                std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
-                wallet->shouldUpdateWalletAgain = false;
-                walletsAvailable = wallet->client.GetWallets(walletsResponse);
-                wallet->client.GetFeeLevels();
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    wallet->shouldUpdateWalletAgain = false;
+                    walletsAvailable = wallet->client.GetWallets(walletsResponse);
+                }
+                emit getWalletsResponseAvailable(wallet, walletsAvailable, walletsResponse, false);
+                bool isSingleWallet = false;
+                {
+                    std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                    wallet->client.GetFeeLevels();
+                    isSingleWallet = (wallet == this->singleWallet);
+                }
                 std::string txHistoryResponse;
-                if (wallet == this->singleWallet) {
-                    bool transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);
+                if (isSingleWallet) {
+                    bool transactionHistoryAvailable  = false;
+                    {
+                        std::unique_lock<std::recursive_mutex> lock(this->cs_walletObjects);
+                        transactionHistoryAvailable = wallet->client.GetTransactionHistory(txHistoryResponse);
+                    }
+
 
 
                     UniValue data;

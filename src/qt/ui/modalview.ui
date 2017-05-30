@@ -181,7 +181,7 @@
                               padding:4px;</string>
        </property>
        <property name="maxLength">
-        <number>64</number>
+        <number>1048</number>
        </property>
        <property name="echoMode">
         <enum>QLineEdit::Password</enum>
@@ -221,7 +221,7 @@
                               padding:4px;</string>
        </property>
        <property name="maxLength">
-        <number>64</number>
+        <number>1048</number>
        </property>
        <property name="echoMode">
         <enum>QLineEdit::Password</enum>
@@ -245,7 +245,7 @@
                               padding:4px;</string>
        </property>
        <property name="maxLength">
-        <number>64</number>
+        <number>1048</number>
        </property>
        <property name="echoMode">
         <enum>QLineEdit::Password</enum>
