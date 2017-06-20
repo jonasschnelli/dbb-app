@@ -1875,8 +1875,19 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 responseMutable.pushKV("echo", requestXPubEchoUV.get_str().c_str());
                 if (subtag == DBB_ADDRESS_STYLE_MULTISIG_1OF1)
                     responseMutable.pushKV("type", "p2sh_ms_1of1");
-                if (subtag == DBB_ADDRESS_STYLE_P2PKH)
+                if (subtag == DBB_ADDRESS_STYLE_P2PKH) {
                     responseMutable.pushKV("type", "p2pkh");
+
+                    // compare the addresses
+                    btc_hdnode node;
+                    bool r = btc_hdnode_deserialize(requestXPubKeyUV.get_str().c_str(), &btc_chain_main, &node);
+                    char address[1024];
+                    btc_hdnode_get_p2pkh_address(&node, (DBB_USE_TESTNET ? &btc_chain_test : &btc_chain_main), address, sizeof(address));
+                    std::string strAddress(address);
+                    if (strAddress != ui->currentAddress->text().toStdString()) {
+                        showModalInfo(tr("The address does <strong><font color=\"#AA0000\">not match</font></strong>."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+                    }
+                }
                 // send verification to verification devices
                 if (comServer->mobileAppConnected)
                     comServer->postNotification(responseMutable.write());
