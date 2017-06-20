@@ -2854,7 +2854,6 @@ void DBBDaemonGui::PaymentProposalAction(DBBWallet* wallet, const QString &tfaCo
                         int sigCount = 0;
                         for (const UniValue& oneSig : vSignatureObjects) {
                             UniValue sigObject = find_value(oneSig, "sig");
-                            UniValue pubKey = find_value(oneSig, "pubkey");
                             if (sigObject.isNull() || !sigObject.isStr()) {
                                 wallet->mapHashSig.clear();
                                 DBB::LogPrint("Invalid signature from device\n", "");
