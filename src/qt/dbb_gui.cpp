@@ -1262,11 +1262,11 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             if (possibleFilename.empty() || possibleFilename == "" || possibleFilename == "int")
             {
                 // load internally
-                for (int i = 0; i<firmware_deterministic_2_2_0_signed_bin_len;i++)
+                for (int i = 0; i<firmware_deterministic_2_2_2_signed_bin_len;i++)
                 {
-                    buffer << firmware_deterministic_2_2_0_signed_bin[i];
+                    buffer << firmware_deterministic_2_2_2_signed_bin[i];
                 }
-                firmwareSize = firmware_deterministic_2_2_0_signed_bin_len;
+                firmwareSize = firmware_deterministic_2_2_2_signed_bin_len;
             }
             else {
                 // load the file
@@ -1678,9 +1678,14 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                             executeCommandWrapper("{\"bootloader\" : \"unlock\" }", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
                                 UniValue jsonOut;
                                 jsonOut.read(cmdOut);
-                                emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
-                                if (!upgradeFirmwareState) {
+                                UniValue errorObj = find_value(jsonOut, "error");
+                                if (errorObj.isObject()) {
+                                    processCommand = false;
+                                    emit shouldHideModalInfo();
                                     emit reloadGetinfo();
+                                }
+                                else {
+                                    emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_BOOTLOADER_UNLOCK);
                                 }
                             }, tr("Unlock the bootloader to install a new firmware"));
                             passwordAccepted();
@@ -1739,7 +1744,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     if (sdcard.isBool() && !sdcard.isTrue())
                     {
                         //: translation: warning text if micro SD card needs to be inserted for wallet creation
-                        showModalInfo(tr("Please insert a micro SD card and replug the device. Initializing the wallet is only possible with an SD card. Otherwise, you will not have a backup."));
+                        showModalInfo(tr("Please insert a micro SD card and <strong>replug</strong> the device. Make sure the SDCard is pushed in all the way. Initializing the wallet is only possible with an SD card. Otherwise, you will not have a backup."));
                         updateModalWithIconName(":/icons/touchhelp_sdcard_in");
                         return;
                     }
@@ -2169,17 +2174,22 @@ void DBBDaemonGui::createTxProposalPressed()
         std::string errorOut;
 
         int64_t fee = singleWallet->client.GetFeeForPriority(this->ui->feeLevel->currentIndex());
-
-        if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+        if (fee == 0) {
             emit changeNetLoading(false);
             emit shouldHideModalInfo();
-            emit shouldShowAlert("Error", QString::fromStdString(errorOut));
-        }
-        else
-        {
-            emit changeNetLoading(false);
-            emit shouldUpdateModalInfo(tr("Start Signing Process"));
-            emit createTxProposalDone(singleWallet, "", proposalOut);
+            emit shouldShowAlert("Error", tr("Could not estimate fees. Make sure you are online."));
+        } else {
+            if (!singleWallet->client.CreatePaymentProposal(this->ui->sendToAddress->text().toStdString(), amount, fee, proposalOut, errorOut)) {
+                emit changeNetLoading(false);
+                emit shouldHideModalInfo();
+                emit shouldShowAlert("Error", QString::fromStdString(errorOut));
+            }
+            else
+            {
+                emit changeNetLoading(false);
+                emit shouldUpdateModalInfo(tr("Start Signing Process"));
+                emit createTxProposalDone(singleWallet, "", proposalOut);
+            }
         }
 
         thread->completed();
