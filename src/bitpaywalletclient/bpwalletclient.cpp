@@ -285,8 +285,10 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keyp
     if (!SendRequest("post", "/v1/addresses/", json, response, httpStatusCode))
         return false;
 
-    if (httpStatusCode != 200)
+    if (httpStatusCode != 200) {
+        DBB::LogPrint("GetNewAddress non 200 http status code (got %d)\n", httpStatusCode);
         return false;
+    }
 
     UniValue responseUni;
     responseUni.read(response);
@@ -402,16 +404,20 @@ bool BitPayWalletClient::CreatePaymentProposal(const std::string& address, uint6
             int reqRet = SendRequest("post", "/v2/txproposals/", json, response, httpStatusCode);
             if (!reqRet || httpStatusCode != 200) {
                 errorOut = "Could not unlock funds";
+                DBB::LogPrint("Could not unlock funds\n", httpStatusCode);
                 return false;
             }
             paymentProposalOut.read(response);
 
-            if (!PublishTxProposal(paymentProposalOut, errorOut))
+            if (!PublishTxProposal(paymentProposalOut, errorOut)) {
+                DBB::LogPrint("Publish tx proposal failed (%s)\n", errorOut.c_str());
                 return false;
+            }
             
             return true;
         } else {
             //unknown error
+            DBB::LogPrint("Uknown error during CreatePaymentProposal\n");
             UniValue messageUni;
             messageUni = find_value(responseUni, "message");
 
@@ -460,11 +466,13 @@ bool BitPayWalletClient::PublishTxProposal(const UniValue& paymentProposal, std:
     if (!SendRequest("post", "/v1/txproposals/"+txpID+"/publish/", signatureJson.write(), response, httpStatusCode))
     {
         errorOut = "Connection failed";
+        DBB::LogPrint("Connection failed during PublishTxProposal\n");
         return false;
     }
 
     if (httpStatusCode != 200) {
         errorOut = "Could not publish transaction proposal";
+        DBB::LogPrint("Connection failed during PublishTxProposal (got http status %d)\n", httpStatusCode);
         return false;
     }
 
@@ -497,8 +505,10 @@ bool BitPayWalletClient::CreateWallet(const std::string& walletName)
     if (!SendRequest("post", "/v2/wallets/", json, response, httpStatusCode))
         return false;
 
-    if (httpStatusCode != 200)
+    if (httpStatusCode != 200) {
+        DBB::LogPrint("Got non 200 http status during CreateWallet (got %d)\n", httpStatusCode);
         return false;
+    }
 
     UniValue responseUni;
     responseUni.read(response);
@@ -1117,7 +1127,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
         std::string signature = SignRequest(method, url, args, hashOut);
         if (signature.empty()) {
             BP_LOG_MSG("SignRequest failed.");
-            DBB::LogPrintDebug("SignRequest failed.", "");
+            DBB::LogPrint("SignRequest failed.", "");
             success = false;
         } else {
             chunk = curl_slist_append(chunk, ("x-identity: " + GetCopayerId()).c_str()); //requestPubKey).c_str());
@@ -1158,7 +1168,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
             res = curl_easy_perform(curl);
             if (res != CURLE_OK) {
                 BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-                DBB::LogPrintDebug("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
+                DBB::LogPrint("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
                 success = false;
             } else {
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
