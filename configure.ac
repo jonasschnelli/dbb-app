@@ -1,11 +1,21 @@
 dnl require autoconf 2.60 (AS_ECHO/AS_ECHO_N)
 AC_PREREQ([2.68])
-AC_INIT([Digital Bitbox CLI],[2.2.1],[https://github.com/jonasschnelli/dbb_cli/issues],[dbb_cli])
+define(_CLIENT_VERSION_MAJOR, 2)
+define(_CLIENT_VERSION_MINOR, 2)
+define(_CLIENT_VERSION_REVISION, 2)
+define(_CLIENT_VERSION_BUILD, 0)
+define(_COPYRIGHT_YEAR, 2017)
+define(_COPYRIGHT_HOLDERS,[The %s developers])
+define(_COPYRIGHT_HOLDERS_SUBSTITUTION,[[Bitcoin Core]])
+AC_INIT([Digital Bitbox],[_CLIENT_VERSION_MAJOR._CLIENT_VERSION_MINOR._CLIENT_VERSION_REVISION],[https://github.com/jonasschnelli/dbb_cli/issues],[DigitalBitbox])
 AC_CONFIG_SRCDIR([src/config])
 AC_CONFIG_HEADERS([src/config/dbb-config.h])
 AX_PREFIX_CONFIG_H([src/config/_dbb-config.h], [DBB])
 AC_CONFIG_AUX_DIR([build-aux])
 AC_CONFIG_MACRO_DIR([build-aux/m4])
+
+DBB_GUI_NAME=dbb-app
+
 AC_CANONICAL_HOST
 AM_INIT_AUTOMAKE([no-define subdir-objects foreign])
 AM_MAINTAINER_MODE([enable])
@@ -347,12 +357,17 @@ AC_SUBST(PIC_FLAGS)
 AC_SUBST(PIE_FLAGS)
 AC_SUBST(BUILD_TEST)
 AC_SUBST(BUILD_QT)
+AC_SUBST(CLIENT_VERSION_MAJOR, _CLIENT_VERSION_MAJOR)
+AC_SUBST(CLIENT_VERSION_MINOR, _CLIENT_VERSION_MINOR)
+AC_SUBST(CLIENT_VERSION_REVISION, _CLIENT_VERSION_REVISION)
+AC_SUBST(CLIENT_VERSION_BUILD, _CLIENT_VERSION_BUILD)
+AC_SUBST(DBB_GUI_NAME)
 AC_DEFINE([TARGET_OS], [$TARGET_OS], [Define to 1 if using pthread is enabled.])
 export CXXFLAGS
 AC_CONFIG_SUBDIRS([src/libbtc src/univalue src/hidapi])
 
 AC_PROG_CXX
-AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile win/setup.nsi mac/appfolder/Contents/Info.plist])
 AC_OUTPUT
 
 echo ""
