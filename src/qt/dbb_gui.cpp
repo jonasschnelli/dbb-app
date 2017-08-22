@@ -2639,7 +2639,11 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     else if (walletsResponse.size() > 5) {
         if (!response.isObject())
         {
-            DBB::LogPrint("Got invalid response, maybe a invalid proxy response\n");
+            int maxlen = 20;
+            if (walletsResponse.size() < 20) {
+                maxlen = walletsResponse.size();
+            }
+            DBB::LogPrint("Got invalid response, maybe a invalid proxy response (%s)\n", DBB::SanitizeString(walletsResponse.substr(0, maxlen)).c_str());
             emit shouldShowAlert("Error", tr("Invalid response. Are you connected to the internet? Please check your proxy settings."));
         }
     }

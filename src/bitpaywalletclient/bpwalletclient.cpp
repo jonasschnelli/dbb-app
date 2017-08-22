@@ -1168,10 +1168,10 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
             curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
 #endif
 
-//#ifdef DBB_ENABLE_NETDEBUG
+#ifdef DBB_ENABLE_NETDEBUG
             curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
             curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, logprint_cb);
-//#endif
+#endif
 
             res = curl_easy_perform(curl);
             if (res != CURLE_OK) {
