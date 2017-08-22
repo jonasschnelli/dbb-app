@@ -94,7 +94,7 @@ public:
     bool CreateWallet(const std::string& walletName);
 
     //!Get a new address and writes it to &newAddress
-    bool GetNewAddress(std::string& newAddress, std::string& keypath);
+    bool GetNewAddress(std::string& newAddress, std::string& keypath, std::string &error);
 
     //!Return the last (disk) cached known address for receiving coins
     bool GetLastKnownAddress(std::string& address, std::string& keypath);

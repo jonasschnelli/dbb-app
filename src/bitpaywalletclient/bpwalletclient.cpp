@@ -274,7 +274,7 @@ bool BitPayWalletClient::ParseWalletInvitation(const std::string& walletInvitati
     return true;
 }
 
-bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keypath)
+bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keypath, std::string &error)
 {
     //form request
     UniValue jsonArgs(UniValue::VOBJ);
@@ -282,10 +282,18 @@ bool BitPayWalletClient::GetNewAddress(std::string& newAddress,std::string& keyp
 
     long httpStatusCode = 0;
     std::string response;
-    if (!SendRequest("post", "/v1/addresses/", json, response, httpStatusCode))
+    if (!SendRequest("post", "/v3/addresses/", json, response, httpStatusCode))
         return false;
 
     if (httpStatusCode != 200) {
+        UniValue errorUni;
+        errorUni.read(response);
+        if (errorUni.isObject()) {
+            UniValue messageUni = find_value(errorUni, "message");
+            if (messageUni.isStr()) {
+                error = messageUni.get_str();
+            }
+        }
         DBB::LogPrint("GetNewAddress non 200 http status code (got %d)\n", httpStatusCode);
         return false;
     }
@@ -1152,7 +1160,7 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
                 curl_easy_setopt(curl, CURLOPT_PROXY, socks5ProxyURL.c_str());
 
             curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
-            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+            curl_easy_setopt(curl, CURLOPT_TIMEOUT, 45L);
 
 #if defined(__linux__) || defined(__unix__)
             //need to libcurl, load it once, set the CA path at runtime
@@ -1160,15 +1168,15 @@ bool BitPayWalletClient::SendRequest(const std::string& method,
             curl_easy_setopt(curl, CURLOPT_CAINFO, ca_file.c_str());
 #endif
 
-#ifdef DBB_ENABLE_NETDEBUG
+//#ifdef DBB_ENABLE_NETDEBUG
             curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
             curl_easy_setopt(curl, CURLOPT_DEBUGFUNCTION, logprint_cb);
-#endif
+//#endif
 
             res = curl_easy_perform(curl);
             if (res != CURLE_OK) {
                 BP_LOG_MSG("curl_easy_perform() failed: %s\n", curl_easy_strerror(res));
-                DBB::LogPrint("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : ""), "");
+                DBB::LogPrint("curl_easy_perform() failed "+ ( curl_easy_strerror(res) ? std::string(curl_easy_strerror(res)) : "") + "\n", "");
                 success = false;
             } else {
                 curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &httpcodeOut);
