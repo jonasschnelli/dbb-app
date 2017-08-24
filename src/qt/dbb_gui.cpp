@@ -3052,18 +3052,23 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
 void DBBDaemonGui::pairSmartphone()
 {
     //create a new channel id and encryption key
+    bool generateData = true;
     if (!comServer->getChannelID().empty())
     {
         QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to re-pair your device (create a new key)?"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
-            comServer->generateNewKey();
-            configData->setComServerChannelID(comServer->getChannelID());
-            configData->setComServerEncryptionKey(comServer->getEncryptionKey());
-            configData->write();
-            comServer->setChannelID(configData->getComServerChannelID());
-            comServer->startLongPollThread();
-            pingComServer();
+        if (reply == QMessageBox::No) {
+            generateData = false;
         }
+    }
+
+    if (generateData) {
+        comServer->generateNewKey();
+        configData->setComServerChannelID(comServer->getChannelID());
+        configData->setComServerEncryptionKey(comServer->getEncryptionKey());
+        configData->write();
+        comServer->setChannelID(configData->getComServerChannelID());
+        comServer->startLongPollThread();
+        pingComServer();
     }
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
