@@ -199,6 +199,7 @@ private:
     std::time_t lastPing;
 
     std::atomic<bool> netLoaded;
+    std::atomic<int> netErrCount;
 #ifdef DBB_USE_MULTIMEDIA
     DBBQRCodeScanner *qrCodeScanner; //!< QRCode scanner object
 #endif

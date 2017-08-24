@@ -163,6 +163,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               comServer(0),
                                               lastPing(0),
                                               netLoaded(false),
+                                              netErrCount(0),
                                               settingsDialog(0),
                                               updateManager(0)
 {
@@ -2649,8 +2650,12 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     }
     else {
         if (!netLoaded) {
-            DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
-            emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+            netErrCount++;
+            if (netErrCount > 2) {
+                DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
+                emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+                netErrCount = 0;
+            }
         }
     }
 }
@@ -3047,18 +3052,23 @@ void DBBDaemonGui::comServerMessageParse(const QString& msg)
 void DBBDaemonGui::pairSmartphone()
 {
     //create a new channel id and encryption key
+    bool generateData = true;
     if (!comServer->getChannelID().empty())
     {
         QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to re-pair your device (create a new key)?"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::Yes) {
-            comServer->generateNewKey();
-            configData->setComServerChannelID(comServer->getChannelID());
-            configData->setComServerEncryptionKey(comServer->getEncryptionKey());
-            configData->write();
-            comServer->setChannelID(configData->getComServerChannelID());
-            comServer->startLongPollThread();
-            pingComServer();
+        if (reply == QMessageBox::No) {
+            generateData = false;
         }
+    }
+
+    if (generateData) {
+        comServer->generateNewKey();
+        configData->setComServerChannelID(comServer->getChannelID());
+        configData->setComServerEncryptionKey(comServer->getEncryptionKey());
+        configData->write();
+        comServer->setChannelID(configData->getComServerChannelID());
+        comServer->startLongPollThread();
+        pingComServer();
     }
 
     QString pairingData = QString::fromStdString(comServer->getPairData());
