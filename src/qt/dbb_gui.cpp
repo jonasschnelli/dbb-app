@@ -3049,21 +3049,20 @@ void DBBDaemonGui::pairSmartphone()
     //create a new channel id and encryption key
     if (!comServer->getChannelID().empty())
     {
-        QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to pair with a new device?"), QMessageBox::Yes | QMessageBox::No);
-        if (reply == QMessageBox::No)
-            return;
+        QMessageBox::StandardButton reply = QMessageBox::question(this, "", tr("Would you like to re-pair your device (create a new key)?"), QMessageBox::Yes | QMessageBox::No);
+        if (reply == QMessageBox::Yes) {
+            comServer->generateNewKey();
+            configData->setComServerChannelID(comServer->getChannelID());
+            configData->setComServerEncryptionKey(comServer->getEncryptionKey());
+            configData->write();
+            comServer->setChannelID(configData->getComServerChannelID());
+            comServer->startLongPollThread();
+            pingComServer();
+        }
     }
 
-    comServer->generateNewKey();
-    configData->setComServerChannelID(comServer->getChannelID());
-    configData->setComServerEncryptionKey(comServer->getEncryptionKey());
-    configData->write();
-    comServer->setChannelID(configData->getComServerChannelID());
-    comServer->startLongPollThread();
-    pingComServer();
-
     QString pairingData = QString::fromStdString(comServer->getPairData());
-    showModalInfo(tr("Scan the QR code using the Digital Bitbox mobile app."), DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
+    showModalInfo(tr("Scan the QR code using the Digital Bitbox mobile app.")+"<br/><br /><font color=\"#999999\" style=\"font-size: small\">Connection-Code:<br />"+QString::fromStdString(comServer->getChannelID())+":"+QString::fromStdString(comServer->getAESKeyBase58())+"</font>", DBB_PROCESS_INFOLAYER_CONFIRM_WITH_BUTTON);
     updateModalWithQRCode(pairingData);
 }
 
