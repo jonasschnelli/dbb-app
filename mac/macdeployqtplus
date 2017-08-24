@@ -773,7 +773,7 @@ if config.dmg is not None:
         for path, dirs, files in os.walk("dist"):
             for file in files:
                 size += os.path.getsize(os.path.join(path, file))
-        size += int(size * 0.15)
+        size += int(size * 2)
         
         if verbose >= 3:
             print("Creating temp image for modification...")
@@ -870,6 +870,9 @@ if config.dmg is not None:
         if p.returncode:
             print("Error running osascript.")
 
+
+        app_path = os.path.join(disk_root, "DigitalBitbox.app")
+        subprocess.call(["codesign", "-s Shift", app_path])
         if verbose >= 2:
             print("+ Finalizing .dmg disk image +")
             time.sleep(5)
