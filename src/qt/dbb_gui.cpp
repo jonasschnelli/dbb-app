@@ -2095,7 +2095,8 @@ void DBBDaemonGui::getNewAddress()
             std::string address;
             std::string keypath;
 
-            singleWallet->client.GetNewAddress(address, keypath);
+            std::string error;
+            singleWallet->client.GetNewAddress(address, keypath, error);
             if (address.size())
             {
                 singleWallet->rewriteKeypath(keypath);
@@ -2103,7 +2104,8 @@ void DBBDaemonGui::getNewAddress()
             }
             else
             {
-                emit shouldShowAlert("Error", tr("Could not get a new receiving address."));
+                emit shouldShowAlert("Error", (error.size() > 1) ? QString::fromStdString(error) : tr("Could not get a new receiving address."));
+                setNetLoading(false);
             }
 
             thread->completed();
@@ -2637,7 +2639,11 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     else if (walletsResponse.size() > 5) {
         if (!response.isObject())
         {
-            DBB::LogPrint("Got invalid response, maybe a invalid proxy response\n");
+            int maxlen = 20;
+            if (walletsResponse.size() < 20) {
+                maxlen = walletsResponse.size();
+            }
+            DBB::LogPrint("Got invalid response, maybe a invalid proxy response (%s)\n", DBB::SanitizeString(walletsResponse.substr(0, maxlen)).c_str());
             emit shouldShowAlert("Error", tr("Invalid response. Are you connected to the internet? Please check your proxy settings."));
         }
     }

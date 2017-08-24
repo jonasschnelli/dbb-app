@@ -260,7 +260,7 @@ enum dbb_device_mode deviceAvailable(std::string& devicePathOut)
     cur_dev = devs;
     enum dbb_device_mode foundType = DBB_DEVICE_NO_DEVICE;
     while (cur_dev) {
-        DBB_DEBUG_INTERNAL("found device with usage_page: %d and ifnum: %d and path: %s\n", cur_dev->usage_page, cur_dev->interface_number, cur_dev->path);
+        //DBB_DEBUG_INTERNAL("found device with usage_page: %d and ifnum: %d and path: %s\n", cur_dev->usage_page, cur_dev->interface_number, cur_dev->path);
         if (cur_dev->interface_number == 0 || cur_dev->usage_page == 0xffff) {
             // get the manufacturer wide string
             if (!cur_dev || !cur_dev->manufacturer_string || !cur_dev->serial_number || !cur_dev->path)
@@ -318,7 +318,7 @@ enum dbb_device_mode deviceAvailable(std::string& devicePathOut)
     }
     hid_free_enumeration(devs);
     
-    DBB_DEBUG_INTERNAL("found device type: %d\n", foundType);
+    //DBB_DEBUG_INTERNAL("found device type: %d\n", foundType);
     return foundType;
 }
 

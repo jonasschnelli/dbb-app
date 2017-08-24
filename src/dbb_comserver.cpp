@@ -167,7 +167,7 @@ bool DBBComServer::SendRequest(const std::string& method,
         if (socks5ProxyURL.size())
             curl_easy_setopt(curl, CURLOPT_PROXY, socks5ProxyURL.c_str());
         
-        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 15L);
+        curl_easy_setopt(curl, CURLOPT_TIMEOUT, 35L);
         curl_easy_setopt(curl, CURLOPT_NOPROGRESS, 0L);
         curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 
