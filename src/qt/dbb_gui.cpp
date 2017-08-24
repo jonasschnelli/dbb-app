@@ -163,6 +163,7 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
                                               comServer(0),
                                               lastPing(0),
                                               netLoaded(false),
+                                              netErrCount(0),
                                               settingsDialog(0),
                                               updateManager(0)
 {
@@ -2649,8 +2650,12 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     }
     else {
         if (!netLoaded) {
-            DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
-            emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+            netErrCount++;
+            if (netErrCount > 2) {
+                DBB::LogPrint("Got no response or timeout, are you connected to the internet or using an invalid proxy?\n");
+                emit shouldShowAlert("Error", tr("No response or timeout. Are you connected to the internet?"));
+                netErrCount = 0;
+            }
         }
     }
 }
