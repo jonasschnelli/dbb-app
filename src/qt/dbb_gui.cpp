@@ -1263,11 +1263,11 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             if (possibleFilename.empty() || possibleFilename == "" || possibleFilename == "int")
             {
                 // load internally
-                for (int i = 0; i<firmware_deterministic_2_2_2_signed_bin_len;i++)
+                for (int i = 0; i<firmware_deterministic_2_2_3_signed_bin_len;i++)
                 {
-                    buffer << firmware_deterministic_2_2_2_signed_bin[i];
+                    buffer << firmware_deterministic_2_2_3_signed_bin[i];
                 }
-                firmwareSize = firmware_deterministic_2_2_2_signed_bin_len;
+                firmwareSize = firmware_deterministic_2_2_3_signed_bin_len;
             }
             else {
                 // load the file
