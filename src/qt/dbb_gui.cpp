@@ -1659,7 +1659,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                     vcopy.erase(std::remove(vcopy.begin(), vcopy.end(), 'V'), vcopy.end());
                     vcopy.erase(std::remove(vcopy.begin(), vcopy.end(), '.'), vcopy.end());
                     int test = std::stoi(vcopy);
-                    if (test < 220 && bootlock.isTrue()) {
+                    if (test < firmware_deterministic_version && bootlock.isTrue()) {
 
                         QMessageBox msgBox;
                         msgBox.setText(tr("Update Firmware"));
