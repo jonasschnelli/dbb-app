@@ -1106,7 +1106,7 @@ void DBBDaemonGui::seedHardwareWithName()
 
 void DBBDaemonGui::seedHardware()
 {
-    if (sessionPassword.empty() || sessionPassword.size() > 64)
+    if (sessionPassword.empty())
         return;
 
     std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);

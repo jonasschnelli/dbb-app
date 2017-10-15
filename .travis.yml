@@ -24,7 +24,7 @@ install:
         && export CC="gcc-4.8"
         ;
       else
-        brew install qt5 libqrencode
+        HOMEBREW_NO_AUTO_UPDATE=1 brew install qt5 libqrencode
         ;
       fi
 
