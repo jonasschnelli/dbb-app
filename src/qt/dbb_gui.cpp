@@ -2624,6 +2624,8 @@ void DBBDaemonGui::parseWalletsResponse(DBBWallet* wallet, bool walletsAvailable
     else
         multisigWalletIsUpdating = false;
 
+    netLoaded = false;
+
     UniValue response;
     if (response.read(walletsResponse) && response.isObject()) {
         DBB::LogPrint("Got update wallet response...\n", "");
