@@ -36,6 +36,7 @@
 #include <string>
 
 #include "dbb.h"
+#include "libdbb/crypto.h"
 #include "dbb_util.h"
 
 #include "univalue.h"
@@ -44,6 +45,58 @@
 #include <btc/hash.h>
 #include <btc/ecc_key.h>
 #include <btc/ecc.h>
+#include <btc/bip32.h>
+
+#include <portable_endian.h>
+
+void ser_bytes(cstring* s, const void* p, size_t len)
+{
+    cstr_append_buf(s, p, len);
+}
+
+void ser_u16(cstring* s, uint16_t v_)
+{
+    uint16_t v = htole16(v_);
+    cstr_append_buf(s, &v, sizeof(v));
+}
+
+void ser_u32(cstring* s, uint32_t v_)
+{
+    uint32_t v = htole32(v_);
+    cstr_append_buf(s, &v, sizeof(v));
+}
+
+void ser_varlen(cstring* s, uint32_t vlen)
+{
+    unsigned char c;
+
+    if (vlen < 253) {
+        c = vlen;
+        ser_bytes(s, &c, 1);
+    }
+
+    else if (vlen < 0x10000) {
+        c = 253;
+        ser_bytes(s, &c, 1);
+        ser_u16(s, (uint16_t)vlen);
+    }
+
+    else {
+        c = 254;
+        ser_bytes(s, &c, 1);
+        ser_u32(s, vlen);
+    }
+
+    /* u64 case intentionally not implemented */
+}
+
+void ser_str(cstring* s, const char* s_in, size_t maxlen)
+{
+    size_t slen = strnlen(s_in, maxlen);
+
+    ser_varlen(s, slen);
+    ser_bytes(s, s_in, slen);
+}
 
 //simple class for a dbb command
 class CDBBCommand
@@ -102,6 +155,7 @@ static const CDBBCommand vCommands[] =
     { "bootloaderunlock"  , "{\"bootloader\" : \"unlock\"}",                              "", true},
     { "bootloaderlock"    , "{\"bootloader\" : \"lock\"}",                                "", true},
     { "firmware"          , "%filename%",                                                 "", true},
+    { "signmessage"       , "%!password% %!message% %!keypath%",                          "", true},
     /*{ "decryptbackup"     , "%filename%",                                                 "", true},*//* no longer valid for firmware v2 */
     { "hidden_password"   , "{\"hidden_password\" : \"%!hiddenpassword%\"}",              "", true},
     { "u2f-on"            , "{\"feature_set\" : {\"U2F\": true} }",                       "", true},
@@ -250,7 +304,102 @@ int main(int argc, char* argv[])
             return 0;
         }
 
-        if (userCmd == "decryptbackup")
+        if (userCmd == "signmessage")
+        {
+            if (!DBB::mapArgs.count("-password"))
+            {
+                printf("You need to provide the password used during backup creation (-password=<password>)\n");
+                return 0;
+            }
+
+            std::string password = DBB::GetArg("-password", "0000");
+
+            const std::string strMessageMagic = "Bitcoin Signed Message:\n";
+
+            // serialize the message with magic in p2p ser format
+            cstring* s = cstr_new_sz(200);
+            ser_str(s, strMessageMagic.c_str(), strMessageMagic.size());
+
+            std::string possibleMessage = DBB::mapArgs["-message"];
+            if ((possibleMessage.empty() || possibleMessage == ""))
+                possibleMessage = std::string(cmdArgs[1].c_str());
+
+            ser_str(s, possibleMessage.c_str(), possibleMessage.size());
+
+            // calc double sha256
+            uint8_t hashout[32];
+            btc_hash((const uint8_t*)s->str, s->len, hashout);
+            cstr_free(s, true);
+
+            std::string hashstr = DBB::HexStr(hashout, hashout+32);
+            std::string keypath = DBB::GetArg("-keypath", "m/0");
+            DebugOut("main", "signing message (%s) hash: %s with key at path: %s\n", possibleMessage.c_str(), hashstr.c_str(), keypath.c_str());
+
+            std::string base64str;
+            std::string cmdOut;
+            std::string unencryptedJson;
+
+            std::string cmdS = "{\"sign\" : { \"meta\" : \"bla\", \"data\": [{\"hash\":\""+hashstr+"\", \"keypath\": \""+keypath+"\"}], \"checkpub\" : [] } }";
+            DBB::encryptAndEncodeCommand(cmdS, password, base64str);
+            DBB::sendCommand(base64str, cmdOut);
+            DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+            UniValue jsonObj;
+            jsonObj.read(unencryptedJson);
+
+            UniValue posEcho = find_value(jsonObj, "echo");
+            if(posEcho.isStr()) {
+                // send command again due to echo
+                // skip smart verification
+                DBB::sendCommand(base64str, cmdOut);
+                DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+                jsonObj.read(unencryptedJson);
+            }
+
+            UniValue sign = find_value(jsonObj, "sign");
+            UniValue recid = find_value(sign[0], "recid");
+            UniValue sig = find_value(sign[0], "sig");
+
+            // parse hex compact 64 byte signature
+            std::vector<unsigned char> sigHex = DBB::ParseHex(sig.get_str());
+
+            std::vector<unsigned char> vchSig;
+            int rec = -1;
+            rec = stoi(recid.get_str());
+            printf("rec: %d\n", rec);
+            vchSig.resize(65);
+            vchSig[0] = 27 + rec + (true ? 4 : 0);
+            memcpy(&vchSig[1], &sigHex[0], 64);
+
+            std::string base64strOut = base64_encode(&vchSig[0], vchSig.size());
+            std::string newstr = base64_decode(base64strOut);
+            assert(memcmp(&vchSig[0], &newstr[0], vchSig.size()) == 0);
+
+
+            std::string cmd3 = "{\"xpub\" : \""+keypath+"\"}";
+            DBB::encryptAndEncodeCommand(cmd3, password, base64str);
+            DBB::sendCommand(base64str, cmdOut);
+            DBB::decryptAndDecodeCommand(cmdOut, password, unencryptedJson);
+            jsonObj.read(unencryptedJson);
+            UniValue xpub = find_value(jsonObj, "xpub");
+
+            btc_hdnode node;
+            bool r = btc_hdnode_deserialize(xpub.get_str().c_str(), &btc_chain_main, &node);
+            char address[1024];
+            btc_hdnode_get_p2pkh_address(&node, &btc_chain_main, address, sizeof(address));
+
+            char pubk[1024];
+            size_t len;
+            btc_hdnode_get_pub_hex(&node, pubk, &len);
+
+
+            printf("signature: %s\n", base64strOut.c_str());
+            printf("Message: %s\n", possibleMessage.c_str());
+            printf("Used keypath: %s\n", keypath.c_str());
+            printf("Used address: %s\n", address);
+            printf("Used pubkey: %s\n", pubk);
+            printf("Used xpub: %s\n", xpub.get_str().c_str());
+        }
+        else if (userCmd == "decryptbackup")
         {
             if (!DBB::mapArgs.count("-password"))
             {
