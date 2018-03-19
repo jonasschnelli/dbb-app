@@ -243,7 +243,7 @@
             </sizepolicy>
            </property>
            <property name="text">
-            <string>As a security measure in compromised situations, use a special password to open a hidden wallet. The hidden wallet can receive and send coins, and it has 2FA mode permanently enabled.</string>
+            <string>As a security measure in compromised situations, use a special password to open a hidden wallet. The hidden wallet can receive and send coins, and it has 2FA mode permanently enabled. NOTE: If you have funds in a hidden wallet created before firmware version v3.0.0, move the funds out before setting a new hidden wallet password.</string>
            </property>
            <property name="scaledContents">
             <bool>false</bool>
