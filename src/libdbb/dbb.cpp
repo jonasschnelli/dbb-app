@@ -514,7 +514,7 @@ bool upgradeFirmware(const std::vector<char>& firmwarePadded, size_t firmwareSiz
     size_t pos = 0;
     int nChunks = ceil(firmwareSize / (float)FIRMWARE_CHUNKSIZE);
     progressCallback("", 0.0);
-    while (pos+FIRMWARE_CHUNKSIZE < firmwarePadded.size())
+    while (pos+FIRMWARE_CHUNKSIZE <= firmwarePadded.size())
     {
         std::vector<unsigned char> chunk(firmwarePadded.begin()+pos, firmwarePadded.begin()+pos+FIRMWARE_CHUNKSIZE);
         DBB::sendChunk(cnt,chunk,cmdOut);
