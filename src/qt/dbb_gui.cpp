@@ -1263,11 +1263,11 @@ void DBBDaemonGui::upgradeFirmwareWithFile(const QString& fileName)
             if (possibleFilename.empty() || possibleFilename == "" || possibleFilename == "int")
             {
                 // load internally
-                for (int i = 0; i<firmware_deterministic_2_2_3_signed_bin_len;i++)
+                for (int i = 0; i<firmware_deterministic_3_0_0_signed_bin_len;i++)
                 {
-                    buffer << firmware_deterministic_2_2_3_signed_bin[i];
+                    buffer << firmware_deterministic_3_0_0_signed_bin[i];
                 }
-                firmwareSize = firmware_deterministic_2_2_3_signed_bin_len;
+                firmwareSize = firmware_deterministic_3_0_0_signed_bin_len;
             }
             else {
                 // load the file
@@ -1663,7 +1663,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
 
                         QMessageBox msgBox;
                         msgBox.setText(tr("Update Firmware"));
-                        msgBox.setInformativeText(tr("A firmware upgrade (%1) is available for your device. Do you wish to install it?").arg(QString::fromStdString(std::string(firmware_deterministic_string))));
+                        msgBox.setInformativeText(tr("A firmware upgrade (%1) is required to use this desktop app version. Do you wish to install it?").arg(QString::fromStdString(std::string(firmware_deterministic_string))));
                         QAbstractButton *showOnline = msgBox.addButton(tr("Show online information"), QMessageBox::RejectRole);
                         msgBox.addButton(QMessageBox::Yes);
                         msgBox.addButton(QMessageBox::No);
@@ -1671,6 +1671,9 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                         if (msgBox.clickedButton() == showOnline)
                         {
                             QDesktopServices::openUrl(QUrl("https://digitalbitbox.com/firmware?app=dbb-app"));
+                            DBB::LogPrint("Requested firmware update information\n", "");
+                            emit reloadGetinfo();
+                            return;
                         }
                         else if (res == QMessageBox::Yes) {
                             DBB::LogPrint("Upgrading firmware\n", "");
@@ -1690,6 +1693,11 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                                 }
                             }, tr("Unlock the bootloader to install a new firmware"));
                             passwordAccepted();
+                            return;
+                        } else {
+                            DBB::LogPrint("Outdated firmware\n", "");
+                            deviceConnected = false;
+                            uiUpdateDeviceState();
                             return;
                         }
                     }
