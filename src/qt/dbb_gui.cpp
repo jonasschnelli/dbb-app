@@ -240,8 +240,6 @@ DBBDaemonGui::DBBDaemonGui(const QString& uri, QWidget* parent) : QMainWindow(pa
     connect(ui->noDeviceConnectedLabel, SIGNAL(linkActivated(const QString&)), this, SLOT(noDeviceConnectedLabelLink(const QString&)));
     connect(ui->eraseButton, SIGNAL(clicked()), this, SLOT(eraseClicked()));
     connect(ui->ledButton, SIGNAL(clicked()), this, SLOT(ledClicked()));
-    connect(ui->passwordButton, SIGNAL(clicked()), this, SLOT(showSetPasswordInfo()));
-    connect(ui->seedButton, SIGNAL(clicked()), this, SLOT(seedHardwareWithName()));
     connect(ui->refreshButton, SIGNAL(clicked()), this, SLOT(SingleWalletUpdateWallets()));
     connect(ui->getNewAddress, SIGNAL(clicked()), this, SLOT(getNewAddress()));
     connect(ui->verifyAddressButton, SIGNAL(clicked()), this, SLOT(verifyAddress()));
@@ -905,12 +903,6 @@ void DBBDaemonGui::hideSessionPasswordView()
     animation->start(QAbstractAnimation::DeleteWhenStopped);
 }
 
-void DBBDaemonGui::showSetPasswordInfo()
-{
-    QMessageBox::information(this, tr("Change Password"), tr("Changing the device password does NOT change the backup password. The backup password is ALWAYS the password that was used during wallet initialization. Be sure to remember it."), QMessageBox::Ok);
-    ui->modalBlockerView->showSetPassword();
-}
-
 void DBBDaemonGui::setPasswordProvided(const QString& newPassword, const QString& repeatPassword)
 {
     std::string command = "{\"password\" : \"" + newPassword.toStdString() + "\"}";
@@ -1097,11 +1089,6 @@ std::string DBBDaemonGui::getBackupString()
     std::stringstream ss;
     ss << name << "-" << DBB::putTime(in_time_t, "%Y-%m-%d-%H-%M-%S");
     return ss.str();
-}
-
-void DBBDaemonGui::seedHardwareWithName()
-{
-    ui->modalBlockerView->showSetDeviceNameCreate();
 }
 
 void DBBDaemonGui::seedHardware()
@@ -1635,7 +1622,6 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 cachedDeviceLock = lock.isTrue();
 
                 ui->lockDevice->setEnabled(!cachedDeviceLock);
-                ui->seedButton->setEnabled(!cachedDeviceLock);
                 ui->showBackups->setEnabled(!cachedDeviceLock);
                 ui->pairDeviceButton->setEnabled(!cachedDeviceLock);
                 if (cachedDeviceLock)

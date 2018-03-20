@@ -205,7 +205,7 @@ private:
 #endif
 
     void createMenuBar();
-    
+
     //== Plug / Unplug ==
     //! gets called when the device was sucessfully unlocked (password accepted)
     void deviceIsReadyToInteract();
@@ -286,8 +286,6 @@ private slots:
     void updateModalWithIconName(const QString& filename);
     void hideModalInfo();
     void modalStateChanged(bool state);
-    //!show set passworf form
-    void showSetPasswordInfo();
     //!gets called when the user presses button in the "set password form"
     void setPasswordProvided(const QString& newPassword, const QString& repeatPassword);
     //!gets called on device reset
@@ -306,8 +304,6 @@ private slots:
     void getInfo();
     //!seed the wallet, flush everything and create a new bip32 entropy
     void seedHardware();
-    //!update device name before continuing to seed the wallet
-    void seedHardwareWithName();
 
     //== DBB USB / UTILS ==
     //!get the current local IPv4 address

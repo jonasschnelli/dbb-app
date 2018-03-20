@@ -679,7 +679,7 @@ background-color: rgba(240,240,240,255);
           <number>20</number>
          </property>
          <item>
-          <widget class="QPushButton" name="passwordButton">
+          <widget class="QPushButton" name="getAddress">
            <property name="maximumSize">
             <size>
              <width>200</width>
@@ -687,10 +687,10 @@ background-color: rgba(240,240,240,255);
             </size>
            </property>
            <property name="toolTip">
-            <string>Sets a new device password.</string>
+            <string>List wallet addresses and their extended public keys for different BIP32 keypaths.</string>
            </property>
            <property name="text">
-            <string>Change Password</string>
+            <string>List Addresses...</string>
            </property>
           </widget>
          </item>
@@ -707,45 +707,6 @@ background-color: rgba(240,240,240,255);
            </property>
            <property name="text">
             <string>Get Random Number</string>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </item>
-       <item>
-        <layout class="QHBoxLayout" name="horizontalLayout_2">
-         <property name="spacing">
-          <number>20</number>
-         </property>
-         <item>
-          <widget class="QPushButton" name="seedButton">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>Overwrite the existing wallet with a new wallet.</string>
-           </property>
-           <property name="text">
-            <string>Create New Wallet</string>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QPushButton" name="getAddress">
-           <property name="maximumSize">
-            <size>
-             <width>200</width>
-             <height>16777215</height>
-            </size>
-           </property>
-           <property name="toolTip">
-            <string>List wallet addresses and their extended public keys for different BIP32 keypaths.</string>
-           </property>
-           <property name="text">
-            <string>List Addresses...</string>
            </property>
           </widget>
          </item>
