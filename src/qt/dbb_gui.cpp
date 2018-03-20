@@ -1044,7 +1044,17 @@ void DBBDaemonGui::eraseClicked()
 void DBBDaemonGui::resetU2F()
 {
     DBB::LogPrint("Request U2F reset...\n", "");
-    if (executeCommandWrapper("{\"reset\":\"U2F\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+
+    std::string cmd("{\"reset\":\"U2F\"}");
+    QString version = this->ui->versionLabel->text();
+    if (!(version.contains(QString("v2.")) || version.contains(QString("v1.")) || version.contains(QString("v0.")))) {
+        // v3+ has a new api.
+        std::string hashHex = DBB::getStretchedBackupHexKey(sessionPassword);
+        cmd = std::string("{\"seed\": { \"source\": \"U2F_create\", \"key\":\""+hashHex+"\", \"filename\": \"" + getBackupString() + ".pdf\" } }");
+    }
+
+
+    if (executeCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
             UniValue jsonOut;
             jsonOut.read(cmdOut);
             emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RESET_U2F);
@@ -3097,8 +3107,15 @@ void DBBDaemonGui::updateSettings()
 void DBBDaemonGui::updateHiddenPassword(const QString& hiddenPassword)
 {
     DBB::LogPrint("Set hidden password\n", "");
+    std::string cmd("{\"hidden_password\": \""+hiddenPassword.toStdString()+"\"}");
+    QString version = this->ui->versionLabel->text();
+    if (!(version.contains(QString("v2.")) || version.contains(QString("v1.")) || version.contains(QString("v0.")))) {
+        // v3+ has a new api.
+        std::string hashHex = DBB::getStretchedBackupHexKey(hiddenPassword.toStdString());
+        cmd = std::string("{\"hidden_password\": { \"password\": \""+hiddenPassword.toStdString()+"\", \"key\": \""+hashHex+"\"} }");
+    }
 
-    executeCommandWrapper("{\"hidden_password\": \""+hiddenPassword.toStdString()+"\"}", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
+    executeCommandWrapper(cmd, DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON, [this](const std::string& cmdOut, dbb_cmd_execution_status_t status) {
         UniValue jsonOut;
         jsonOut.read(cmdOut);
         emit gotResponse(jsonOut, status, DBB_RESPONSE_TYPE_RESET_PASSWORD);
