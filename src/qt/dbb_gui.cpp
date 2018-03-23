@@ -1774,9 +1774,7 @@ void DBBDaemonGui::parseResponse(const UniValue& response, dbb_cmd_execution_sta
                 // special case for post firmware upgrades (lock bootloader)
                 if (!shouldKeepBootloaderState && bootlock.isFalse())
                 {
-                    // unlock bootloader
-                    //: translation: modal infotext for guiding user to lock the bootloader
-                    showModalInfo("<strong>Lock Firmware...</strong><br/><br/>This prevents further unintentional firmware upgrades.", DBB_PROCESS_INFOLAYER_STYLE_TOUCHBUTTON);
+                    // lock bootloader
                     lockBootloader();
                     shouldKeepBootloaderState = false;
                     return;
