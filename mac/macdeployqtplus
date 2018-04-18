@@ -763,7 +763,7 @@ if config.dmg is not None:
     
     if fancy is None:
         try:
-            runHDIUtil("create", dmg_name, srcfolder="dist", format="UDBZ", volname=volname, ov=True)
+            runHDIUtil("create", dmg_name, srcfolder="dist", format="UDBZ", fs="hfs+", volname=volname, ov=True)
         except subprocess.CalledProcessError as e:
             sys.exit(e.returncode)
     else:
@@ -778,7 +778,7 @@ if config.dmg is not None:
         if verbose >= 3:
             print("Creating temp image for modification...")
         try:
-            runHDIUtil("create", dmg_name + ".temp", srcfolder="dist", format="UDRW", size=size, volname=volname, ov=True)
+            runHDIUtil("create", dmg_name + ".temp", srcfolder="dist", format="UDRW", fs="hfs+", size=size, volname=volname, ov=True)
         except subprocess.CalledProcessError as e:
             sys.exit(e.returncode)
         
@@ -865,14 +865,16 @@ if config.dmg is not None:
             print("Running AppleScript:")
             print(s)
 
+        if verbose >= 2:
+            print("+ Code signing +")
+        app_path = os.path.join(disk_root, "DigitalBitbox.app")
+        subprocess.call(["codesign", "-s Shift", app_path])
+
         p = subprocess.Popen(['osascript', '-'], stdin=subprocess.PIPE)
         p.communicate(input=s.encode('utf-8'))
         if p.returncode:
             print("Error running osascript.")
 
-
-        app_path = os.path.join(disk_root, "DigitalBitbox.app")
-        subprocess.call(["codesign", "-s Shift", app_path])
         if verbose >= 2:
             print("+ Finalizing .dmg disk image +")
             time.sleep(5)
